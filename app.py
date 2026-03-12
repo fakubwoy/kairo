@@ -562,8 +562,12 @@ def chat():
         if student:
             profile_data = json.loads(student.profile_data or '{}')
 
-    # Add user message
-    messages.append({"role": "user", "content": user_message})
+    # Add user message — tag silent bootstrap so the UI never renders it on reload
+    silent_bootstrap = data.get('silent_bootstrap', False)
+    user_msg = {"role": "user", "content": user_message}
+    if silent_bootstrap:
+        user_msg["_silent"] = True
+    messages.append(user_msg)
 
     # Call LLM — strip any UI-only metadata (_silent) before sending
     llm_messages = [{"role": m["role"], "content": m["content"]} for m in messages]

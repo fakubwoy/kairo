@@ -653,9 +653,12 @@ async function startConversation(forceNew = false) {
         conversationId = data.conversation.id;
         messages = data.conversation.messages;
 
+        const BOOTSTRAP_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
         for (const m of messages) {
-          // Skip the silent greeting message we use to bootstrap
+          // Skip silent bootstrap message — both new (_silent flag) and legacy
+          // entries saved before _silent was persisted server-side (pattern match).
           if (m._silent) continue;
+          if (m.role === 'user' && BOOTSTRAP_RE.test(m.content.trim())) continue;
           if (m.role === 'user') appendMessage('user', m.content);
           else if (m.role === 'assistant') appendMessage('ai', m.content);
         }
