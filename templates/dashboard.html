@@ -56,7 +56,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 .nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
-.nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
 
 .user-info { font-size: 0.78rem; color: var(--muted); }
 .user-name { font-size: 0.88rem; color: var(--cream); margin-bottom: 0.15rem; font-weight: 500; }
@@ -199,7 +199,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 .card:hover { border-color: rgba(201,168,76,0.4); transform: translateY(-2px); }
 
-.card-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
+.card-icon { margin-bottom: 0.8rem; color: var(--gold); }
 .card h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.3rem; }
 .card p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
 
@@ -300,6 +300,67 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   color: var(--muted);
   font-size: 0.9rem;
   border: 1px dashed rgba(201,168,76,0.2);
+}
+
+/* Profile editor */
+.profile-editor-card {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.12);
+  margin-bottom: 2rem;
+}
+.profile-editor-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.profile-editor-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+}
+.profile-editor-body { padding: 1.5rem; display: none; }
+.profile-editor-body.open { display: block; }
+.profile-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.profile-field label {
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.profile-field input,
+.profile-field textarea,
+.profile-field select {
+  width: 100%;
+  background: rgba(245,240,232,0.05);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  padding: 0.55rem 0.8rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.profile-field input:focus,
+.profile-field textarea:focus { border-color: var(--gold); }
+.profile-field textarea { resize: vertical; min-height: 70px; }
+.profile-field.full-width { grid-column: 1 / -1; }
+.profile-save-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+.profile-save-status {
+  font-size: 0.8rem;
+  color: var(--gold);
+  align-self: center;
+  margin-right: auto;
+  min-height: 1rem;
 }
 
 /* AI Engine Bar */
@@ -443,11 +504,22 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 </head>
 <body>
 
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+</svg>
+
 <nav class="sidebar">
   <div class="sidebar-logo">Kairo</div>
-  <a href="/dashboard" class="nav-item active"><span class="nav-icon">⊞</span> Dashboard</a>
-  <a href="/interview" class="nav-item"><span class="nav-icon">🎤</span> Build Profile</a>
-  <a href="/resume" class="nav-item"><span class="nav-icon">📄</span> My Resumes</a>
+  <a href="/dashboard" class="nav-item active"><svg class="nav-icon"><use href="#i-grid"/></svg> Dashboard</a>
+  <a href="/interview" class="nav-item"><svg class="nav-icon"><use href="#i-mic"/></svg> Build Profile</a>
+  <a href="/resume" class="nav-item"><svg class="nav-icon"><use href="#i-file"/></svg> My Resumes</a>
   <div class="sidebar-bottom">
     <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
       <div class="user-name" id="sidebarName">Loading...</div>
@@ -475,8 +547,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <span class="ai-bar-status" id="aiBarStatus">Checking…</span>
     </div>
     <div class="ai-toggle" onclick="event.stopPropagation()">
-      <button class="ai-toggle-btn selected" id="toggleCloud" onclick="switchMode('cloud')">☁ Cloud</button>
-      <button class="ai-toggle-btn" id="toggleLocal" onclick="switchMode('local')">🖥 Local</button>
+      <button class="ai-toggle-btn selected" id="toggleCloud" onclick="switchMode('cloud')">Cloud</button>
+      <button class="ai-toggle-btn" id="toggleLocal" onclick="switchMode('local')">Local</button>
     </div>
     <span class="ai-bar-chevron" id="aiChevron">▼</span>
   </div>
@@ -516,21 +588,81 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
   </div>
 
+  <!-- Profile Editor -->
+  <div class="profile-editor-card">
+    <div class="profile-editor-header">
+      <h2>Edit Profile</h2>
+      <button class="btn-sm" onclick="toggleProfileEditor()" id="profileEditorToggle">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit
+      </button>
+    </div>
+    <div class="profile-editor-body" id="profileEditorBody">
+      <div class="profile-fields">
+        <div class="profile-field">
+          <label>Full Name</label>
+          <input type="text" id="pe-name" placeholder="e.g. Farhaan Khan">
+        </div>
+        <div class="profile-field">
+          <label>Phone</label>
+          <input type="text" id="pe-phone" placeholder="e.g. +91 9876543210">
+        </div>
+        <div class="profile-field">
+          <label>LinkedIn URL</label>
+          <input type="text" id="pe-linkedin" placeholder="linkedin.com/in/username">
+        </div>
+        <div class="profile-field">
+          <label>GitHub URL</label>
+          <input type="text" id="pe-github" placeholder="github.com/username">
+        </div>
+        <div class="profile-field">
+          <label>Branch / Degree</label>
+          <input type="text" id="pe-branch" placeholder="e.g. B.Tech CSE (Blockchain)">
+        </div>
+        <div class="profile-field">
+          <label>CGPA</label>
+          <input type="text" id="pe-cgpa" placeholder="e.g. 9.09">
+        </div>
+        <div class="profile-field">
+          <label>Graduation Year</label>
+          <input type="text" id="pe-year" placeholder="e.g. May 2026">
+        </div>
+        <div class="profile-field">
+          <label>College</label>
+          <input type="text" id="pe-college" placeholder="e.g. VIT Vellore">
+        </div>
+        <div class="profile-field full-width">
+          <label>Technical Skills (comma separated)</label>
+          <input type="text" id="pe-skills" placeholder="e.g. Python, PyTorch, React, AWS, Docker">
+        </div>
+        <div class="profile-field full-width">
+          <label>Summary / Bio</label>
+          <textarea id="pe-summary" placeholder="A brief professional summary about yourself..."></textarea>
+        </div>
+      </div>
+      <div class="profile-save-row">
+        <span class="profile-save-status" id="profileSaveStatus"></span>
+        <button class="btn-ghost" onclick="toggleProfileEditor()">Cancel</button>
+        <button class="btn-gold" style="width:auto;margin-top:0;padding:0.5rem 1.4rem;" onclick="saveProfileEdits()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <div class="cards-grid">
     <a href="/interview" class="card">
-      <div class="card-icon">🎤</div>
+      <div class="card-icon"><svg width="22" height="22"><use href="#i-mic"/></svg></div>
       <h3>Talk to Kairo</h3>
       <p>Have a conversation to build your profile. Share your experiences, projects, and skills naturally.</p>
       <div class="card-action">Start Interview →</div>
     </a>
     <a href="/resume" class="card">
-      <div class="card-icon">⚡</div>
+      <div class="card-icon"><svg width="22" height="22"><use href="#i-zap"/></svg></div>
       <h3>Generate Resume</h3>
       <p>Paste a job description and get a custom, ATS-optimized resume tailored to that role in seconds.</p>
       <div class="card-action">Create Resume →</div>
     </a>
     <div class="card" onclick="alert('Upload a PDF transcript or certificate to extract information automatically.')">
-      <div class="card-icon">📂</div>
+      <div class="card-icon"><svg width="22" height="22"><use href="#i-folder"/></svg></div>
       <h3>Upload Documents</h3>
       <p>Upload your transcripts, certificates, or marksheets. Kairo will extract details automatically.</p>
       <div class="card-action">Upload Files →</div>
@@ -539,7 +671,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
   <div class="section-header">
     <h2>Recent Resumes</h2>
-    <a href="/resume" class="btn-sm">View All</a>
+    <a href="/resume#saved" class="btn-sm">View All</a>
   </div>
   <div class="resumes-list" id="resumesList">
     <div class="empty-state">No resumes yet. Build your profile and generate your first resume!</div>
@@ -563,22 +695,22 @@ function updateProfileDisplay(profile) {
   
   if (profile.name || profile.email) {
     document.getElementById('ps-basic').classList.add('filled');
-    document.getElementById('ps-basic').querySelector('.profile-section-status').textContent = '✓ Complete';
+    document.getElementById('ps-basic').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
   if (profile.branch || profile.subjects?.length) {
     document.getElementById('ps-edu').classList.add('filled');
-    document.getElementById('ps-edu').querySelector('.profile-section-status').textContent = '✓ Complete';
+    document.getElementById('ps-edu').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
   if (profile.projects?.length) {
     document.getElementById('ps-projects').classList.add('filled');
-    document.getElementById('ps-projects').querySelector('.profile-section-status').textContent = `✓ ${profile.projects.length} projects`;
+    document.getElementById('ps-projects').querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.projects.length} projects`;
     filled++;
   }
   if (profile.skills?.technical?.length) {
     document.getElementById('ps-skills').classList.add('filled');
-    document.getElementById('ps-skills').querySelector('.profile-section-status').textContent = '✓ Complete';
+    document.getElementById('ps-skills').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
   
@@ -588,7 +720,7 @@ function updateProfileDisplay(profile) {
   document.getElementById('completeLabel').textContent = 
     pct === 0 ? 'Start by talking to Kairo' :
     pct < 50 ? 'Good start! Keep going' :
-    pct < 100 ? 'Almost there!' : 'Profile complete! 🎉';
+    pct < 100 ? 'Almost there!' : 'Profile complete!';
 }
 
 async function loadResumes() {
@@ -603,7 +735,7 @@ async function loadResumes() {
           <div class="resume-item-title">${r.job_description || 'Custom Resume'}</div>
           <div class="resume-item-date">${new Date(r.created_at).toLocaleDateString()}</div>
         </div>
-        <button class="btn-sm" onclick="window.location.href='/resume'">View</button>
+        <button class="btn-sm" onclick="window.location.href='/resume#saved'">View</button>
       </div>
     `).join('');
   } catch(e) {}
@@ -684,16 +816,16 @@ function renderLLMStatus(s) {
 
   // Bar status text — just show what's active, no internal details
   const barText = {
-    groq: '⚡ Groq · ready',
-    openrouter: '☁ OpenRouter · ready',
-    ollama: '🖥 Ollama · local',
+    groq: 'Groq · ready',
+    openrouter: 'OpenRouter · ready',
+    ollama: 'Ollama · local',
   };
   const statusEl = document.getElementById('aiBarStatus');
   if (s.active_backend) {
     statusEl.textContent = barText[s.active_backend] || 'Ready';
     statusEl.style.color = 'var(--gold)';
   } else {
-    statusEl.textContent = '⚠ No AI backend — tap to set up';
+    statusEl.textContent = 'No AI backend — tap to set up';
     statusEl.style.color = '#ef9a9a';
     // Auto-open drawer if nothing works
     document.getElementById('aiDrawer').classList.add('open');
@@ -743,8 +875,90 @@ fetch('/api/auth/me').then(r => r.json()).then(data => {
   if (data.profile) {
     updateProfileDisplay(data.profile);
     localStorage.setItem('kairo_user', JSON.stringify(data));
+    populateProfileEditor(data);
   }
 }).catch(() => {});
+
+// ── Profile Editor ────────────────────────────────────────────────────────────
+function toggleProfileEditor() {
+  const body = document.getElementById('profileEditorBody');
+  const btn = document.getElementById('profileEditorToggle');
+  const open = body.classList.toggle('open');
+  btn.innerHTML = open
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Close'
+    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
+}
+
+function populateProfileEditor(data) {
+  const p = data.profile || {};
+  document.getElementById('pe-name').value = data.name || p.name || '';
+  document.getElementById('pe-phone').value = p.phone || '';
+  document.getElementById('pe-linkedin').value = p.linkedin || '';
+  document.getElementById('pe-github').value = p.github || '';
+  document.getElementById('pe-branch').value = p.branch || '';
+  document.getElementById('pe-cgpa').value = p.cgpa || '';
+  document.getElementById('pe-year').value = p.year || p.graduation_year || '';
+  document.getElementById('pe-college').value = p.college || data.college || 'VIT Vellore';
+  document.getElementById('pe-summary').value = p.summary || '';
+  // Skills — flatten if structured
+  const sk = p.skills || {};
+  const allSkills = [...(sk.technical||[]), ...(sk.tools||[])];
+  document.getElementById('pe-skills').value = allSkills.length ? allSkills.join(', ') : (Array.isArray(p.skills) ? p.skills.join(', ') : '');
+}
+
+async function saveProfileEdits() {
+  const statusEl = document.getElementById('profileSaveStatus');
+  statusEl.textContent = 'Saving...';
+
+  const skillsRaw = document.getElementById('pe-skills').value.trim();
+  const skillsList = skillsRaw ? skillsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const updates = {
+    name: document.getElementById('pe-name').value.trim(),
+    phone: document.getElementById('pe-phone').value.trim(),
+    linkedin: document.getElementById('pe-linkedin').value.trim(),
+    github: document.getElementById('pe-github').value.trim(),
+    branch: document.getElementById('pe-branch').value.trim(),
+    cgpa: document.getElementById('pe-cgpa').value.trim(),
+    year: document.getElementById('pe-year').value.trim(),
+    college: document.getElementById('pe-college').value.trim(),
+    summary: document.getElementById('pe-summary').value.trim(),
+    skills: { technical: skillsList, tools: [], soft: [] }
+  };
+
+  // Update name separately if changed
+  const nameVal = updates.name;
+  if (nameVal) {
+    try {
+      await fetch('/api/auth/update-name', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: nameVal })
+      });
+      document.getElementById('sidebarName').textContent = nameVal;
+      document.getElementById('userName').textContent = nameVal.split(' ')[0];
+    } catch(e) {}
+  }
+
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(updates)
+    });
+    const data = await res.json();
+    if (data.profile) {
+      updateProfileDisplay(data.profile);
+      const stored = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+      stored.profile = data.profile;
+      stored.name = nameVal || stored.name;
+      localStorage.setItem('kairo_user', JSON.stringify(stored));
+      statusEl.textContent = 'Saved successfully';
+      setTimeout(() => { statusEl.textContent = ''; }, 2500);
+    }
+  } catch(e) {
+    statusEl.textContent = 'Could not save. Please try again.';
+    statusEl.style.color = '#ef9a9a';
+  }
+}
 </script>
 <!-- Edit name modal -->
 <div class="modal-overlay" id="editNameModal">

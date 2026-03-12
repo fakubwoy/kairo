@@ -736,6 +736,19 @@ def get_resumes():
         'job_description': r.job_description[:100] + '...' if r.job_description and len(r.job_description) > 100 else r.job_description
     } for r in resumes])
 
+@app.route('/api/resumes/<int:resume_id>', methods=['GET'])
+def get_resume(resume_id):
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    resume = Resume.query.filter_by(id=resume_id, student_id=sid).first()
+    if not resume:
+        return jsonify({'error': 'Resume not found'}), 404
+    data = json.loads(resume.resume_data or '{}')
+    data['resume_id'] = resume.id
+    data['created_at'] = resume.created_at.isoformat()
+    return jsonify(data)
+
 @app.route('/api/conversations/active')
 def active_conversation():
     """Return the most recent conversation with its messages for session restore."""

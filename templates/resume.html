@@ -19,287 +19,247 @@
 body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
 
 .sidebar {
-  width: 240px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem 0;
-  position: fixed;
-  height: 100vh;
-  z-index: 10;
+  width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 1.5rem 0;
+  position: fixed; height: 100vh; z-index: 10;
 }
-
 .sidebar-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.5rem;
-  font-weight: 900;
-  color: var(--gold);
-  padding: 0 1.5rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 1rem;
+  font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900;
+  color: var(--gold); padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid var(--border); margin-bottom: 1rem;
 }
-
 .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.7rem 1.5rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-decoration: none;
-  border-left: 2px solid transparent;
+  display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1.5rem;
+  color: var(--muted); font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+  text-decoration: none; border-left: 2px solid transparent;
 }
-
 .nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
 
 .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
-
-.page-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; }
+.page-header { margin-bottom: 1.5rem; }
 .page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 0.3rem; }
 .page-header p { color: var(--muted); font-size: 0.95rem; }
 
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+.tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  padding: 0.6rem 1.2rem; cursor: pointer; transition: all 0.2s; margin-bottom: -1px;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.tab-btn:hover { color: var(--cream); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
 
-/* JD Input */
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-}
+.panel { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; }
+.panel h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; margin-bottom: 1rem; }
 
-.panel h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.2rem;
-  margin-bottom: 1rem;
-}
+.field-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; display: block; }
 
-.field-label {
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.4rem;
-  display: block;
-}
-
-textarea, input[type="text"], input[type="url"] {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--cream);
-  padding: 0.7rem 1rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.2s;
-  resize: vertical;
-}
-
-textarea:focus, input:focus { border-color: rgba(201,168,76,0.4); }
-textarea::placeholder, input::placeholder { color: rgba(245,240,232,0.2); }
+textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--cream); padding: 0.7rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; resize: vertical; }
+textarea:focus { border-color: rgba(201,168,76,0.4); }
+textarea::placeholder { color: rgba(245,240,232,0.2); }
 
 .btn-gold {
-  background: var(--gold);
-  color: var(--ink);
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 1rem;
-  transition: opacity 0.2s;
+  background: var(--gold); color: var(--ink); border: none; padding: 0.75rem 1.5rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; width: 100%; margin-top: 1rem; transition: opacity 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
 }
-
 .btn-gold:hover { opacity: 0.85; }
 .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Resume preview */
-.resume-preview {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  min-height: 500px;
-}
-
-.preview-toolbar {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
+.resume-preview { background: var(--surface); border: 1px solid var(--border); min-height: 500px; }
+.preview-toolbar { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .preview-toolbar h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
 
 .btn-outline {
-  background: transparent;
-  border: 1px solid rgba(201,168,76,0.3);
-  color: var(--gold);
-  padding: 0.4rem 1rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold);
+  padding: 0.4rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;
 }
-
 .btn-outline:hover { background: rgba(201,168,76,0.1); }
 
 .preview-body { padding: 1.5rem; }
 
-/* Resume document style */
+/* Professional resume document (Times-based, like attached PDF) */
 .resume-doc {
-  background: white;
-  color: #1a1a1a;
-  padding: 2.5rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  border-radius: 2px;
+  background: white; color: #1a1a1a; padding: 2rem 2.4rem;
+  font-family: 'Times New Roman', Times, serif; font-size: 10.5pt; line-height: 1.4;
+  max-width: 720px; margin: 0 auto;
 }
-
-.resume-doc .r-name {
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #0a0a0f;
-  margin-bottom: 0.3rem;
-}
-
+.resume-doc .r-name { font-size: 21pt; font-weight: 700; text-align: center; margin-bottom: 0.35rem; color: #000; }
 .resume-doc .r-contact {
-  font-size: 0.8rem;
-  color: #555;
-  margin-bottom: 1.2rem;
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+  font-size: 9pt; color: #333; text-align: center;
+  display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;
+  margin-bottom: 0.9rem; font-family: Arial, sans-serif;
 }
-
-.resume-doc .r-section {
-  margin-bottom: 1.2rem;
-}
-
+.resume-doc .r-contact a { color: #1a0dab; text-decoration: none; }
+.resume-doc .r-contact-sep { color: #bbb; }
+.resume-doc .r-section { margin-bottom: 0.9rem; }
 .resume-doc .r-section-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #c9a84c;
-  border-bottom: 1px solid #c9a84c;
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.7rem;
+  font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  border-bottom: 1.5px solid #000; padding-bottom: 0.12rem; margin-bottom: 0.5rem;
+  font-family: Arial, sans-serif; color: #000;
 }
-
-.resume-doc .r-item { margin-bottom: 0.7rem; }
-.resume-doc .r-item-header { display: flex; justify-content: space-between; }
-.resume-doc .r-item-title { font-weight: 600; font-size: 0.9rem; }
-.resume-doc .r-item-subtitle { color: #555; font-size: 0.8rem; }
-.resume-doc .r-item-date { color: #888; font-size: 0.8rem; white-space: nowrap; }
-.resume-doc .r-bullets { margin-top: 0.3rem; padding-left: 1.2rem; }
-.resume-doc .r-bullets li { margin-bottom: 0.2rem; color: #333; }
-.resume-doc .r-skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.resume-doc .r-skill-tag {
-  background: #f5f0e8;
-  border: 1px solid #e8d5a3;
-  color: #555;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.75rem;
-  border-radius: 2px;
-}
+.resume-doc .r-summary { font-size: 10pt; color: #222; line-height: 1.5; }
+.resume-doc .r-edu-item { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.2rem; }
+.resume-doc .r-institution { font-weight: 700; font-size: 10.5pt; }
+.resume-doc .r-degree { font-style: italic; font-size: 10pt; color: #333; }
+.resume-doc .r-edu-right { text-align: right; font-size: 10pt; color: #333; white-space: nowrap; margin-left: 1rem; }
+.resume-doc .r-exp-item { margin-bottom: 0.6rem; }
+.resume-doc .r-exp-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.resume-doc .r-exp-company { font-weight: 700; font-size: 10.5pt; }
+.resume-doc .r-exp-sub { font-size: 10pt; color: #333; }
+.resume-doc .r-exp-role { font-style: italic; font-size: 10pt; }
+.resume-doc .r-exp-date { font-size: 10pt; color: #333; white-space: nowrap; margin-left: 1rem; text-align: right; }
+.resume-doc .r-bullets { padding-left: 1.3rem; list-style-type: disc; margin-top: 0.2rem; }
+.resume-doc .r-bullets li { font-size: 10pt; color: #1a1a1a; margin-bottom: 0.12rem; line-height: 1.45; }
+.resume-doc .r-proj-item { margin-bottom: 0.5rem; }
+.resume-doc .r-proj-header { display: flex; justify-content: space-between; align-items: baseline; }
+.resume-doc .r-proj-name { font-weight: 700; font-size: 10.5pt; }
+.resume-doc .r-proj-tech { font-style: italic; color: #444; font-size: 10pt; }
+.resume-doc .r-proj-date { font-size: 10pt; color: #333; white-space: nowrap; margin-left: 1rem; }
+.resume-doc .r-pub-item { font-size: 10pt; margin-bottom: 0.3rem; line-height: 1.45; }
+.resume-doc .r-skills-row { font-size: 10pt; margin-bottom: 0.18rem; line-height: 1.5; }
+.resume-doc .r-skills-label { font-weight: 700; }
 
 .empty-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  color: var(--muted);
-  text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 400px; color: var(--muted); text-align: center; gap: 0.3rem;
 }
-
-.empty-preview-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.4; }
-
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  gap: 0.5rem;
-  color: var(--gold);
-}
-
-.spinner {
-  width: 20px; height: 20px;
-  border: 2px solid rgba(201,168,76,0.2);
-  border-top-color: var(--gold);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
+.empty-preview svg { opacity: 0.3; margin-bottom: 0.5rem; }
+.loading-state { display: flex; align-items: center; justify-content: center; height: 300px; gap: 0.5rem; color: var(--gold); }
+.spinner { width: 20px; height: 20px; border: 2px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Saved resumes view */
+.resumes-viewer { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
+.resumes-sidebar { background: var(--surface); border: 1px solid var(--border); }
+.resumes-sidebar-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); font-family: 'Playfair Display', serif; font-size: 1.05rem; }
+
+.saved-resume-item {
+  padding: 0.9rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.08);
+  cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;
+}
+.saved-resume-item:hover { background: rgba(201,168,76,0.05); }
+.saved-resume-item.selected { background: rgba(201,168,76,0.08); border-left: 2px solid var(--gold); }
+.sri-title { font-size: 0.88rem; font-weight: 500; margin-bottom: 0.2rem; line-height: 1.3; }
+.sri-date { font-size: 0.73rem; color: var(--muted); }
+.btn-sm {
+  background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold);
+  padding: 0.3rem 0.7rem; font-size: 0.78rem; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0;
+}
+.btn-sm:hover { background: rgba(201,168,76,0.1); }
+
+.empty-list { padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; line-height: 1.8; }
 
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main { margin-left: 0; }
-  .two-col { grid-template-columns: 1fr; }
+  .two-col, .resumes-viewer { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+</svg>
+
 <nav class="sidebar">
   <div class="sidebar-logo">Kairo</div>
-  <a href="/dashboard" class="nav-item"><span>⊞</span> Dashboard</a>
-  <a href="/interview" class="nav-item"><span>🎤</span> Build Profile</a>
-  <a href="/resume" class="nav-item active"><span>📄</span> My Resumes</a>
+  <a href="/dashboard" class="nav-item"><svg class="nav-icon"><use href="#i-grid"/></svg> Dashboard</a>
+  <a href="/interview" class="nav-item"><svg class="nav-icon"><use href="#i-mic"/></svg> Build Profile</a>
+  <a href="/resume" class="nav-item active"><svg class="nav-icon"><use href="#i-file"/></svg> My Resumes</a>
 </nav>
 
 <main class="main">
   <div class="page-header">
-    <div>
-      <h1>Resume Generator</h1>
-      <p>Paste a job description and get a tailored resume in seconds</p>
+    <h1>Resumes</h1>
+    <p>Generate tailored resumes or view your saved ones</p>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-generate" onclick="switchTab('generate')">
+      <svg width="15" height="15"><use href="#i-zap"/></svg> Generate New
+    </button>
+    <button class="tab-btn" id="tab-saved" onclick="switchTab('saved')">
+      <svg width="15" height="15"><use href="#i-list"/></svg> Saved Resumes
+      <span id="resumeCount" style="font-size:0.75rem; opacity:0.6"></span>
+    </button>
+  </div>
+
+  <!-- Generate tab -->
+  <div id="pane-generate">
+    <div class="two-col">
+      <div>
+        <div class="panel">
+          <h2>Job Description</h2>
+          <label class="field-label">Paste the JD or describe the role</label>
+          <textarea id="jdInput" rows="10" placeholder="Paste the full job description here..."></textarea>
+          <button class="btn-gold" id="generateBtn" onclick="generateResume()">
+            <svg width="15" height="15"><use href="#i-zap"/></svg> Generate Custom Resume
+          </button>
+        </div>
+        <div class="panel" style="margin-top:1rem">
+          <h2>Quick Tips</h2>
+          <ul style="color:var(--muted); font-size:0.85rem; line-height:2.1; padding-left:1.2rem;">
+            <li>Include the full JD for best results</li>
+            <li>The more profile data you've shared, the better</li>
+            <li>You can generate multiple versions</li>
+            <li>Download as PDF for applications</li>
+          </ul>
+        </div>
+      </div>
+      <div class="resume-preview">
+        <div class="preview-toolbar">
+          <h2>Resume Preview</h2>
+          <button class="btn-outline" id="downloadBtn" onclick="downloadCurrentResume()" style="display:none">
+            <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
+          </button>
+        </div>
+        <div class="preview-body" id="previewBody">
+          <div class="empty-preview">
+            <svg width="38" height="38"><use href="#i-file"/></svg>
+            <div>Your resume will appear here</div>
+            <div style="font-size:0.8rem; color:var(--muted)">Build your profile first, then generate a resume</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="two-col">
-    <div>
-      <div class="panel">
-        <h2>Job Description</h2>
-        <label class="field-label">Paste the JD or describe the role</label>
-        <textarea id="jdInput" rows="10" placeholder="Paste the full job description here...
-
-Example:
-We are looking for a Software Development Engineer with experience in React, Node.js, and AWS. The candidate should have strong problem-solving skills and experience with REST APIs..."></textarea>
-        <button class="btn-gold" id="generateBtn" onclick="generateResume()">⚡ Generate Custom Resume</button>
+  <!-- Saved resumes tab -->
+  <div id="pane-saved" style="display:none">
+    <div class="resumes-viewer">
+      <div class="resumes-sidebar">
+        <div class="resumes-sidebar-header">Your Resumes</div>
+        <div id="savedList"><div class="empty-list">Loading...</div></div>
       </div>
-
-      <div class="panel" style="margin-top: 1rem;">
-        <h2>Quick Tips</h2>
-        <ul style="color:var(--muted); font-size:0.85rem; line-height:2; padding-left:1.2rem;">
-          <li>Include the full JD for best results</li>
-          <li>The more profile data you've shared, the better</li>
-          <li>You can generate multiple versions</li>
-          <li>Download as PDF for applications</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="resume-preview">
-      <div class="preview-toolbar">
-        <h2>Resume Preview</h2>
-        <div style="display:flex; gap:0.5rem;">
-          <button class="btn-outline" id="downloadBtn" onclick="downloadResume()" style="display:none">↓ Download PDF</button>
+      <div class="resume-preview">
+        <div class="preview-toolbar">
+          <h2>Resume Preview</h2>
+          <button class="btn-outline" id="savedDownloadBtn" onclick="downloadSavedResume()" style="display:none">
+            <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
+          </button>
         </div>
-      </div>
-      <div class="preview-body" id="previewBody">
-        <div class="empty-preview">
-          <div class="empty-preview-icon">📄</div>
-          <div>Your resume will appear here</div>
-          <div style="font-size:0.8rem; margin-top:0.4rem;">Build your profile first, then generate a resume</div>
+        <div class="preview-body" id="savedPreviewBody">
+          <div class="empty-preview">
+            <svg width="38" height="38"><use href="#i-list"/></svg>
+            <div>Select a resume from the list</div>
+          </div>
         </div>
       </div>
     </div>
@@ -307,198 +267,222 @@ We are looking for a Software Development Engineer with experience in React, Nod
 </main>
 
 <script>
-let currentResumeData = null;
+let currentGeneratedData = null;
+let currentSavedData = null;
 
+function switchTab(tab) {
+  document.getElementById('pane-generate').style.display = tab === 'generate' ? '' : 'none';
+  document.getElementById('pane-saved').style.display = tab === 'saved' ? '' : 'none';
+  document.getElementById('tab-generate').classList.toggle('active', tab === 'generate');
+  document.getElementById('tab-saved').classList.toggle('active', tab === 'saved');
+  if (tab === 'saved') loadSavedResumes();
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
 async function generateResume() {
   const jd = document.getElementById('jdInput').value.trim();
   if (!jd) { alert('Please paste a job description first'); return; }
-  
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
-  
-  document.getElementById('previewBody').innerHTML = `
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <span>Kairo is crafting your resume...</span>
-    </div>
-  `;
-  
+  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Generating...';
+  document.getElementById('previewBody').innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Crafting your resume...</span></div>';
   try {
     const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-    
     const res = await fetch('/api/generate-resume', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        job_description: jd,
-        profile_data: user.profile || {}
-      })
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ job_description: jd, profile_data: user.profile || {} })
     });
-    
     const data = await res.json();
-    
     if (data.error) {
-      document.getElementById('previewBody').innerHTML = `
-        <div class="empty-preview">
-          <div class="empty-preview-icon">⚠️</div>
-          <div>${data.error}</div>
-          <div style="margin-top:1rem;"><a href="/interview" style="color:var(--gold)">→ Build your profile first</a></div>
-        </div>
-      `;
+      document.getElementById('previewBody').innerHTML = `<div class="empty-preview"><svg width="32" height="32"><use href="#i-alert"/></svg><div>${data.error}</div><div style="margin-top:0.8rem"><a href="/interview" style="color:var(--gold)">Build your profile first →</a></div></div>`;
       return;
     }
-    
-    currentResumeData = data;
-    renderResume(data);
+    currentGeneratedData = data;
+    renderResume(data, 'previewBody', 'gen');
     document.getElementById('downloadBtn').style.display = 'inline-flex';
-    
+    loadResumeCount();
   } catch(e) {
-    document.getElementById('previewBody').innerHTML = `<div class="empty-preview"><div>Error generating resume. Please try again.</div></div>`;
+    document.getElementById('previewBody').innerHTML = '<div class="empty-preview"><div>Error generating resume. Please try again.</div></div>';
   }
-  
   btn.disabled = false;
-  btn.textContent = '⚡ Generate Custom Resume';
+  btn.innerHTML = '<svg width="15" height="15"><use href="#i-zap"/></svg> Generate Custom Resume';
 }
 
-function renderResume(data) {
-  if (!data || data.error) return;
-  
-  const skills = data.skills || {};
-  const allSkills = [...(skills.technical || []), ...(skills.tools || [])];
-  
-  const experienceHTML = (data.experience || []).map(e => `
-    <div class="r-item">
-      <div class="r-item-header">
-        <div><div class="r-item-title">${e.role || ''}</div><div class="r-item-subtitle">${e.company || ''}</div></div>
-        <div class="r-item-date">${e.duration || ''}</div>
-      </div>
-      ${(e.points || []).length > 0 ? `<ul class="r-bullets">${e.points.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
-    </div>
-  `).join('');
-  
-  const projectsHTML = (data.projects || []).map(p => `
-    <div class="r-item">
-      <div class="r-item-title">${p.name || ''} <span style="font-weight:400;color:#888;">${(p.tech || []).join(', ')}</span></div>
-      <div style="color:#333; margin-top:0.2rem;">${p.description || ''}</div>
-      ${p.impact ? `<div style="color:#555; font-style:italic; margin-top:0.2rem;">${p.impact}</div>` : ''}
-    </div>
-  `).join('');
-  
-  const educationHTML = (data.education || []).map(e => `
-    <div class="r-item">
-      <div class="r-item-header">
-        <div><div class="r-item-title">${e.degree || ''}</div><div class="r-item-subtitle">${e.institution || ''}</div></div>
-        <div><div class="r-item-date">${e.year || ''}</div>${e.cgpa ? `<div class="r-item-date">CGPA: ${e.cgpa}</div>` : ''}</div>
-      </div>
-    </div>
-  `).join('');
-  
-  document.getElementById('previewBody').innerHTML = `
-    <div class="resume-doc" id="resumeDoc">
-      <div class="r-name">${data.name || 'Your Name'}</div>
-      <div class="r-contact">
-        ${data.email ? `<span>✉ ${data.email}</span>` : ''}
-        ${data.phone ? `<span>☏ ${data.phone}</span>` : ''}
-        ${data.linkedin ? `<span>in ${data.linkedin}</span>` : ''}
-        ${data.github ? `<span>⎋ ${data.github}</span>` : ''}
-      </div>
-      
-      ${data.summary ? `
-      <div class="r-section">
-        <div class="r-section-title">Professional Summary</div>
-        <p style="color:#333;">${data.summary}</p>
-      </div>` : ''}
-      
-      ${educationHTML ? `
-      <div class="r-section">
-        <div class="r-section-title">Education</div>
-        ${educationHTML}
-      </div>` : ''}
-      
-      ${allSkills.length > 0 ? `
-      <div class="r-section">
-        <div class="r-section-title">Technical Skills</div>
-        <div class="r-skills">
-          ${allSkills.map(s => `<span class="r-skill-tag">${s}</span>`).join('')}
+// ── Saved resumes ─────────────────────────────────────────────────────────────
+async function loadResumeCount() {
+  try {
+    const r = await fetch('/api/resumes');
+    const d = await r.json();
+    const el = document.getElementById('resumeCount');
+    if (el) el.textContent = d.length > 0 ? `(${d.length})` : '';
+  } catch(e) {}
+}
+
+async function loadSavedResumes() {
+  const listEl = document.getElementById('savedList');
+  listEl.innerHTML = '<div class="empty-list">Loading...</div>';
+  try {
+    const res = await fetch('/api/resumes');
+    const resumes = await res.json();
+    const el = document.getElementById('resumeCount');
+    if (el) el.textContent = resumes.length > 0 ? `(${resumes.length})` : '';
+    if (resumes.length === 0) {
+      listEl.innerHTML = '<div class="empty-list">No saved resumes yet.<br><a href="#" onclick="switchTab(\'generate\')" style="color:var(--gold)">Generate your first resume →</a></div>';
+      return;
+    }
+    listEl.innerHTML = resumes.map(r => `
+      <div class="saved-resume-item" id="sri-${r.id}" onclick="viewResume(${r.id})">
+        <div style="min-width:0">
+          <div class="sri-title">${trunc(r.job_description || 'Resume', 48)}</div>
+          <div class="sri-date">${fmtDate(r.created_at)}</div>
         </div>
-        ${skills.soft?.length > 0 ? `<div style="margin-top:0.5rem; color:#555; font-size:0.8rem;">Soft Skills: ${skills.soft.join(', ')}</div>` : ''}
-      </div>` : ''}
-      
-      ${projectsHTML ? `
-      <div class="r-section">
-        <div class="r-section-title">Projects</div>
-        ${projectsHTML}
-      </div>` : ''}
-      
-      ${experienceHTML ? `
-      <div class="r-section">
-        <div class="r-section-title">Experience</div>
-        ${experienceHTML}
-      </div>` : ''}
-      
-      ${(data.certifications || []).length > 0 ? `
-      <div class="r-section">
-        <div class="r-section-title">Certifications</div>
-        <ul class="r-bullets">
-          ${data.certifications.map(c => `<li>${c}</li>`).join('')}
-        </ul>
-      </div>` : ''}
-      
-      ${(data.achievements || []).length > 0 ? `
-      <div class="r-section">
-        <div class="r-section-title">Achievements</div>
-        <ul class="r-bullets">
-          ${data.achievements.map(a => `<li>${a}</li>`).join('')}
-        </ul>
-      </div>` : ''}
-      
-      ${(data.extracurriculars || []).length > 0 ? `
-      <div class="r-section">
-        <div class="r-section-title">Extracurriculars</div>
-        <ul class="r-bullets">
-          ${data.extracurriculars.map(e => `<li>${e}</li>`).join('')}
-        </ul>
-      </div>` : ''}
-    </div>
-  `;
+        <button class="btn-sm" onclick="event.stopPropagation();viewResume(${r.id})">
+          <svg width="13" height="13"><use href="#i-eye"/></svg> View
+        </button>
+      </div>`).join('');
+    // Auto-select first
+    viewResume(resumes[0].id);
+  } catch(e) {
+    listEl.innerHTML = '<div class="empty-list">Could not load resumes.</div>';
+  }
 }
 
-function downloadResume() {
-  const doc = document.getElementById('resumeDoc');
+async function viewResume(id) {
+  document.querySelectorAll('.saved-resume-item').forEach(el => el.classList.remove('selected'));
+  const itemEl = document.getElementById(`sri-${id}`);
+  if (itemEl) itemEl.classList.add('selected');
+  const body = document.getElementById('savedPreviewBody');
+  body.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Loading...</span></div>';
+  try {
+    const res = await fetch(`/api/resumes/${id}`);
+    const data = await res.json();
+    if (data.error) { body.innerHTML = `<div class="empty-preview"><div>${data.error}</div></div>`; return; }
+    currentSavedData = data;
+    renderResume(data, 'savedPreviewBody', 'saved');
+    document.getElementById('savedDownloadBtn').style.display = 'inline-flex';
+  } catch(e) {
+    body.innerHTML = '<div class="empty-preview"><div>Could not load this resume.</div></div>';
+  }
+}
+
+function downloadCurrentResume() { printDoc('resume-doc-gen'); }
+function downloadSavedResume() { printDoc('resume-doc-saved'); }
+
+// ── Resume renderer (professional Times New Roman format) ─────────────────────
+function renderResume(data, targetId, suffix) {
+  if (!data || data.error) return;
+  const sk = data.skills || {};
+
+  const contacts = [];
+  if (data.phone) contacts.push(data.phone);
+  if (data.email) contacts.push(`<a href="mailto:${data.email}">${data.email}</a>`);
+  if (data.linkedin) { const l = data.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,''); contacts.push(`<a href="${ensureHttp(data.linkedin)}" target="_blank">linkedin.com/in/${l}</a>`); }
+  if (data.github) { const g = data.github.replace(/^https?:\/\/(www\.)?github\.com\//,''); contacts.push(`<a href="${ensureHttp(data.github)}" target="_blank">github.com/${g}</a>`); }
+
+  const sep = '<span class="r-contact-sep"> | </span>';
+
+  const summaryHtml = data.summary ? `<div class="r-section"><div class="r-section-title">Summary</div><p class="r-summary">${esc(data.summary)}</p></div>` : '';
+
+  const eduHtml = arr(data.education).length ? `<div class="r-section"><div class="r-section-title">Education</div>${arr(data.education).map(e=>`
+    <div class="r-edu-item">
+      <div><div class="r-institution">${esc(e.institution||'')}</div><div class="r-degree">${esc(e.degree||'')}${e.cgpa?` &mdash; CGPA: ${esc(e.cgpa)}`:''}${e.specialization?` (${esc(e.specialization)})`:''}${e.stream?` &mdash; ${esc(e.stream)}`:''}</div></div>
+      <div class="r-edu-right">${esc(e.year||e.duration||'')}</div>
+    </div>`).join('')}</div>` : '';
+
+  const expHtml = arr(data.experience).length ? `<div class="r-section"><div class="r-section-title">Experience</div>${arr(data.experience).map(e=>`
+    <div class="r-exp-item">
+      <div class="r-exp-header">
+        <div><div class="r-exp-company">${esc(e.company||'')}${e.location?`<span class="r-exp-sub"> &mdash; ${esc(e.location)}</span>`:''}</div><div class="r-exp-role">${esc(e.role||'')}</div></div>
+        <div class="r-exp-date">${esc(e.duration||'')}</div>
+      </div>
+      ${arr(e.points).length?`<ul class="r-bullets">${arr(e.points).map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`:''}
+    </div>`).join('')}</div>` : '';
+
+  const projHtml = arr(data.projects).length ? `<div class="r-section"><div class="r-section-title">Projects</div>${arr(data.projects).map(p=>`
+    <div class="r-proj-item">
+      <div class="r-proj-header">
+        <div><span class="r-proj-name">${esc(p.name||'')}</span>${arr(p.tech).length?` <span class="r-proj-tech">| ${p.tech.map(esc).join(', ')}</span>`:''}</div>
+        ${p.year?`<div class="r-proj-date">${esc(p.year)}</div>`:''}
+      </div>
+      ${p.description||p.impact?`<ul class="r-bullets">${p.description?`<li>${esc(p.description)}</li>`:''} ${p.impact?`<li>${esc(p.impact)}</li>`:''}</ul>`:''}
+    </div>`).join('')}</div>` : '';
+
+  const pubHtml = arr(data.publications).length ? `<div class="r-section"><div class="r-section-title">Publications</div>${arr(data.publications).map(p=>`<div class="r-pub-item">${esc(typeof p==='string'?p:(p.citation||p.title||''))}</div>`).join('')}</div>` : '';
+
+  const certHtml = arr(data.certifications).length ? `<div class="r-section"><div class="r-section-title">Certifications</div><ul class="r-bullets">${arr(data.certifications).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>` : '';
+
+  const achHtml = arr(data.achievements).length ? `<div class="r-section"><div class="r-section-title">Key Achievements</div><ul class="r-bullets">${arr(data.achievements).map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>` : '';
+
+  // Skills — structured rows matching attached PDF format
+  const allTech = [...arr(sk.technical||[]), ...arr(sk.tools||[])];
+  const skillRows = [];
+  if (arr(sk.languages).length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Languages:</span> ${sk.languages.map(esc).join(', ')}</div>`);
+  if (allTech.length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Libraries &amp; Tools:</span> ${allTech.map(esc).join(', ')}</div>`);
+  if (arr(sk.databases).length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Databases:</span> ${sk.databases.map(esc).join(', ')}</div>`);
+  if (arr(sk.soft).length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Key Areas:</span> ${sk.soft.map(esc).join(', ')}</div>`);
+  if (!skillRows.length && allTech.length) skillRows.push(`<div class="r-skills-row">${allTech.map(esc).join(', ')}</div>`);
+  const skillHtml = skillRows.length ? `<div class="r-section"><div class="r-section-title">Technical Skills</div>${skillRows.join('')}</div>` : '';
+
+  document.getElementById(targetId).innerHTML = `
+    <div class="resume-doc" id="resume-doc-${suffix}">
+      <div class="r-name">${esc(data.name||'Your Name')}</div>
+      <div class="r-contact">${contacts.join(sep)}</div>
+      ${summaryHtml}${eduHtml}${expHtml}${projHtml}${pubHtml}${certHtml}${achHtml}${skillHtml}
+    </div>`;
+}
+
+function printDoc(docId) {
+  const doc = document.getElementById(docId);
   if (!doc) return;
-  
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Resume - Kairo</title>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
-      <style>
-        body { margin: 0; padding: 2rem; font-family: 'DM Sans', sans-serif; background: white; color: #1a1a1a; }
-        ${doc.parentElement.innerHTML.includes('r-name') ? '' : ''}
-        .r-name { font-size: 1.6rem; font-weight: 700; color: #0a0a0f; margin-bottom: 0.3rem; }
-        .r-contact { font-size: 0.8rem; color: #555; margin-bottom: 1.2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
-        .r-section { margin-bottom: 1.2rem; }
-        .r-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c9a84c; border-bottom: 1px solid #c9a84c; padding-bottom: 0.3rem; margin-bottom: 0.7rem; }
-        .r-item { margin-bottom: 0.7rem; }
-        .r-item-header { display: flex; justify-content: space-between; }
-        .r-item-title { font-weight: 600; font-size: 0.9rem; }
-        .r-item-subtitle { color: #555; font-size: 0.8rem; }
-        .r-item-date { color: #888; font-size: 0.8rem; }
-        .r-bullets { margin-top: 0.3rem; padding-left: 1.2rem; }
-        .r-bullets li { margin-bottom: 0.2rem; color: #333; }
-        .r-skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-        .r-skill-tag { background: #f5f0e8; border: 1px solid #e8d5a3; color: #555; padding: 0.2rem 0.6rem; font-size: 0.75rem; }
-        @media print { body { padding: 0; } }
-      </style>
-    </head>
-    <body>${doc.outerHTML}</body>
-    </html>
-  `);
-  printWindow.document.close();
-  setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>Resume — Kairo</title><style>
+    body{margin:0;padding:0;background:white}
+    .resume-doc{padding:1.8rem 2.2rem;font-family:'Times New Roman',Times,serif;font-size:10.5pt;line-height:1.4;color:#1a1a1a}
+    .r-name{font-size:20pt;font-weight:700;text-align:center;margin-bottom:.3rem;color:#000}
+    .r-contact{font-size:9pt;color:#333;text-align:center;display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem;font-family:Arial,sans-serif}
+    .r-contact a{color:#1a0dab;text-decoration:none}
+    .r-contact-sep{color:#bbb}
+    .r-section{margin-bottom:.8rem}
+    .r-section-title{font-size:10pt;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border-bottom:1.5px solid #000;padding-bottom:.1rem;margin-bottom:.45rem;font-family:Arial,sans-serif;color:#000}
+    .r-summary{font-size:10pt;line-height:1.5}
+    .r-edu-item{display:flex;justify-content:space-between;margin-bottom:.2rem}
+    .r-institution{font-weight:700}
+    .r-degree{font-style:italic;font-size:10pt;color:#333}
+    .r-edu-right{text-align:right;font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem}
+    .r-exp-item{margin-bottom:.5rem}
+    .r-exp-header{display:flex;justify-content:space-between}
+    .r-exp-company{font-weight:700}
+    .r-exp-sub{font-weight:400}
+    .r-exp-role{font-style:italic;font-size:10pt}
+    .r-exp-date{font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem;text-align:right}
+    .r-bullets{padding-left:1.3rem;list-style-type:disc;margin-top:.18rem}
+    .r-bullets li{font-size:10pt;margin-bottom:.1rem;line-height:1.4}
+    .r-proj-item{margin-bottom:.45rem}
+    .r-proj-header{display:flex;justify-content:space-between;align-items:baseline}
+    .r-proj-name{font-weight:700}
+    .r-proj-tech{font-style:italic;color:#444;font-size:10pt}
+    .r-proj-date{font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem}
+    .r-pub-item{font-size:10pt;margin-bottom:.25rem;line-height:1.45}
+    .r-skills-row{font-size:10pt;margin-bottom:.15rem;line-height:1.5}
+    .r-skills-label{font-weight:700}
+    @media print{body{padding:0}}
+  </style></head><body>${doc.outerHTML}</body></html>`);
+  w.document.close();
+  setTimeout(() => { w.print(); w.close(); }, 600);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function arr(v) { return Array.isArray(v) ? v : []; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function trunc(s, n) { return s && s.length > n ? s.slice(0, n) + '…' : s; }
+function fmtDate(iso) { return new Date(iso).toLocaleDateString('en-US', {day:'numeric',month:'short',year:'numeric'}); }
+function ensureHttp(url) { return url.startsWith('http') ? url : 'https://' + url; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (window.location.search.includes('tab=saved') || window.location.hash === '#saved') {
+  switchTab('saved');
+} else {
+  loadResumeCount();
 }
 </script>
 </body>
