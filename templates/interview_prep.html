@@ -894,8 +894,21 @@ function speakText(text, onEnd) {
   const preferred = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Google US English') || v.name.includes('Daniel') || v.name.includes('Alex'));
   if (preferred) utter.voice = preferred;
 
-  utter.onend = () => { if (onEnd) onEnd(); };
-  utter.onerror = () => { if (onEnd) onEnd(); };
+  // Fallback: if speechSynthesis onend never fires (known Chrome bug),
+  // estimate duration and enable the mic after a timeout.
+  let callbackFired = false;
+  const fireOnce = () => {
+    if (callbackFired) return;
+    callbackFired = true;
+    if (onEnd) onEnd();
+  };
+
+  // Estimate ~80ms per character + 1s buffer
+  const estimatedMs = Math.max(3000, text.length * 80 + 1000);
+  const fallbackTimer = setTimeout(fireOnce, estimatedMs);
+
+  utter.onend = () => { clearTimeout(fallbackTimer); fireOnce(); };
+  utter.onerror = () => { clearTimeout(fallbackTimer); fireOnce(); };
   currentSpeech = utter;
   window.speechSynthesis.speak(utter);
 }
@@ -931,8 +944,8 @@ function setMicState(state) {
   btn.disabled = false;
 
   if (state === 'waiting') {
-    btn.disabled = true;
-    label.textContent = 'Wait…';
+    // Allow clicking to skip/interrupt AI speech — don't fully disable
+    label.textContent = 'Skip & speak';
   } else if (state === 'ready') {
     label.textContent = 'Tap to speak';
     micInd.classList.remove('recording');
@@ -966,6 +979,15 @@ async function toggleRecording() {
   if (isRecording) {
     stopRecording();
     return;
+  }
+
+  // If AI is still speaking, interrupt and hand control to user immediately
+  if (currentSpeech && window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    setAiSpeaking(false);
+    setStatus('listening', 'Your turn — speak your answer');
+    currentAnswerText = '';
+    updateAnswerPreview('');
   }
 
   // Ensure we have an audio stream
