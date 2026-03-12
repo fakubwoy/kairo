@@ -691,9 +691,18 @@ def health():
     s = get_llm_status()
     return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
-# Create tables on startup — runs whether launched via gunicorn or python app.py
+# Startup — create tables and apply any missing column migrations
 with app.app_context():
     db.create_all()
+    # Migrate: add password_hash if it doesn't exist (for pre-existing Postgres DBs)
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text(
+                "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)"
+            ))
+            conn.commit()
+    except Exception as e:
+        print(f"Migration note: {e}")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
