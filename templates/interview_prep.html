@@ -990,49 +990,48 @@ async function toggleRecording() {
     updateAnswerPreview('');
   }
 
-  // Ensure we have an audio stream
-  if (!stream || !stream.getAudioTracks().length) {
-    try {
-      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (stream) {
-        // Merge audio track into existing stream if video present
-        audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
-      } else {
-        stream = audioStream;
-      }
-    } catch(e) {
-      showToast('Microphone access denied. Please allow microphone access and try again.');
-      return;
-    }
-  }
-
-  startRecording();
+  await startRecording();
 }
 
-function startRecording() {
+async function startRecording() {
   audioChunks = [];
-  // Pick best supported mime type
+
+  // Always get a fresh audio-only stream — avoids MediaRecorder errors
+  // caused by passing a combined video+audio camera stream (Brave/Firefox bug)
+  let audioStream;
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch(e) {
+    showToast('Microphone access denied. Please allow microphone access and try again.');
+    setMicState('ready');
+    return;
+  }
+
   const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
     .find(m => MediaRecorder.isTypeSupported(m)) || '';
-  
+
   try {
     mediaRecorder = mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
+      ? new MediaRecorder(audioStream, { mimeType })
+      : new MediaRecorder(audioStream);
   } catch(e) {
     showToast('Could not start recording: ' + e.message);
+    setMicState('ready');
     return;
   }
 
   mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
-  mediaRecorder.onstop = () => transcribeAudio();
+  mediaRecorder.onstop = () => {
+    audioStream.getTracks().forEach(t => t.stop()); // release mic after each recording
+    transcribeAudio();
+  };
   mediaRecorder.onerror = e => {
     console.error('MediaRecorder error:', e);
     showToast('Recording error — please try again');
     setMicState('ready');
   };
 
-  mediaRecorder.start(100); // collect chunks every 100ms for reliability
+  mediaRecorder.start();
   isRecording = true;
   setMicState('recording');
 }
