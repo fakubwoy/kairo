@@ -14,6 +14,7 @@
   --muted: #6b6560;
   --surface: #13110e;
   --surface2: #1c1916;
+  --green: #4caf7d;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
@@ -184,7 +185,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .page-header p { color: var(--muted); font-size: 0.95rem; }
 
 /* Cards */
-.cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
 
 .card {
   background: var(--surface);
@@ -922,6 +923,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <p>Paste a job description and get a custom, ATS-optimized resume tailored to that role in seconds.</p>
       <div class="card-action">Create Resume →</div>
     </a>
+    <a href="/interview-prep" class="card">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <h3>Mock Interview</h3>
+      <p>Practice with an AI interviewer. Get scored on 8 tailored questions and receive a detailed report.</p>
+      <div class="card-action">Start Practice →</div>
+    </a>
     <div class="card" onclick="openUploadModal()">
       <div class="card-icon"><svg width="22" height="22"><use href="#i-folder"/></svg></div>
       <h3>Upload Documents</h3>
@@ -936,6 +945,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   </div>
   <div class="resumes-list" id="resumesList">
     <div class="empty-state">No resumes yet. Build your profile and generate your first resume!</div>
+  </div>
+
+  <div class="section-header" style="margin-top: 2rem;">
+    <h2>Recent Interviews</h2>
+    <a href="/interview-prep" class="btn-sm">View All</a>
+  </div>
+  <div class="resumes-list" id="interviewsList">
+    <div class="empty-state">No mock interviews yet. Practice with the AI interviewer to get started!</div>
   </div>
 </main>
 
@@ -1002,9 +1019,33 @@ async function loadResumes() {
   } catch(e) {}
 }
 
+async function loadInterviews() {
+  try {
+    const res = await fetch('/api/mock-interview/list', { credentials: 'include' });
+    const interviews = await res.json();
+    const list = document.getElementById('interviewsList');
+    if (!interviews.length) return;
+    list.innerHTML = interviews.slice(0, 5).map(iv => {
+      const scoreClass = iv.overall_score >= 75 ? 'color:var(--green)' : iv.overall_score >= 50 ? 'color:var(--gold)' : 'color:#e05c5c';
+      const date = new Date(iv.created_at).toLocaleDateString();
+      return `<div class="resume-item">
+        <div>
+          <div class="resume-item-title">${iv.job_title}</div>
+          <div class="resume-item-date">${date}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <span style="font-size:0.85rem;font-weight:600;${scoreClass}">${iv.overall_score ?? '—'}<span style="font-size:0.7rem;color:var(--muted);font-weight:400">/100</span></span>
+          <button class="btn-sm" onclick="window.location.href='/interview-prep'">View</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
 // Init
 if (user.profile) updateProfileDisplay(user.profile);
 loadResumes();
+loadInterviews();
 
 // ── AI Engine Bar ────────────────────────────────────────────────────────────
 

@@ -22,6 +22,7 @@ kairo/
     ├── index.html          # Landing page
     ├── dashboard.html      # User dashboard + profile editor
     ├── interview.html      # AI chat interface (profile builder)
+    ├── interview_prep.html # Mock interview (AI interviewer + voice answers)
     └── resume.html         # Resume generator + saved resumes viewer
 ```
 
@@ -33,7 +34,9 @@ kairo/
 
 **Resumes** — JD-based generation, ATS-friendly format, inline editing, PDF download, saved resumes viewer, version history with inline side-by-side diff
 
-**Voice Input** — microphone recording in the interview chat, transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser
+**Voice Input** — microphone recording in both the profile builder and mock interview; transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser; fresh audio-only stream per recording for broad browser compatibility including Brave
+
+**Mock Interview** — AI interviewer asks 8 tailored questions (behavioural, technical, profile-based) via TTS; candidate answers by voice or text; detailed post-interview report with overall score, readiness level, per-question scores, strengths, improvement areas, and actionable tips; full transcript saved to account
 
 **Imports & Tools** — GitHub profile import, LinkedIn text import, self-intro video script generator
 
@@ -46,7 +49,7 @@ kairo/
 ### 1. Clone and install
 
 ```bash
-git clone <your-repo>
+git clone https://github.com/fakubwoy/kairo.git
 cd kairo
 pip install -r requirements.txt
 ```
@@ -141,6 +144,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ## API Endpoints
 
+### Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/login` | Login or register |
@@ -148,29 +152,49 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | POST | `/api/auth/logout` | Clear session |
 | POST | `/api/auth/update-name` | Update display name |
 | POST | `/api/auth/change-password` | Change password |
+
+### Profile
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | GET, PUT | `/api/profile` | Get or update profile data |
+| POST | `/api/upload` | Upload PDF/image document |
+| DELETE | `/api/documents/<doc_index>` | Delete an uploaded document |
+
+### Chat (Profile Builder)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | POST | `/api/chat` | Send message to Kairo interview AI |
 | GET | `/api/conversations/active` | Get latest conversation |
 | POST | `/api/conversations/new` | Start a fresh conversation |
+
+### Resumes
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | POST | `/api/generate-resume` | Generate resume from JD |
 | GET | `/api/resumes` | List all saved resumes |
 | GET | `/api/resumes/<id>` | Get a specific saved resume |
-| POST | `/api/upload` | Upload PDF/image document |
+| POST | `/api/resumes/<id>/save-edit` | Save an inline edit to a resume |
+| GET | `/api/resumes/<id>/versions` | List version history for a resume |
+| GET | `/api/resumes/<id>/diff` | Get diff between two resume versions |
+
+### Mock Interview
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/mock-interview/start` | Generate questions and start a session |
+| POST | `/api/mock-interview/<id>/submit-answer` | Submit answer for a question |
+| POST | `/api/mock-interview/<id>/complete` | Finish interview and generate report |
+| GET | `/api/mock-interview/list` | List all past interview sessions |
+| GET | `/api/mock-interview/<id>` | Get a specific session with report and transcript |
+
+### Tools & Utilities
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | POST | `/api/transcribe` | Transcribe audio via Groq Whisper |
+| POST | `/api/github-profile` | Import profile data from GitHub username |
+| POST | `/api/linkedin-hints` | Extract hints from pasted LinkedIn text |
+| POST | `/api/generate-intro-script` | Generate a self-intro video script |
 | GET | `/api/llm-status` | Check LLM backend status |
 | GET | `/api/health` | Health check |
-
----
-
-## Recent UI Changes
-
-| Change | Description |
-|--------|-------------|
-| Upload Documents | Dashboard upload card now opens a drag-and-drop modal wired to `/api/upload` |
-| Version History panel | Clicking "History" overlays the resume preview instead of pushing content below |
-| Inline diff view | Side-by-side split diff (Before / After columns) with line-level highlighting |
-| Diff toggle | "Show Diff" button toggles — clicking again hides the diff |
-| GitHub / LinkedIn tabs | Moved to the right side of the tab bar; no longer show scraping/rate-limit notices |
 
 ---
 
