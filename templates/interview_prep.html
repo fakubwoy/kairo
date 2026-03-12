@@ -31,11 +31,52 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
 .nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
-.sidebar-bottom { margin-top: auto; padding: 1rem 1.5rem; border-top: 1px solid rgba(201,168,76,0.12); }
-.user-card { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
-.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(201,168,76,0.2); border: 1px solid rgba(201,168,76,0.4); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--gold); font-weight: 600; flex-shrink: 0; }
-.user-name { font-size: 0.85rem; font-weight: 500; }
-.user-email { font-size: 0.7rem; color: var(--muted); }
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(201,168,76,0.12);
+  position: relative;
+}
+.user-card {
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  position: relative;
+}
+.user-card-chevron {
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+.user-name-sb { font-size: 0.88rem; color: var(--cream); margin-bottom: 0.15rem; font-weight: 500; }
+.user-info-sb { font-size: 0.78rem; color: var(--muted); }
+.account-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0; right: 0;
+  background: var(--surface2);
+  border: 1px solid rgba(201,168,76,0.2);
+  z-index: 50;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+}
+.account-menu.open { display: block; }
+.account-menu-item {
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  color: var(--cream);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 0.5rem;
+  transition: background 0.15s;
+}
+.account-menu-item:hover { background: rgba(201,168,76,0.08); }
+.account-menu-item.signout { color: #ef9a9a; border-top: 1px solid rgba(201,168,76,0.1); }
+.account-menu-item.signout:hover { background: rgba(239,83,80,0.08); }
 
 /* Main */
 .main { margin-left: 240px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
@@ -380,12 +421,13 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     Interview Prep
   </a>
   <div class="sidebar-bottom">
-    <div class="user-card" id="user-card">
-      <div class="user-avatar" id="user-avatar">K</div>
-      <div>
-        <div class="user-name" id="user-name">Loading…</div>
-        <div class="user-email" id="user-email"></div>
-      </div>
+    <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
+      <div class="user-name-sb" id="sidebarName">Loading...</div>
+      <div class="user-info-sb" id="sidebarEmail">—</div>
+      <div class="user-card-chevron">⋯</div>
+    </div>
+    <div class="account-menu" id="accountMenu">
+      <div class="account-menu-item signout" onclick="doSignOut()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign out</div>
     </div>
   </div>
 </nav>
@@ -631,16 +673,29 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPastSessions();
 });
 
-async function fetchUser() {
-  try {
-    const r = await fetch('/api/auth/me');
-    if (!r.ok) { window.location.href = '/'; return; }
-    const u = await r.json();
-    document.getElementById('user-name').textContent = u.name || u.email;
-    document.getElementById('user-email').textContent = u.email;
-    const initial = (u.name || u.email || 'K')[0].toUpperCase();
-    document.getElementById('user-avatar').textContent = initial;
-  } catch(e) {}
+function fetchUser() {
+  const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+  if (!user.id) { window.location.href = '/'; return; }
+  document.getElementById('sidebarName').textContent = user.name || user.email || '—';
+  document.getElementById('sidebarEmail').textContent = user.email || '—';
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (d.name) document.getElementById('sidebarName').textContent = d.name;
+    if (d.email) document.getElementById('sidebarEmail').textContent = d.email;
+    if (d.id) { const u = JSON.parse(localStorage.getItem('kairo_user')||'{}'); Object.assign(u, d); localStorage.setItem('kairo_user', JSON.stringify(u)); }
+  }).catch(()=>{});
+}
+
+function toggleAccountMenu() {
+  document.getElementById('accountMenu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const card = document.getElementById('userCard');
+  if (card && !card.contains(e.target)) document.getElementById('accountMenu').classList.remove('open');
+});
+async function doSignOut() {
+  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch(e) {}
+  localStorage.removeItem('kairo_user');
+  window.location.href = '/';
 }
 
 async function loadPastSessions() {
