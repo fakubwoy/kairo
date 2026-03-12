@@ -6,6 +6,7 @@ from flask import Flask, render_template, request, jsonify, session, send_from_d
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 import pdfplumber
 from datetime import datetime
@@ -66,6 +67,7 @@ class Student(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100))
+    password_hash = db.Column(db.String(256), nullable=True)  # nullable for existing accounts
     college = db.Column(db.String(100), default='VIT Vellore')
     profile_data = db.Column(db.Text, default='{}')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -368,33 +370,52 @@ def resume_page():
 def login():
     data = request.json
     email = data.get('email', '').lower().strip()
-    name = data.get('name', '')
-    
+    name = data.get('name', '').strip()
+    password = data.get('password', '').strip()
+
     if not email:
         return jsonify({'error': 'Email required'}), 400
+    if not password:
+        return jsonify({'error': 'Password required'}), 400
 
-    # Auto-correct common typo: vitsudent → vitstudent
+    # Auto-correct common typo
     email = email.replace('@vitsudent.ac.in', '@vitstudent.ac.in')
 
-    # VIT email validation — accepts both student and staff formats:
-    # farhaan.khan2022@vitstudent.ac.in  (students)
-    # faculty.name@vit.ac.in             (staff/faculty)
     VALID_VIT_DOMAINS = ('@vitstudent.ac.in', '@vit.ac.in')
     if not any(email.endswith(d) for d in VALID_VIT_DOMAINS):
         return jsonify({'error': 'Please use your VIT email (e.g. name2022@vitstudent.ac.in)'}), 400
-    
+
     student = Student.query.filter_by(email=email).first()
+
     if not student:
-        student = Student(email=email, name=name)
+        # New account — register
+        if not name:
+            return jsonify({'error': 'Name required for new accounts'}), 400
+        if len(password) < 6:
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+        student = Student(
+            email=email,
+            name=name,
+            password_hash=generate_password_hash(password)
+        )
         db.session.add(student)
         db.session.commit()
-    elif name and not student.name:
-        student.name = name
-        db.session.commit()
-    
+    else:
+        # Existing account
+        if student.password_hash is None:
+            # Legacy account with no password — set one now
+            if len(password) < 6:
+                return jsonify({'error': 'Password must be at least 6 characters'}), 400
+            student.password_hash = generate_password_hash(password)
+            if name and not student.name:
+                student.name = name
+            db.session.commit()
+        elif not check_password_hash(student.password_hash, password):
+            return jsonify({'error': 'Incorrect password'}), 401
+
     session['student_id'] = student.id
     session['student_email'] = student.email
-    
+
     return jsonify({
         'id': student.id,
         'email': student.email,
@@ -416,6 +437,45 @@ def me():
         'name': student.name,
         'profile': json.loads(student.profile_data or '{}')
     })
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'ok': True})
+
+@app.route('/api/auth/update-name', methods=['POST'])
+def update_name():
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    student = Student.query.get(sid)
+    if not student:
+        return jsonify({'error': 'Not found'}), 404
+    new_name = request.json.get('name', '').strip()
+    if not new_name:
+        return jsonify({'error': 'Name cannot be empty'}), 400
+    student.name = new_name
+    db.session.commit()
+    return jsonify({'ok': True, 'name': student.name})
+
+@app.route('/api/auth/change-password', methods=['POST'])
+def change_password():
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    student = Student.query.get(sid)
+    if not student:
+        return jsonify({'error': 'Not found'}), 404
+    data = request.json
+    current = data.get('current_password', '')
+    new_pw = data.get('new_password', '').strip()
+    if student.password_hash and not check_password_hash(student.password_hash, current):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+    if len(new_pw) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters'}), 400
+    student.password_hash = generate_password_hash(new_pw)
+    db.session.commit()
+    return jsonify({'ok': True})
 
 @app.route('/api/chat', methods=['POST'])
 def chat():

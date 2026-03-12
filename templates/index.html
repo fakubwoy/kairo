@@ -495,18 +495,30 @@ footer {
 <div class="modal-overlay" id="loginModal">
   <div class="modal" style="position:relative;">
     <button class="modal-close" onclick="hideLogin()">✕</button>
-    <h2>Join Kairo</h2>
-    <p>Sign up with your VIT email to get started</p>
-    <div class="form-group">
+    <h2 id="modalTitle">Welcome back</h2>
+    <p id="modalSubtitle">Sign in to your Kairo account</p>
+
+    <div class="form-group" id="nameGroup" style="display:none;">
       <label>Full Name</label>
       <input type="text" id="loginName" placeholder="Your full name">
     </div>
     <div class="form-group">
-      <label>Email Address</label>
+      <label>VIT Email</label>
       <input type="email" id="loginEmail" placeholder="name.surname2022@vitstudent.ac.in">
     </div>
-    <button class="btn-primary" onclick="doLogin()">Continue →</button>
-    <div class="disclaimer">By continuing, you agree that your data is used only to build your career profile and will not be shared with third parties.</div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter your password">
+    </div>
+
+    <button class="btn-primary" id="authBtn" onclick="doAuth()">Sign In →</button>
+
+    <div style="margin-top:1rem; text-align:center; font-size:0.82rem; color:var(--muted);">
+      <span id="toggleText">New to Kairo?</span>
+      <span onclick="toggleMode()" style="color:var(--gold); cursor:pointer; margin-left:0.3rem;" id="toggleLink">Create account</span>
+    </div>
+
+    <div class="disclaimer">Your data is used only to build your career profile and is never shared with third parties.</div>
   </div>
 </div>
 
@@ -516,40 +528,66 @@ footer {
 </footer>
 
 <script>
-function showLogin() {
-  document.getElementById('loginModal').classList.add('active');
-}
-function hideLogin() {
-  document.getElementById('loginModal').classList.remove('active');
+let authMode = 'signin'; // 'signin' | 'signup'
+
+function showLogin() { document.getElementById('loginModal').classList.add('active'); }
+function hideLogin() { document.getElementById('loginModal').classList.remove('active'); }
+
+function toggleMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  const isSignup = authMode === 'signup';
+  document.getElementById('modalTitle').textContent = isSignup ? 'Create account' : 'Welcome back';
+  document.getElementById('modalSubtitle').textContent = isSignup ? 'Sign up with your VIT email' : 'Sign in to your Kairo account';
+  document.getElementById('nameGroup').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('authBtn').textContent = isSignup ? 'Create Account →' : 'Sign In →';
+  document.getElementById('toggleText').textContent = isSignup ? 'Already have an account?' : 'New to Kairo?';
+  document.getElementById('toggleLink').textContent = isSignup ? 'Sign in' : 'Create account';
 }
 
-async function doLogin() {
+async function doAuth() {
   const name = document.getElementById('loginName').value.trim();
   const email = document.getElementById('loginEmail').value.trim();
-  if (!name || !email) { alert('Please fill in all fields'); return; }
-  
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('authBtn');
+
+  if (!email || !password) { alert('Please fill in all fields'); return; }
+  if (authMode === 'signup' && !name) { alert('Please enter your name'); return; }
+
+  btn.textContent = 'Please wait…';
+  btn.disabled = true;
+
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name, email})
+      body: JSON.stringify({ name, email, password })
     });
     const data = await res.json();
-    if (data.error) { alert(data.error); return; }
+    if (data.error) {
+      alert(data.error);
+      btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
+      btn.disabled = false;
+      return;
+    }
     localStorage.setItem('kairo_user', JSON.stringify(data));
     window.location.href = '/dashboard';
   } catch(e) {
-    alert('Login failed. Please try again.');
+    alert('Something went wrong. Please try again.');
+    btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
+    btn.disabled = false;
   }
 }
 
-document.getElementById('loginEmail').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
+// Keep old name for any stray onclick refs
+function doLogin() { doAuth(); }
 
-// Close on backdrop click
-document.getElementById('loginModal').addEventListener('click', function(e) {
-  if (e.target === this) hideLogin();
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('loginPassword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAuth();
+  });
+  document.getElementById('loginModal').addEventListener('click', function(e) {
+    if (e.target === this) hideLogin();
+  });
 });
 </script>
 </body>

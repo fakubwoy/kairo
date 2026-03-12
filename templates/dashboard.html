@@ -58,14 +58,118 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
 .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
 
+.user-info { font-size: 0.78rem; color: var(--muted); }
+.user-name { font-size: 0.88rem; color: var(--cream); margin-bottom: 0.15rem; font-weight: 500; }
+
 .sidebar-bottom {
   margin-top: auto;
   padding: 1rem 1.5rem;
   border-top: 1px solid rgba(201,168,76,0.12);
+  position: relative;
 }
 
-.user-info { font-size: 0.8rem; color: var(--muted); }
-.user-name { font-size: 0.9rem; color: var(--cream); margin-bottom: 0.2rem; font-weight: 500; }
+.user-card {
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  position: relative;
+}
+
+.user-card-chevron {
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+.account-menu {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 0; right: 0;
+  background: var(--surface2);
+  border: 1px solid rgba(201,168,76,0.2);
+  z-index: 50;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+}
+
+.account-menu.open { display: block; }
+
+.account-menu-item {
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  color: var(--cream);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.account-menu-item:hover { background: rgba(201,168,76,0.08); }
+.account-menu-item.signout { color: #ef9a9a; border-top: 1px solid rgba(201,168,76,0.1); }
+.account-menu-item.signout:hover { background: rgba(239,83,80,0.08); }
+
+/* Edit name modal */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200; backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 2rem;
+  width: 100%; max-width: 380px;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.modal-box h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  margin-bottom: 1.2rem;
+}
+
+.modal-input {
+  width: 100%;
+  background: rgba(245,240,232,0.05);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  padding: 0.65rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 1rem;
+}
+.modal-input:focus { border-color: var(--gold); }
+
+.modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; }
+
+.btn-ghost {
+  background: none; border: 1px solid rgba(245,240,232,0.15);
+  color: var(--muted); padding: 0.5rem 1rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-ghost:hover { border-color: rgba(245,240,232,0.3); color: var(--cream); }
+
+.btn-gold {
+  background: var(--gold); border: none; color: var(--ink);
+  padding: 0.5rem 1.2rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+  font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.btn-gold:hover { background: var(--gold-light); }
 
 /* Main */
 .main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
@@ -345,8 +449,16 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   <a href="/interview" class="nav-item"><span class="nav-icon">🎤</span> Build Profile</a>
   <a href="/resume" class="nav-item"><span class="nav-icon">📄</span> My Resumes</a>
   <div class="sidebar-bottom">
-    <div class="user-name" id="sidebarName">Loading...</div>
-    <div class="user-info" id="sidebarEmail">—</div>
+    <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
+      <div class="user-name" id="sidebarName">Loading...</div>
+      <div class="user-info" id="sidebarEmail">—</div>
+      <div class="user-card-chevron">⋯</div>
+    </div>
+    <div class="account-menu" id="accountMenu">
+      <div class="account-menu-item" onclick="openEditName()">✏️ Edit name</div>
+      <div class="account-menu-item" onclick="openChangePassword()">🔑 Change password</div>
+      <div class="account-menu-item signout" onclick="doSignOut()">↩ Sign out</div>
+    </div>
   </div>
 </nav>
 
@@ -633,6 +745,146 @@ fetch('/api/auth/me').then(r => r.json()).then(data => {
     localStorage.setItem('kairo_user', JSON.stringify(data));
   }
 }).catch(() => {});
+</script>
+<!-- Edit name modal -->
+<div class="modal-overlay" id="editNameModal">
+  <div class="modal-box">
+    <h3>Edit your name</h3>
+    <input class="modal-input" id="editNameInput" type="text" placeholder="Your full name" maxlength="80">
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeEditName()">Cancel</button>
+      <button class="btn-gold" onclick="saveEditName()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change password modal -->
+<div class="modal-overlay" id="changePasswordModal">
+  <div class="modal-box">
+    <h3>Change password</h3>
+    <input class="modal-input" id="currentPasswordInput" type="password" placeholder="Current password" style="margin-bottom:0.6rem;">
+    <input class="modal-input" id="newPasswordInput" type="password" placeholder="New password (min. 6 chars)" style="margin-bottom:0.6rem;">
+    <input class="modal-input" id="confirmPasswordInput" type="password" placeholder="Confirm new password">
+    <div id="pwError" style="font-size:0.78rem; color:#ef9a9a; min-height:1.2rem; margin-top:0.5rem;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeChangePassword()">Cancel</button>
+      <button class="btn-gold" id="savePwBtn" onclick="saveChangePassword()">Update</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Account menu ──────────────────────────────────────────────────────────────
+function toggleAccountMenu() {
+  document.getElementById('accountMenu').classList.toggle('open');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', e => {
+  if (!document.getElementById('userCard').contains(e.target)) {
+    document.getElementById('accountMenu').classList.remove('open');
+  }
+});
+
+function openEditName() {
+  document.getElementById('accountMenu').classList.remove('open');
+  const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+  document.getElementById('editNameInput').value = user.name || '';
+  document.getElementById('editNameModal').classList.add('active');
+  setTimeout(() => document.getElementById('editNameInput').focus(), 50);
+}
+
+function closeEditName() {
+  document.getElementById('editNameModal').classList.remove('active');
+}
+
+async function saveEditName() {
+  const name = document.getElementById('editNameInput').value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch('/api/auth/update-name', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+      user.name = data.name;
+      localStorage.setItem('kairo_user', JSON.stringify(user));
+      document.getElementById('sidebarName').textContent = data.name;
+      document.getElementById('userName').textContent = data.name.split(' ')[0];
+      closeEditName();
+    } else {
+      alert(data.error || 'Could not update name');
+    }
+  } catch(e) {
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+document.getElementById('editNameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveEditName();
+  if (e.key === 'Escape') closeEditName();
+});
+
+document.getElementById('editNameModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('editNameModal')) closeEditName();
+});
+
+async function doSignOut() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch(e) {}
+  localStorage.removeItem('kairo_user');
+  window.location.href = '/';
+}
+
+// ── Change password ───────────────────────────────────────────────────────────
+function openChangePassword() {
+  document.getElementById('accountMenu').classList.remove('open');
+  document.getElementById('currentPasswordInput').value = '';
+  document.getElementById('newPasswordInput').value = '';
+  document.getElementById('confirmPasswordInput').value = '';
+  document.getElementById('pwError').textContent = '';
+  document.getElementById('changePasswordModal').classList.add('active');
+  setTimeout(() => document.getElementById('currentPasswordInput').focus(), 50);
+}
+
+function closeChangePassword() {
+  document.getElementById('changePasswordModal').classList.remove('active');
+}
+
+async function saveChangePassword() {
+  const current = document.getElementById('currentPasswordInput').value;
+  const newPw = document.getElementById('newPasswordInput').value;
+  const confirm = document.getElementById('confirmPasswordInput').value;
+  const errEl = document.getElementById('pwError');
+  const btn = document.getElementById('savePwBtn');
+
+  errEl.textContent = '';
+  if (newPw.length < 6) { errEl.textContent = 'New password must be at least 6 characters.'; return; }
+  if (newPw !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ current_password: current, new_password: newPw })
+    });
+    const data = await res.json();
+    if (data.error) { errEl.textContent = data.error; }
+    else { closeChangePassword(); }
+  } catch(e) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+  }
+  btn.textContent = 'Update'; btn.disabled = false;
+}
+
+document.getElementById('changePasswordModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('changePasswordModal')) closeChangePassword();
+});
 </script>
 </body>
 </html>
