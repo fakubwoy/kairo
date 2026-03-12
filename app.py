@@ -71,39 +71,54 @@ class Resume(db.Model):
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
+# Free models tried in order — if one is rate-limited, the next is attempted.
+# All are free-tier on OpenRouter; ordered by quality/availability.
+OPENROUTER_FREE_MODELS = [
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "qwen/qwen-2-7b-instruct:free",
+]
+
+
 def call_llm(messages, system_prompt=""):
-    """Call LLM — OpenRouter (cloud) is the default. Ollama is an optional local fallback."""
+    """Call LLM — OpenRouter (cloud) is the default. Ollama is an optional local fallback.
+    Tries multiple free models in sequence if one is rate-limited (429)."""
 
-    # ── Primary: OpenRouter (free cloud LLM) ──────────────────────────────────
+    # ── Primary: OpenRouter — walk through free model list until one succeeds ──
     if OPENROUTER_API_KEY:
-        try:
-            full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://kairo.app",
-                "X-Title": "Kairo"
-            }
-            payload = {
-                "model": "meta-llama/llama-3.2-3b-instruct:free",
-                "messages": full_messages,
-                "max_tokens": 1000
-            }
-            resp = requests.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers=headers, json=payload, timeout=30
-            )
-            if resp.status_code == 200:
-                return resp.json()['choices'][0]['message']['content']
-            else:
-                print(f"OpenRouter non-200: {resp.status_code} {resp.text[:200]}")
-        except Exception as e:
-            print(f"OpenRouter error: {e}")
+        full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://kairo.app",
+            "X-Title": "Kairo"
+        }
+        for model in OPENROUTER_FREE_MODELS:
+            try:
+                resp = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json={"model": model, "messages": full_messages, "max_tokens": 1000},
+                    timeout=30
+                )
+                if resp.status_code == 200:
+                    return resp.json()['choices'][0]['message']['content']
+                elif resp.status_code == 429:
+                    print(f"OpenRouter 429 on {model}, trying next model...")
+                    continue  # rate-limited — try next model
+                else:
+                    print(f"OpenRouter {resp.status_code} on {model}: {resp.text[:120]}")
+                    break  # non-rate-limit error, don't bother retrying
+            except Exception as e:
+                print(f"OpenRouter error on {model}: {e}")
+                break
 
-    # ── Fallback: Local Ollama (only if OLLAMA_BASE_URL is explicitly set or Ollama is running) ──
+    # ── Fallback: Local Ollama — only attempt if it's actually reachable ──────
+    # Silently skip if Ollama isn't running (e.g. cloud deployment on Railway).
     try:
-        # Check Ollama is actually up before attempting
-        ping = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        ping = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
         if ping.status_code != 200:
             raise ConnectionError("Ollama not reachable")
 
@@ -131,7 +146,7 @@ def call_llm(messages, system_prompt=""):
 def get_llm_status():
     """Return detailed status of both LLM backends for the UI."""
     status = {
-        "openrouter": {"configured": False, "ok": False, "model": "meta-llama/llama-3.2-3b-instruct:free"},
+        "openrouter": {"configured": False, "ok": False, "models": OPENROUTER_FREE_MODELS},
         "ollama": {
             "installed": False, "model_available": False,
             "model": OLLAMA_MODEL,
@@ -288,9 +303,12 @@ def login():
     if not email:
         return jsonify({'error': 'Email required'}), 400
     
-    # VIT email check (relaxed for demo - in prod enforce @vit.ac.in)
-    # if not email.endswith('@vit.ac.in'):
-    #     return jsonify({'error': 'Please use your VIT email (@vit.ac.in)'}), 400
+    # VIT email validation — accepts both student and staff formats:
+    # farhaan.khan2022@vitstudent.ac.in  (students)
+    # faculty.name@vit.ac.in             (staff/faculty)
+    VALID_VIT_DOMAINS = ('@vitstudent.ac.in', '@vit.ac.in')
+    if not any(email.endswith(d) for d in VALID_VIT_DOMAINS):
+        return jsonify({'error': 'Please use your VIT email (e.g. name2022@vitstudent.ac.in)'}), 400
     
     student = Student.query.filter_by(email=email).first()
     if not student:
@@ -544,4 +562,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, port=5000)
-    
