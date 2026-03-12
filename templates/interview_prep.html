@@ -19,7 +19,7 @@
   --blue: #5c8de0;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; overflow-x: hidden; }
 
 /* Sidebar */
 .sidebar {
@@ -157,7 +157,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 /* ── Interview Screen ── */
 #interview-screen {
-  display: none; flex-direction: column; height: 100vh; background: #080608;
+  display: none; flex-direction: column; height: 100vh; background: #080608; overflow: hidden;
 }
 
 .interview-header {
@@ -277,7 +277,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .ctrl-btn.active { background: rgba(224,92,92,0.2); border-color: var(--red); color: var(--red); }
 
 /* Big mic button — center of controls */
-.mic-center { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+.mic-center { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 
 .mic-big-btn {
   width: 72px; height: 72px; border-radius: 50%;
