@@ -372,7 +372,10 @@ def login():
     
     if not email:
         return jsonify({'error': 'Email required'}), 400
-    
+
+    # Auto-correct common typo: vitsudent → vitstudent
+    email = email.replace('@vitsudent.ac.in', '@vitstudent.ac.in')
+
     # VIT email validation — accepts both student and staff formats:
     # farhaan.khan2022@vitstudent.ac.in  (students)
     # faculty.name@vit.ac.in             (staff/faculty)
@@ -628,7 +631,9 @@ def health():
     s = get_llm_status()
     return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
+# Create tables on startup — runs whether launched via gunicorn or python app.py
+with app.app_context():
+    db.create_all()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True, port=5000)
