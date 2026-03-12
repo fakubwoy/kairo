@@ -33,6 +33,8 @@ kairo/
 
 **Resumes** — JD-based generation, ATS-friendly format, inline editing, PDF download, saved resumes viewer, version history with inline side-by-side diff
 
+**Voice Input** — microphone recording in the interview chat, transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser
+
 **Imports & Tools** — GitHub profile import, LinkedIn text import, self-intro video script generator
 
 **Infrastructure** — SQLite/Postgres, Groq (primary) + OpenRouter + Ollama LLM fallbacks, Railway deployment
@@ -62,7 +64,7 @@ cp .env.example .env
 1. Go to [console.groq.com](https://console.groq.com)
 2. Sign up → API Keys → Create key
 3. Add to `.env`: `GROQ_API_KEY=gsk_...`
-4. Models used: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`
+4. Models used: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `whisper-large-v3`
 
 **Alternative: OpenRouter (free)**
 1. Go to [openrouter.ai](https://openrouter.ai)
@@ -92,7 +94,7 @@ python app.py
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/your-username/kairo.git
+git remote add origin https://github.com/fakubwoy/kairo.git
 git push -u origin main
 ```
 
@@ -133,7 +135,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | `OLLAMA_MODEL` | No | Ollama model name (default: llama3.2) |
 | `REDIS_URL` | No | Optional Redis for conversation caching |
 
-*Groq is the primary provider. For local dev, Ollama works without any API key.
+*Groq is the primary provider and also powers Whisper voice transcription. For local dev, Ollama works without any API key (voice input requires Groq).
 
 ---
 
@@ -154,6 +156,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | GET | `/api/resumes` | List all saved resumes |
 | GET | `/api/resumes/<id>` | Get a specific saved resume |
 | POST | `/api/upload` | Upload PDF/image document |
+| POST | `/api/transcribe` | Transcribe audio via Groq Whisper |
 | GET | `/api/llm-status` | Check LLM backend status |
 | GET | `/api/health` | Health check |
 
@@ -169,9 +172,10 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | Diff toggle | "Show Diff" button toggles — clicking again hides the diff |
 | GitHub / LinkedIn tabs | Moved to the right side of the tab bar; no longer show scraping/rate-limit notices |
 
+---
+
 ## Roadmap
 
-- [ ] Voice/audio conversation with Whisper (open-source STT)
 - [ ] Chrome extension for job application
 - [ ] VIT email validation enforcement
 - [ ] Credit system for usage limits
@@ -189,11 +193,12 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | LLM (primary) | Llama 3.3 70B via Groq (free) |
 | LLM (fallback) | Llama 3.2 via OpenRouter (free) |
 | LLM (local) | Llama 3.2 via Ollama |
+| Voice / STT | Whisper Large v3 via Groq (free) |
 | Caching | Redis (optional) |
 | PDF extraction | pdfplumber |
 | Frontend | Vanilla HTML/CSS/JS |
 | Deployment | Railway |
 
-No paid APIs required. Groq provides free access to Llama 3.3 70B with a generous rate limit.
+No paid APIs required. Groq provides free access to Llama 3.3 70B and Whisper Large v3 with a generous rate limit.
 
 ---

@@ -1574,7 +1574,7 @@ async function saveProfileEdits() {
   <div class="modal-box" style="max-width:480px;width:92%;">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;gap:0.8rem;">
       <div>
-        <h3 style="margin:0 0 0.2rem" id="docDetailTitle">Document</h3>
+        <h3 style="margin:0 0 0.2rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px;" id="docDetailTitle">Document</h3>
         <p style="margin:0;font-size:0.78rem;color:var(--muted)">Extracted information from this document</p>
       </div>
       <button onclick="closeDocDetail()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:0.1rem;flex-shrink:0;margin-top:0.15rem;">
