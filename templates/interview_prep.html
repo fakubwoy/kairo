@@ -262,41 +262,69 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 /* Bottom controls */
 .interview-controls {
-  padding: 1rem 1.5rem; background: rgba(8,6,8,0.98);
+  padding: 0.8rem 1.5rem; background: rgba(8,6,8,0.98);
   border-top: 1px solid rgba(201,168,76,0.1);
   display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 0.8rem;
+  gap: 1.5rem;
 }
-.ctrl-group { display: flex; align-items: center; gap: 0.6rem; }
 .ctrl-btn {
   width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.2s; color: var(--cream);
+  cursor: pointer; transition: all 0.2s; color: var(--cream); flex-shrink: 0;
 }
 .ctrl-btn svg { width: 18px; height: 18px; }
 .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
 .ctrl-btn.active { background: rgba(224,92,92,0.2); border-color: var(--red); color: var(--red); }
-.ctrl-btn.speaking-btn { background: rgba(76,175,125,0.15); border-color: var(--green); }
-.ctrl-btn.speaking-btn.recording { background: rgba(224,92,92,0.2); border-color: var(--red); animation: btnPulse 1s infinite; }
-@keyframes btnPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 
-.answer-area { flex: 1; min-width: 200px; }
-#answer-input {
-  width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: var(--cream); padding: 0.6rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
-  outline: none; resize: none; height: 60px; transition: border-color 0.2s;
+/* Big mic button — center of controls */
+.mic-center { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+
+.mic-big-btn {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(201,168,76,0.1); border: 2px solid rgba(201,168,76,0.3);
+  color: var(--gold); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.25s; gap: 3px; position: relative; z-index: 2;
 }
-#answer-input:focus { border-color: rgba(201,168,76,0.4); }
-#answer-input::placeholder { color: var(--muted); }
+.mic-big-btn svg { width: 22px; height: 22px; }
+.mic-btn-label { font-size: 0.55rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+.mic-big-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.mic-big-btn:not(:disabled):hover { background: rgba(201,168,76,0.18); border-color: var(--gold); transform: scale(1.05); }
+
+/* Recording state */
+.mic-big-btn.recording {
+  background: rgba(224,92,92,0.2); border-color: var(--red); color: var(--red);
+}
+.mic-big-btn.recording .mic-btn-label { color: var(--red); }
+
+/* Pulsing ring when recording */
+.mic-recording-ring {
+  position: absolute; width: 72px; height: 72px; border-radius: 50%;
+  border: 2px solid var(--red); opacity: 0; pointer-events: none;
+  z-index: 1;
+}
+.mic-recording-ring.active {
+  animation: micRingPulse 1.2s ease-out infinite;
+}
+@keyframes micRingPulse {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.9);  opacity: 0; }
+}
+
+/* Transcribing state */
+.mic-big-btn.transcribing {
+  background: rgba(92,141,224,0.15); border-color: var(--blue); color: var(--blue);
+  animation: btnPulse 1s infinite;
+}
+@keyframes btnPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 .submit-answer-btn {
   padding: 0.6rem 1.4rem; background: var(--gold); color: var(--ink);
   border: none; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
-  font-weight: 600; cursor: pointer; transition: all 0.2s; height: 60px;
-  white-space: nowrap;
+  font-weight: 600; cursor: pointer; transition: all 0.2s; height: 52px;
+  white-space: nowrap; flex-shrink: 0;
 }
 .submit-answer-btn:hover { background: var(--gold-light); }
-.submit-answer-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.submit-answer-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* Status pill */
 .status-pill {
@@ -564,25 +592,25 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
     <!-- Controls -->
     <div class="interview-controls">
-      <div class="ctrl-group">
-        <button class="ctrl-btn" id="toggle-cam-btn" title="Toggle camera" onclick="toggleCam()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z"/></svg>
-        </button>
-        <button class="ctrl-btn speaking-btn" id="record-btn" title="Hold to speak" onclick="toggleRecording()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
-        </button>
-      </div>
+      <button class="ctrl-btn" id="toggle-cam-btn" title="Toggle camera" onclick="toggleCam()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z"/></svg>
+      </button>
 
-      <div class="answer-area">
-        <textarea id="answer-input" placeholder="Type your answer here, or use the mic button to speak…"></textarea>
+      <div class="mic-center">
+        <button class="mic-big-btn" id="record-btn" onclick="toggleRecording()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+          <span class="mic-btn-label" id="mic-btn-label">Wait for question</span>
+        </button>
+        <div class="mic-recording-ring" id="mic-recording-ring"></div>
+      <div id="answer-preview" style="position:absolute;bottom:calc(100% + 0.5rem);left:50%;transform:translateX(-50%);background:rgba(10,10,15,0.95);border:1px solid rgba(201,168,76,0.2);padding:0.5rem 1rem;font-size:0.8rem;color:var(--cream);max-width:400px;text-align:center;display:none;white-space:pre-wrap;word-break:break-word;"></div>
       </div>
 
       <button class="submit-answer-btn" id="submit-btn" onclick="submitAnswer()" disabled>
-        Submit Answer →
+        Done Answering →
       </button>
 
-      <button class="btn btn-danger" onclick="confirmEndInterview()" style="height:60px; padding: 0 1.2rem;">
-        End Interview
+      <button class="btn btn-danger" onclick="confirmEndInterview()" style="padding: 0 1.2rem; height: 52px;">
+        End
       </button>
     </div>
   </div>
@@ -669,6 +697,7 @@ let audioChunks = [];
 let isRecording = false;
 let camEnabled = true;
 let currentSpeech = null; // SpeechSynthesisUtterance
+let currentAnswerText = '';
 
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -824,7 +853,7 @@ function askQuestion(index) {
   document.getElementById('progress-info').textContent = `Question ${index + 1} of ${total}`;
   document.getElementById('q-label').textContent = `Q${index + 1} of ${total} — ${formatType(q.type)}`;
   document.getElementById('q-text').textContent = q.question;
-  document.getElementById('answer-input').value = '';
+  
   document.getElementById('submit-btn').disabled = true;
 
   // Record that this question was asked — answer will be filled in on submit
@@ -835,11 +864,15 @@ function askQuestion(index) {
 
   setStatus('speaking', 'Kairo is speaking…');
   setAiSpeaking(true);
+  setMicState('waiting');
 
   speakText(q.question, () => {
     setAiSpeaking(false);
-    setStatus('listening', 'Your turn — answer now');
-    document.getElementById('submit-btn').disabled = false;
+    setStatus('listening', 'Your turn — speak your answer');
+    setMicState('ready');
+    currentAnswerText = '';
+    updateAnswerPreview('');
+    document.getElementById('submit-btn').disabled = true; // enabled after mic stop
   });
 }
 
@@ -885,80 +918,158 @@ function setStatus(type, text) {
   document.getElementById('status-text').textContent = text;
 }
 
+// ── Mic state helper ───────────────────────────────────────────────────────
+function setMicState(state) {
+  // states: 'waiting' | 'ready' | 'recording' | 'transcribing'
+  const btn = document.getElementById('record-btn');
+  const ring = document.getElementById('mic-recording-ring');
+  const label = document.getElementById('mic-btn-label');
+  const micInd = document.getElementById('mic-indicator');
+
+  btn.classList.remove('recording', 'transcribing');
+  ring.classList.remove('active');
+  btn.disabled = false;
+
+  if (state === 'waiting') {
+    btn.disabled = true;
+    label.textContent = 'Wait…';
+  } else if (state === 'ready') {
+    label.textContent = 'Tap to speak';
+    micInd.classList.remove('recording');
+  } else if (state === 'recording') {
+    btn.classList.add('recording');
+    ring.classList.add('active');
+    label.textContent = 'Tap to stop';
+    micInd.classList.add('recording');
+    setStatus('listening', 'Recording your answer…');
+  } else if (state === 'transcribing') {
+    btn.disabled = true;
+    btn.classList.add('transcribing');
+    label.textContent = 'Processing…';
+    micInd.classList.remove('recording');
+    setStatus('waiting', 'Transcribing…');
+  }
+}
+
+function updateAnswerPreview(text) {
+  const preview = document.getElementById('answer-preview');
+  if (text && text.trim()) {
+    preview.textContent = '"' + text.trim() + '"';
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
 // ── Recording ──────────────────────────────────────────────────────────────
 async function toggleRecording() {
-  if (!stream) {
-    // Try to get audio only
+  if (isRecording) {
+    stopRecording();
+    return;
+  }
+
+  // Ensure we have an audio stream
+  if (!stream || !stream.getAudioTracks().length) {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (stream) {
+        // Merge audio track into existing stream if video present
+        audioStream.getAudioTracks().forEach(t => stream.addTrack(t));
+      } else {
+        stream = audioStream;
+      }
     } catch(e) {
-      showToast('Microphone not available. Please type your answer.');
+      showToast('Microphone access denied. Please allow microphone access and try again.');
       return;
     }
   }
 
-  if (!isRecording) {
-    startRecording();
-  } else {
-    stopRecording();
-  }
+  startRecording();
 }
 
 function startRecording() {
   audioChunks = [];
-  const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg;codecs=opus';
+  // Pick best supported mime type
+  const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+  
   try {
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
   } catch(e) {
-    mediaRecorder = new MediaRecorder(stream);
+    showToast('Could not start recording: ' + e.message);
+    return;
   }
-  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+
+  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
   mediaRecorder.onstop = () => transcribeAudio();
-  mediaRecorder.start();
+  mediaRecorder.onerror = e => {
+    console.error('MediaRecorder error:', e);
+    showToast('Recording error — please try again');
+    setMicState('ready');
+  };
+
+  mediaRecorder.start(100); // collect chunks every 100ms for reliability
   isRecording = true;
-  document.getElementById('record-btn').classList.add('recording');
-  document.getElementById('mic-indicator').classList.add('recording');
-  setStatus('listening', 'Recording…');
+  setMicState('recording');
 }
 
 function stopRecording() {
   if (mediaRecorder && isRecording) {
     mediaRecorder.stop();
     isRecording = false;
-    document.getElementById('record-btn').classList.remove('recording');
-    document.getElementById('mic-indicator').classList.remove('recording');
-    setStatus('waiting', 'Transcribing…');
+    setMicState('transcribing');
   }
 }
 
 async function transcribeAudio() {
-  const mimeType = audioChunks.length > 0 ? (audioChunks[0].type || 'audio/webm') : 'audio/webm';
+  if (!audioChunks.length) {
+    showToast('No audio recorded — please try again');
+    setMicState('ready');
+    return;
+  }
+
+  const mimeType = audioChunks[0].type || 'audio/webm';
   const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
   const blob = new Blob(audioChunks, { type: mimeType });
+
+  // Minimum size check — if too small, probably no speech
+  if (blob.size < 1000) {
+    showToast('Recording too short — please speak your answer');
+    setMicState('ready');
+    return;
+  }
+
   const formData = new FormData();
   formData.append('audio', blob, `answer.${ext}`);
 
   try {
     const r = await fetch('/api/transcribe', { method: 'POST', credentials: 'include', body: formData });
     const data = await r.json();
-    if (data.text) {
-      const current = document.getElementById('answer-input').value.trim();
-      document.getElementById('answer-input').value = current ? current + ' ' + data.text : data.text;
-      setStatus('listening', 'Transcribed — review and submit');
+    if (data.text && data.text.trim()) {
+      // Append to existing answer (allow multiple recording attempts)
+      currentAnswerText = currentAnswerText
+        ? currentAnswerText.trim() + ' ' + data.text.trim()
+        : data.text.trim();
+      updateAnswerPreview(currentAnswerText);
+      setStatus('listening', 'Answer recorded — tap mic to add more or submit');
+      setMicState('ready');
+      document.getElementById('submit-btn').disabled = false;
     } else {
-      showToast('Transcription empty — please type or try again');
-      setStatus('listening', 'Your turn — answer now');
+      showToast('Could not detect speech — please try again');
+      setMicState('ready');
     }
   } catch(e) {
-    showToast('Transcription failed — please type your answer');
-    setStatus('listening', 'Your turn — answer now');
+    showToast('Transcription failed — please try again');
+    setMicState('ready');
   }
 }
 
 // ── Submit Answer ──────────────────────────────────────────────────────────
 async function submitAnswer() {
-  const answer = document.getElementById('answer-input').value.trim();
-  if (!answer) { showToast('Please provide an answer first'); return; }
+  const answer = currentAnswerText.trim();
+  if (!answer) { showToast('Please record your answer first'); return; }
 
   const q = questions[currentQIndex];
   // Update existing entry (set in askQuestion) with the actual answer
@@ -979,7 +1090,9 @@ async function submitAnswer() {
   }).catch(() => {});
 
   document.getElementById('submit-btn').disabled = true;
-  document.getElementById('answer-input').value = '';
+  currentAnswerText = '';
+  updateAnswerPreview('');
+  setMicState('waiting');
 
   const next = currentQIndex + 1;
   if (next < questions.length) {
@@ -1000,6 +1113,16 @@ function confirmEndInterview() {
 async function finishInterview() {
   if (currentSpeech) window.speechSynthesis.cancel();
   clearInterval(timerInterval);
+  if (isRecording) stopRecording();
+
+  // Capture any in-progress answer that hasn't been submitted yet
+  if (currentAnswerText.trim()) {
+    const q = questions[currentQIndex];
+    if (q) {
+      const existing = transcript.find(t => String(t.question_id) === String(q.id));
+      if (existing) existing.answer = currentAnswerText.trim();
+    }
+  }
 
   speakText("Thank you for your time. I'm now evaluating your responses. Please hold on.", null);
 

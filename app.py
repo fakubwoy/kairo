@@ -169,7 +169,7 @@ class MockInterview(db.Model):
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
-def _call_groq(messages, system_prompt):
+def _call_groq(messages, system_prompt, max_tokens=1000):
     """Try Groq models in order. Returns response string or None."""
     if not GROQ_API_KEY:
         return None
@@ -183,8 +183,8 @@ def _call_groq(messages, system_prompt):
             resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers=headers,
-                json={"model": model, "messages": full_messages, "max_tokens": 1000},
-                timeout=30
+                json={"model": model, "messages": full_messages, "max_tokens": max_tokens},
+                timeout=60
             )
             if resp.status_code == 200:
                 return resp.json()['choices'][0]['message']['content']
@@ -200,7 +200,7 @@ def _call_groq(messages, system_prompt):
     return None
 
 
-def _call_openrouter(messages, system_prompt):
+def _call_openrouter(messages, system_prompt, max_tokens=1000):
     """Try OpenRouter free models in order. Returns response string or None."""
     if not OPENROUTER_API_KEY:
         return None
@@ -216,8 +216,8 @@ def _call_openrouter(messages, system_prompt):
             resp = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
-                json={"model": model, "messages": full_messages, "max_tokens": 1000},
-                timeout=30
+                json={"model": model, "messages": full_messages, "max_tokens": max_tokens},
+                timeout=60
             )
             if resp.status_code == 200:
                 return resp.json()['choices'][0]['message']['content']
@@ -233,7 +233,7 @@ def _call_openrouter(messages, system_prompt):
     return None
 
 
-def _call_ollama(messages, system_prompt):
+def _call_ollama(messages, system_prompt, max_tokens=1000):
     """Try local Ollama. Returns response string or None. Fully silent if not running."""
     try:
         ping = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
@@ -261,17 +261,17 @@ def _call_ollama(messages, system_prompt):
     return None
 
 
-def call_llm(messages, system_prompt=""):
+def call_llm(messages, system_prompt="", max_tokens=1000):
     """Call LLM with provider priority: Groq → OpenRouter → Ollama."""
-    result = _call_groq(messages, system_prompt)
+    result = _call_groq(messages, system_prompt, max_tokens)
     if result:
         return result
 
-    result = _call_openrouter(messages, system_prompt)
+    result = _call_openrouter(messages, system_prompt, max_tokens)
     if result:
         return result
 
-    result = _call_ollama(messages, system_prompt)
+    result = _call_ollama(messages, system_prompt, max_tokens)
     if result:
         return result
 
@@ -1482,7 +1482,7 @@ def start_mock_interview():
     
     # Generate questions via LLM
     prompt = get_mock_interview_questions_prompt(profile_data, job_title, job_description)
-    raw = call_llm([], prompt)
+    raw = call_llm([], prompt, max_tokens=2000)
     
     try:
         # Strip markdown fences if present
@@ -1566,7 +1566,7 @@ def complete_mock_interview(interview_id):
     
     # Generate evaluation
     eval_prompt = get_evaluation_prompt(questions, transcript, interview.job_title)
-    raw = call_llm([], eval_prompt)
+    raw = call_llm([], eval_prompt, max_tokens=3000)
     
     try:
         cleaned = raw.strip() if raw else ''
