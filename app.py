@@ -1609,29 +1609,81 @@ def health():
 
 # Startup — create tables and apply any missing column migrations
 with app.app_context():
-    # Create each table individually with checkfirst=True so Postgres
-    # duplicate-type errors on already-existing tables don't crash startup.
-    for table in db.metadata.sorted_tables:
-        try:
-            table.create(db.engine, checkfirst=True)
-        except Exception as te:
-            print(f"Table '{table.name}' create skipped: {te}")
-    try:
-        with db.engine.connect() as conn:
-            conn.execute(db.text(
-                "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)"
-            ))
-            conn.execute(db.text(
-                "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"
-            ))
-            conn.execute(db.text(
-                "ALTER TABLE resume ADD COLUMN IF NOT EXISTS edited_html TEXT"
-            ))
-            conn.execute(db.text(
-                "ALTER TABLE resume ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"
-            ))
-            conn.commit()
-    except Exception as e:
-        print(f"Migration note: {e}")
+    # Use raw SQL for all DDL so every statement is idempotent on Postgres.
+    # SQLAlchemy table.create(checkfirst=True) can still raise UniqueViolation
+    # on pg_type when composite types already exist, so we bypass it entirely.
+    with db.engine.connect() as conn:
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS student (
+                id VARCHAR(36) PRIMARY KEY,
+                email VARCHAR(120) UNIQUE NOT NULL,
+                name VARCHAR(100),
+                password_hash VARCHAR(256),
+                college VARCHAR(100) DEFAULT 'VIT Vellore',
+                profile_data TEXT DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS conversation (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(36) NOT NULL REFERENCES student(id),
+                messages TEXT DEFAULT '[]',
+                topic VARCHAR(100) DEFAULT 'general',
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS resume (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(36) NOT NULL REFERENCES student(id),
+                job_description TEXT,
+                resume_data TEXT,
+                edited_html TEXT,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS resume_version (
+                id SERIAL PRIMARY KEY,
+                resume_id INTEGER NOT NULL REFERENCES resume(id),
+                version_number INTEGER NOT NULL DEFAULT 1,
+                resume_data TEXT,
+                edited_html TEXT,
+                label VARCHAR(100),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS mock_interview (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(36) NOT NULL REFERENCES student(id),
+                job_title VARCHAR(200),
+                job_description TEXT,
+                status VARCHAR(20) DEFAULT 'pending',
+                questions TEXT DEFAULT '[]',
+                transcript TEXT DEFAULT '[]',
+                report TEXT,
+                overall_score INTEGER,
+                created_at TIMESTAMP DEFAULT NOW(),
+                completed_at TIMESTAMP
+            )
+        """))
+        # Column back-fills (safe on repeated runs)
+        for stmt in [
+            "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)",
+            "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+            "ALTER TABLE resume ADD COLUMN IF NOT EXISTS edited_html TEXT",
+            "ALTER TABLE resume ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+        ]:
+            try:
+                conn.execute(db.text(stmt))
+            except Exception:
+                pass
+        conn.commit()
+        print("Database schema ready.")
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
