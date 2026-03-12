@@ -243,12 +243,7 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
       <svg width="15" height="15"><use href="#i-video"/></svg> Intro Script
     </button>
     <div style="flex:1"></div>
-    <button class="tab-btn" id="tab-github" onclick="switchTab('github')" style="font-size:0.8rem;opacity:0.8">
-      <svg width="15" height="15"><use href="#i-github"/></svg> Import GitHub
-    </button>
-    <button class="tab-btn" id="tab-linkedin" onclick="switchTab('linkedin')" style="font-size:0.8rem;opacity:0.8">
-      <svg width="15" height="15"><use href="#i-linkedin"/></svg> Import LinkedIn
-    </button>
+
   </div>
 
   <!-- ── Generate tab ───────────────────────────────────────────────────── -->
@@ -267,7 +262,7 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
           <h2>Quick Tips</h2>
           <ul style="color:var(--muted);font-size:0.85rem;line-height:2.1;padding-left:1.2rem;">
             <li>Include the full JD for best results</li>
-            <li>Import GitHub/LinkedIn before generating</li>
+            <li>Import GitHub/LinkedIn from your <a href="/dashboard" style="color:var(--gold)">Profile dashboard</a></li>
             <li>Click "Edit" on the preview to edit inline</li>
             <li>Version history is saved automatically</li>
           </ul>
@@ -362,55 +357,9 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
     </div>
   </div>
 
-  <!-- ── GitHub import tab ─────────────────────────────────────────────── -->
-  <div id="pane-github" style="display:none">
-    <div class="two-col">
-      <div>
-        <div class="panel">
-          <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:0.4rem"><use href="#i-github"/></svg>GitHub Profile Import</h2>
-          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;line-height:1.6">
-            Enter your GitHub username and Kairo will fetch your top repositories and format them for your resume automatically.
-          </p>
-          <label class="field-label">GitHub Username</label>
-          <input type="text" id="githubUsername" placeholder="e.g. torvalds" style="margin-bottom:0.8rem">
-          <button class="btn-gold" id="githubBtn" onclick="fetchGithub()">
-            <svg width="15" height="15"><use href="#i-github"/></svg> Fetch Profile & Projects
-          </button>
-        </div>
-      </div>
-      <div id="githubResultsPane">
-        <div class="panel" style="text-align:center;color:var(--muted);padding:3rem 1.5rem">
-          <svg width="40" height="40" style="opacity:0.3;margin-bottom:1rem"><use href="#i-github"/></svg>
-          <div>Enter your GitHub username to import your best projects</div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── LinkedIn import tab ───────────────────────────────────────────── -->
-  <div id="pane-linkedin" style="display:none">
-    <div class="two-col">
-      <div>
-        <div class="panel">
-          <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:0.4rem"><use href="#i-linkedin"/></svg>LinkedIn Profile Import</h2>
 
-          <label class="field-label">Paste your LinkedIn "About", Experience & Skills sections</label>
-          <textarea id="linkedinText" rows="12" placeholder="Copy your About section, experience entries, skills — paste it all here. The more text the better..."></textarea>
-          <label class="field-label" style="margin-top:0.8rem">LinkedIn Profile URL (optional)</label>
-          <input type="url" id="linkedinUrl" placeholder="https://linkedin.com/in/yourname">
-          <button class="btn-gold" id="linkedinBtn" onclick="parseLinkedin()">
-            <svg width="15" height="15"><use href="#i-linkedin"/></svg> Extract Profile Data
-          </button>
-        </div>
-      </div>
-      <div id="linkedinResultsPane">
-        <div class="panel" style="text-align:center;color:var(--muted);padding:3rem 1.5rem">
-          <svg width="40" height="40" style="opacity:0.3;margin-bottom:1rem"><use href="#i-linkedin"/></svg>
-          <div>Paste your LinkedIn profile text to import experience and skills</div>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- ── Intro Script tab ──────────────────────────────────────────────── -->
   <div id="pane-intro" style="display:none">
@@ -472,7 +421,7 @@ let versionPanelOpen = false;
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['generate','saved','github','linkedin','intro'].forEach(t => {
+  ['generate','saved','intro'].forEach(t => {
     document.getElementById(`pane-${t}`).style.display = t === tab ? '' : 'none';
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
   });
@@ -741,126 +690,6 @@ async function viewResume(id) {
 }
 
 // ── GitHub import ─────────────────────────────────────────────────────────────
-async function fetchGithub() {
-  const username = document.getElementById('githubUsername').value.trim();
-  if (!username) { showToast('Enter a GitHub username', false); return; }
-  const btn = document.getElementById('githubBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Fetching...';
-  const pane = document.getElementById('githubResultsPane');
-  pane.innerHTML = '<div class="panel"><div class="loading-state"><div class="spinner"></div><span>Fetching GitHub profile & analyzing projects...</span></div></div>';
-  try {
-    const res = await fetch('/api/github-profile', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ username })
-    });
-    const data = await res.json();
-    if (data.error) {
-      pane.innerHTML = `<div class="panel"><div style="color:#ffb3b3;padding:1rem">${data.error}</div></div>`;
-      return;
-    }
-    renderGithubResults(data, pane);
-  } catch(e) {
-    pane.innerHTML = `<div class="panel"><div style="color:var(--muted);padding:1rem">Error: ${e.message}</div></div>`;
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<svg width="15" height="15"><use href="#i-github"/></svg> Fetch Profile & Projects';
-}
-
-function renderGithubResults(data, pane) {
-  const projects = data.extracted_projects || [];
-  pane.innerHTML = `
-    <div class="github-user">
-      <img class="github-avatar" src="${data.avatar_url || ''}" alt="" onerror="this.style.display='none'">
-      <div class="github-user-info">
-        <h4>${esc(data.name || data.username)}</h4>
-        <p>${esc(data.bio || '')} &nbsp; ${data.public_repos} repos · ${data.followers} followers</p>
-        <a href="${data.profile_url}" target="_blank" style="color:var(--gold);font-size:0.8rem">${data.profile_url}</a>
-      </div>
-    </div>
-    <h3 style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem">AI-Extracted Resume Projects</h3>
-    ${projects.map(p => `
-      <div class="project-card">
-        <h4>
-          <svg width="14" height="14"><use href="#i-github"/></svg>
-          ${esc(p.name)}
-          ${p.url ? `<a href="${esc(p.url)}" target="_blank" style="color:var(--gold);font-size:0.75rem;font-weight:400">↗ view</a>` : ''}
-        </h4>
-        <p>${esc(p.description || '')}</p>
-        ${p.impact ? `<p style="color:var(--cream);font-size:0.82rem">📈 ${esc(p.impact)}</p>` : ''}
-        <div class="tech-tags">${(p.tech||[]).map(t=>`<span class="tech-tag">${esc(t)}</span>`).join('')}</div>
-      </div>`).join('')}
-    <button class="btn-gold" onclick="addGithubToProfile(${JSON.stringify(projects).replace(/"/g,'&quot;')})" style="margin-top:1rem">
-      <svg width="15" height="15"><use href="#i-save"/></svg> Add These Projects to My Profile
-    </button>`;
-}
-
-async function addGithubToProfile(projects) {
-  try {
-    const res = await fetch('/api/profile', {
-      method: 'PUT', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ github_projects: projects })
-    });
-    if (res.ok) showToast('✓ Projects added to your profile', true);
-    else showToast('Could not add projects (are you logged in?)', false);
-  } catch(e) { showToast('Error: ' + e.message, false); }
-}
-
-// ── LinkedIn import ───────────────────────────────────────────────────────────
-async function parseLinkedin() {
-  const text = document.getElementById('linkedinText').value.trim();
-  const url = document.getElementById('linkedinUrl').value.trim();
-  if (!text) { showToast('Paste your LinkedIn profile text first', false); return; }
-  const btn = document.getElementById('linkedinBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Extracting...';
-  const pane = document.getElementById('linkedinResultsPane');
-  pane.innerHTML = '<div class="panel"><div class="loading-state"><div class="spinner"></div><span>Analysing your LinkedIn profile...</span></div></div>';
-  try {
-    const res = await fetch('/api/linkedin-hints', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ text, url })
-    });
-    const data = await res.json();
-    if (data.error) { pane.innerHTML = `<div class="panel"><div style="color:#ffb3b3;padding:1rem">${data.error}</div></div>`; return; }
-    renderLinkedinResults(data.extracted, pane);
-  } catch(e) {
-    pane.innerHTML = `<div class="panel"><div style="color:var(--muted);padding:1rem">Error: ${e.message}</div></div>`;
-  }
-  btn.disabled = false;
-  btn.innerHTML = '<svg width="15" height="15"><use href="#i-linkedin"/></svg> Extract Profile Data';
-}
-
-function renderLinkedinResults(extracted, pane) {
-  const exp = extracted.experience || [];
-  const skills = extracted.skills || {};
-  pane.innerHTML = `
-    <div class="panel">
-      <h2 style="margin-bottom:0.8rem">Extracted from LinkedIn</h2>
-      ${extracted.summary ? `<div style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;line-height:1.6">${esc(extracted.summary)}</div>` : ''}
-      ${exp.length ? `<div style="margin-bottom:1rem"><div class="field-label">Experience</div>${exp.map(e=>`
-        <div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
-          <strong>${esc(e.role)}</strong> at ${esc(e.company)} &nbsp;<span style="color:var(--muted)">${esc(e.duration||'')}</span>
-          ${(e.points||[]).map(p=>`<div style="color:var(--muted);margin-top:0.2rem;padding-left:0.8rem">• ${esc(p)}</div>`).join('')}
-        </div>`).join('')}</div>` : ''}
-      ${(skills.technical||[]).length ? `<div style="margin-bottom:1rem"><div class="field-label">Technical Skills</div><div class="tag-list">${(skills.technical||[]).map(s=>`<span class="tag">${esc(s)}</span>`).join('')}</div></div>` : ''}
-      <button class="btn-gold" onclick="addLinkedinToProfile(${JSON.stringify(extracted).replace(/"/g,'&quot;')})">
-        <svg width="15" height="15"><use href="#i-save"/></svg> Add to My Profile
-      </button>
-    </div>`;
-}
-
-async function addLinkedinToProfile(extracted) {
-  try {
-    const res = await fetch('/api/profile', {
-      method: 'PUT', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ linkedin_data: extracted })
-    });
-    if (res.ok) showToast('✓ LinkedIn data added to your profile', true);
-    else showToast('Could not save (are you logged in?)', false);
-  } catch(e) { showToast('Error: ' + e.message, false); }
-}
-
 // ── Intro Script ──────────────────────────────────────────────────────────────
 async function generateIntroScript() {
   const btn = document.getElementById('introBtn');

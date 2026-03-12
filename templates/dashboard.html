@@ -363,6 +363,190 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   min-height: 1rem;
 }
 
+/* Profile editor tabs */
+.pe-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+  margin-bottom: 1.5rem;
+}
+.pe-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.pe-tab:hover { color: var(--cream); }
+.pe-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.pe-pane { display: none; }
+.pe-pane.active { display: block; }
+
+/* Import inline panel */
+.import-field-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.import-field-row input { flex: 1; }
+.btn-import {
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+  padding: 0.55rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.btn-import:hover { background: rgba(201,168,76,0.2); }
+.btn-import:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.import-result-box {
+  margin-top: 0.8rem;
+  background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.15);
+  padding: 1rem;
+  font-size: 0.82rem;
+  display: none;
+}
+.import-result-box.visible { display: block; }
+
+/* Projects editor */
+.projects-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1rem; }
+.project-entry {
+  background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 1rem;
+  position: relative;
+}
+.project-entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.project-entry-grid .full { grid-column: 1 / -1; }
+.project-field-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+.project-entry input,
+.project-entry textarea {
+  width: 100%;
+  background: rgba(245,240,232,0.05);
+  border: 1px solid rgba(201,168,76,0.15);
+  color: var(--cream);
+  padding: 0.45rem 0.7rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.project-entry input:focus,
+.project-entry textarea:focus { border-color: var(--gold); }
+.project-entry textarea { resize: vertical; min-height: 56px; }
+.project-remove-btn {
+  position: absolute;
+  top: 0.6rem; right: 0.6rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.2s;
+}
+.project-remove-btn:hover { color: #ef9a9a; }
+.btn-add-project {
+  background: none;
+  border: 1px dashed rgba(201,168,76,0.25);
+  color: var(--muted);
+  padding: 0.6rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+.btn-add-project:hover { border-color: rgba(201,168,76,0.5); color: var(--gold); }
+
+/* LinkedIn textarea */
+.linkedin-paste-area {
+  width: 100%;
+  background: rgba(245,240,232,0.05);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  padding: 0.7rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+  transition: border-color 0.2s;
+}
+.linkedin-paste-area:focus { border-color: var(--gold); }
+
+/* Github avatar */
+.gh-user-mini {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.7rem;
+  background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.15);
+  margin-bottom: 0.6rem;
+}
+.gh-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(201,168,76,0.3); }
+.gh-user-meta h4 { font-size: 0.88rem; margin-bottom: 0.1rem; }
+.gh-user-meta p { font-size: 0.75rem; color: var(--muted); }
+.project-card-mini {
+  padding: 0.6rem 0.8rem;
+  background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.1);
+  margin-bottom: 0.4rem;
+  font-size: 0.83rem;
+}
+.project-card-mini strong { display: block; margin-bottom: 0.2rem; color: var(--cream); }
+.project-card-mini p { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.3rem; }
+.tech-mini-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.tech-mini-tag {
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--gold);
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+}
+
+/* Section divider */
+.pe-section-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+  padding-bottom: 0.4rem;
+  margin-bottom: 1rem;
+  margin-top: 1.2rem;
+  grid-column: 1 / -1;
+}
+.pe-section-label:first-child { margin-top: 0; }
+
 /* AI Engine Bar */
 .ai-bar {
   background: var(--surface);
@@ -598,48 +782,123 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       </button>
     </div>
     <div class="profile-editor-body" id="profileEditorBody">
-      <div class="profile-fields">
-        <div class="profile-field">
-          <label>Full Name</label>
-          <input type="text" id="pe-name" placeholder="e.g. Farhaan Khan">
-        </div>
-        <div class="profile-field">
-          <label>Phone</label>
-          <input type="text" id="pe-phone" placeholder="e.g. +91 9876543210">
-        </div>
-        <div class="profile-field">
-          <label>LinkedIn URL</label>
-          <input type="text" id="pe-linkedin" placeholder="linkedin.com/in/username">
-        </div>
-        <div class="profile-field">
-          <label>GitHub URL</label>
-          <input type="text" id="pe-github" placeholder="github.com/username">
-        </div>
-        <div class="profile-field">
-          <label>Branch / Degree</label>
-          <input type="text" id="pe-branch" placeholder="e.g. B.Tech CSE (Blockchain)">
-        </div>
-        <div class="profile-field">
-          <label>CGPA</label>
-          <input type="text" id="pe-cgpa" placeholder="e.g. 9.09">
-        </div>
-        <div class="profile-field">
-          <label>Graduation Year</label>
-          <input type="text" id="pe-year" placeholder="e.g. May 2026">
-        </div>
-        <div class="profile-field">
-          <label>College</label>
-          <input type="text" id="pe-college" placeholder="e.g. VIT Vellore">
-        </div>
-        <div class="profile-field full-width">
-          <label>Technical Skills (comma separated)</label>
-          <input type="text" id="pe-skills" placeholder="e.g. Python, PyTorch, React, AWS, Docker">
-        </div>
-        <div class="profile-field full-width">
-          <label>Summary / Bio</label>
-          <textarea id="pe-summary" placeholder="A brief professional summary about yourself..."></textarea>
+
+      <!-- Tab bar -->
+      <div class="pe-tabs">
+        <button class="pe-tab active" onclick="switchPeTab('basics')" id="petab-basics">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Basics
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('projects')" id="petab-projects">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Projects
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('github')" id="petab-github">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+          GitHub Import
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('linkedin')" id="petab-linkedin">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn Import
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('documents')" id="petab-documents">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Documents
+        </button>
+      </div>
+
+      <!-- Basics tab -->
+      <div class="pe-pane active" id="pepane-basics">
+        <div class="profile-fields">
+          <div class="profile-field">
+            <label>Full Name</label>
+            <input type="text" id="pe-name" placeholder="e.g. Farhaan Khan">
+          </div>
+          <div class="profile-field">
+            <label>Phone</label>
+            <input type="text" id="pe-phone" placeholder="e.g. +91 9876543210">
+          </div>
+          <div class="profile-field">
+            <label>Branch / Degree</label>
+            <input type="text" id="pe-branch" placeholder="e.g. B.Tech CSE (Blockchain)">
+          </div>
+          <div class="profile-field">
+            <label>CGPA</label>
+            <input type="text" id="pe-cgpa" placeholder="e.g. 9.09">
+          </div>
+          <div class="profile-field">
+            <label>Graduation Year</label>
+            <input type="text" id="pe-year" placeholder="e.g. May 2026">
+          </div>
+          <div class="profile-field">
+            <label>College</label>
+            <input type="text" id="pe-college" placeholder="e.g. VIT Vellore">
+          </div>
+          <div class="profile-field">
+            <label>LinkedIn URL</label>
+            <input type="text" id="pe-linkedin" placeholder="linkedin.com/in/username">
+          </div>
+          <div class="profile-field">
+            <label>GitHub URL</label>
+            <input type="text" id="pe-github" placeholder="github.com/username">
+          </div>
+          <div class="profile-field full-width">
+            <label>Technical Skills (comma separated)</label>
+            <input type="text" id="pe-skills" placeholder="e.g. Python, PyTorch, React, AWS, Docker">
+          </div>
+          <div class="profile-field full-width">
+            <label>Summary / Bio</label>
+            <textarea id="pe-summary" placeholder="A brief professional summary about yourself..."></textarea>
+          </div>
         </div>
       </div>
+
+      <!-- Projects tab -->
+      <div class="pe-pane" id="pepane-projects">
+        <div id="peProjectsList" class="projects-list"></div>
+        <button class="btn-add-project" onclick="addProjectEntry()">+ Add Project</button>
+      </div>
+
+      <!-- GitHub Import tab -->
+      <div class="pe-pane" id="pepane-github">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Enter your GitHub username to fetch your top repositories. Kairo will extract and format them as resume projects automatically.</p>
+        <div class="profile-field" style="margin-bottom:0.8rem">
+          <label>GitHub Username</label>
+          <div class="import-field-row">
+            <input type="text" id="pe-githubUsername" placeholder="e.g. torvalds">
+            <button class="btn-import" id="peGithubBtn" onclick="peImportGithub()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              Fetch Profile
+            </button>
+          </div>
+        </div>
+        <div id="peGithubResult" class="import-result-box"></div>
+      </div>
+
+      <!-- LinkedIn Import tab -->
+      <div class="pe-pane" id="pepane-linkedin">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Copy your LinkedIn About, Experience, and Skills sections and paste below. Kairo will extract and merge them into your profile.</p>
+        <div style="margin-bottom:0.8rem">
+          <label style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.3rem">Paste LinkedIn Text</label>
+          <textarea class="linkedin-paste-area" id="pe-linkedinText" placeholder="Copy your About section, experience entries, skills — paste it all here. The more the better…"></textarea>
+          <label style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.3rem;margin-top:0.7rem">LinkedIn Profile URL (optional)</label>
+          <input type="url" id="pe-linkedinUrl" placeholder="https://linkedin.com/in/yourname" style="width:100%;background:rgba(245,240,232,0.05);border:1px solid rgba(201,168,76,0.2);color:var(--cream);padding:0.55rem 0.8rem;font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s;">
+        </div>
+        <button class="btn-import" id="peLinkedinBtn" onclick="peImportLinkedin()" style="margin-bottom:0.8rem">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          Extract Profile Data
+        </button>
+        <div id="peLinkedinResult" class="import-result-box"></div>
+      </div>
+
+      <!-- Documents tab -->
+      <div class="pe-pane" id="pepane-documents">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Data extracted from your uploaded documents (transcripts, marksheets, certificates). You can edit any field and save.</p>
+        <div id="peDocumentData">
+          <div style="color:var(--muted);font-size:0.85rem;padding:1.5rem;text-align:center;border:1px dashed rgba(201,168,76,0.15)">No documents uploaded yet. <a href="javascript:openUploadModal()" style="color:var(--gold)">Upload a document</a> to extract data automatically.</div>
+        </div>
+      </div>
+
       <div class="profile-save-row">
         <span class="profile-save-status" id="profileSaveStatus"></span>
         <button class="btn-ghost" onclick="toggleProfileEditor()">Cancel</button>
@@ -889,6 +1148,224 @@ function toggleProfileEditor() {
     : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
 }
 
+function switchPeTab(tab) {
+  ['basics','projects','github','linkedin','documents'].forEach(t => {
+    document.getElementById(`pepane-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`petab-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+// ── Projects editor ──────────────────────────────────────────────────────────
+let peProjects = [];
+
+function renderProjectsList() {
+  const list = document.getElementById('peProjectsList');
+  if (!peProjects.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:1rem;border:1px dashed rgba(201,168,76,0.12)">No projects yet. Add one below or import from GitHub.</div>';
+    return;
+  }
+  list.innerHTML = peProjects.map((p, i) => `
+    <div class="project-entry">
+      <button class="project-remove-btn" onclick="removeProject(${i})" title="Remove">✕</button>
+      <div class="project-entry-grid">
+        <div>
+          <span class="project-field-label">Project Name</span>
+          <input type="text" value="${esc(p.name||'')}" oninput="peProjects[${i}].name=this.value" placeholder="e.g. Campus Event App">
+        </div>
+        <div>
+          <span class="project-field-label">Tech Stack (comma separated)</span>
+          <input type="text" value="${esc((p.tech||[]).join(', '))}" oninput="peProjects[${i}].tech=this.value.split(',').map(s=>s.trim()).filter(Boolean)" placeholder="e.g. React, Node.js, MongoDB">
+        </div>
+        <div class="full">
+          <span class="project-field-label">Description</span>
+          <textarea oninput="peProjects[${i}].description=this.value" placeholder="What did you build and why?">${esc(p.description||'')}</textarea>
+        </div>
+        <div class="full">
+          <span class="project-field-label">Impact / Key Achievement</span>
+          <input type="text" value="${esc(p.impact||'')}" oninput="peProjects[${i}].impact=this.value" placeholder="e.g. Reduced load time by 40%, used by 200+ students">
+        </div>
+        <div>
+          <span class="project-field-label">GitHub / Live URL</span>
+          <input type="text" value="${esc(p.url||'')}" oninput="peProjects[${i}].url=this.value" placeholder="https://github.com/...">
+        </div>
+        <div>
+          <span class="project-field-label">Duration</span>
+          <input type="text" value="${esc(p.duration||'')}" oninput="peProjects[${i}].duration=this.value" placeholder="e.g. Jan–Mar 2024">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addProjectEntry() {
+  peProjects.push({ name: '', description: '', tech: [], impact: '', url: '', duration: '' });
+  renderProjectsList();
+  // Scroll to new entry
+  const list = document.getElementById('peProjectsList');
+  list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeProject(idx) {
+  peProjects.splice(idx, 1);
+  renderProjectsList();
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── GitHub Import (dashboard) ─────────────────────────────────────────────────
+async function peImportGithub() {
+  const username = document.getElementById('pe-githubUsername').value.trim();
+  if (!username) { showToast('Enter a GitHub username', false); return; }
+  const btn = document.getElementById('peGithubBtn');
+  const result = document.getElementById('peGithubResult');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:2px;margin:0"></div> Fetching...';
+  result.className = 'import-result-box visible';
+  result.innerHTML = '<div style="color:var(--muted);font-size:0.83rem">Fetching GitHub profile & analyzing projects…</div>';
+  try {
+    const res = await fetch('/api/github-profile', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username })
+    });
+    const data = await res.json();
+    if (data.error) { result.innerHTML = `<div style="color:#ffb3b3;font-size:0.83rem">${data.error}</div>`; return; }
+    const projects = data.extracted_projects || [];
+    result.innerHTML = `
+      <div class="gh-user-mini">
+        <img class="gh-avatar" src="${data.avatar_url||''}" alt="" onerror="this.style.display='none'">
+        <div class="gh-user-meta">
+          <h4>${esc(data.name||data.username)}</h4>
+          <p>${esc(data.bio||'')} &nbsp; ${data.public_repos} repos · ${data.followers} followers</p>
+        </div>
+      </div>
+      <div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Extracted Projects (${projects.length})</div>
+      ${projects.map(p => `
+        <div class="project-card-mini">
+          <strong>${esc(p.name)} ${p.url ? `<a href="${esc(p.url)}" target="_blank" style="color:var(--gold);font-size:0.72rem;font-weight:400">↗</a>` : ''}</strong>
+          <p>${esc(p.description||'')}</p>
+          <div class="tech-mini-tags">${(p.tech||[]).map(t=>`<span class="tech-mini-tag">${esc(t)}</span>`).join('')}</div>
+        </div>`).join('')}
+      <button class="btn-import" onclick="peAddGithubProjects(${JSON.stringify(projects).replace(/"/g,'&quot;')})" style="margin-top:0.6rem">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Add ${projects.length} Project${projects.length!==1?'s':''} to Profile
+      </button>`;
+    // Pre-fill GitHub URL field in basics
+    if (data.profile_url) document.getElementById('pe-github').value = data.profile_url;
+  } catch(e) {
+    result.innerHTML = `<div style="color:var(--muted);font-size:0.83rem">Error: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg> Fetch Profile';
+}
+
+function peAddGithubProjects(projects) {
+  projects.forEach(p => {
+    if (!peProjects.find(ep => ep.name === p.name)) peProjects.push(p);
+  });
+  renderProjectsList();
+  switchPeTab('projects');
+  showToast(`✓ ${projects.length} project${projects.length!==1?'s':''} added — save to confirm`, true);
+}
+
+// ── LinkedIn Import (dashboard) ───────────────────────────────────────────────
+async function peImportLinkedin() {
+  const text = document.getElementById('pe-linkedinText').value.trim();
+  const url = document.getElementById('pe-linkedinUrl').value.trim();
+  if (!text) { showToast('Paste your LinkedIn profile text first', false); return; }
+  const btn = document.getElementById('peLinkedinBtn');
+  const result = document.getElementById('peLinkedinResult');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:2px;margin:0"></div> Extracting...';
+  result.className = 'import-result-box visible';
+  result.innerHTML = '<div style="color:var(--muted);font-size:0.83rem">Analysing your LinkedIn profile…</div>';
+  try {
+    const res = await fetch('/api/linkedin-hints', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text, url })
+    });
+    const data = await res.json();
+    if (data.error) { result.innerHTML = `<div style="color:#ffb3b3;font-size:0.83rem">${data.error}</div>`; return; }
+    const ex = data.extracted || {};
+    const exp = ex.experience || [];
+    const skills = ex.skills?.technical || [];
+    result.innerHTML = `
+      ${ex.summary ? `<div style="font-size:0.83rem;color:var(--muted);margin-bottom:0.7rem;line-height:1.6;border-left:2px solid rgba(201,168,76,0.3);padding-left:0.7rem">${esc(ex.summary)}</div>` : ''}
+      ${exp.length ? `<div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Experience (${exp.length})</div>
+        ${exp.map(e=>`<div style="padding:0.5rem 0;border-bottom:1px solid rgba(201,168,76,0.08);font-size:0.83rem">
+          <strong>${esc(e.role)}</strong> <span style="color:var(--muted)">at ${esc(e.company)} ${esc(e.duration||'')}</span>
+          ${(e.points||[]).map(p=>`<div style="color:var(--muted);padding-left:0.8rem;margin-top:0.15rem">• ${esc(p)}</div>`).join('')}
+        </div>`).join('')}` : ''}
+      ${skills.length ? `<div style="font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin:0.7rem 0 0.4rem">Skills (${skills.length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-bottom:0.7rem">${skills.map(s=>`<span class="tech-mini-tag">${esc(s)}</span>`).join('')}</div>` : ''}
+      <button class="btn-import" onclick="peApplyLinkedin(${JSON.stringify(ex).replace(/"/g,'&quot;')})">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Apply to Profile
+      </button>`;
+    if (url) document.getElementById('pe-linkedin').value = url;
+  } catch(e) {
+    result.innerHTML = `<div style="color:var(--muted);font-size:0.83rem">Error: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg> Extract Profile Data';
+}
+
+function peApplyLinkedin(extracted) {
+  // Merge skills into basics tab
+  const skills = extracted.skills?.technical || [];
+  if (skills.length) {
+    const existing = document.getElementById('pe-skills').value;
+    const existingArr = existing ? existing.split(',').map(s=>s.trim()) : [];
+    const merged = [...new Set([...existingArr, ...skills])].join(', ');
+    document.getElementById('pe-skills').value = merged;
+  }
+  if (extracted.summary && !document.getElementById('pe-summary').value) {
+    document.getElementById('pe-summary').value = extracted.summary;
+  }
+  // Add experience entries as projects if they look like projects
+  const exp = extracted.experience || [];
+  exp.forEach(e => {
+    if (!peProjects.find(p => p.name === e.company)) {
+      peProjects.push({ name: e.company, description: (e.points||[]).join(' '), tech: [], impact: '', url: '', duration: e.duration||'' });
+    }
+  });
+  renderProjectsList();
+  showToast('✓ LinkedIn data applied — review and save', true);
+  switchPeTab('basics');
+}
+
+// ── Document data tab ─────────────────────────────────────────────────────────
+function renderDocumentData(profile) {
+  const container = document.getElementById('peDocumentData');
+  const doc = profile.document_data || profile.extracted_from_docs || {};
+  if (!doc || !Object.keys(doc).length) return;
+
+  let html = '<div class="profile-fields">';
+  const fieldMap = {
+    name: 'Full Name', cgpa: 'CGPA', branch: 'Branch / Degree',
+    college: 'College', year: 'Graduation Year', roll_number: 'Roll Number',
+    semester: 'Semester', subjects: 'Subjects / Courses', certifications: 'Certifications',
+    achievements: 'Achievements'
+  };
+  Object.entries(doc).forEach(([key, val]) => {
+    const label = fieldMap[key] || key.replace(/_/g,' ').replace(/\w/g,c=>c.toUpperCase());
+    const isArray = Array.isArray(val);
+    const displayVal = isArray ? val.join(', ') : (val||'');
+    html += `<div class="profile-field${isArray || String(displayVal).length > 60 ? ' full-width' : ''}">
+      <label>${label} <span style="font-size:0.65rem;color:rgba(201,168,76,0.5);font-style:italic;margin-left:0.3rem">from document</span></label>
+      <input type="text" value="${esc(displayVal)}" oninput="updateDocField('${key}', this.value)" placeholder="${label}">
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateDocField(key, val) {
+  // Will be saved as part of profile on Save Changes
+  window._pendingDocEdits = window._pendingDocEdits || {};
+  window._pendingDocEdits[key] = val;
+}
+
 function populateProfileEditor(data) {
   const p = data.profile || {};
   document.getElementById('pe-name').value = data.name || p.name || '';
@@ -904,11 +1381,21 @@ function populateProfileEditor(data) {
   const sk = p.skills || {};
   const allSkills = [...(sk.technical||[]), ...(sk.tools||[])];
   document.getElementById('pe-skills').value = allSkills.length ? allSkills.join(', ') : (Array.isArray(p.skills) ? p.skills.join(', ') : '');
+  // Projects
+  peProjects = JSON.parse(JSON.stringify(p.projects || []));
+  renderProjectsList();
+  // Document data
+  renderDocumentData(p);
+  // Pre-fill GitHub username from URL
+  const ghUrl = p.github || '';
+  const ghMatch = ghUrl.match(/github\.com\/([^/]+)/);
+  if (ghMatch) document.getElementById('pe-githubUsername').value = ghMatch[1];
 }
 
 async function saveProfileEdits() {
   const statusEl = document.getElementById('profileSaveStatus');
   statusEl.textContent = 'Saving...';
+  statusEl.style.color = 'var(--gold)';
 
   const skillsRaw = document.getElementById('pe-skills').value.trim();
   const skillsList = skillsRaw ? skillsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -923,7 +1410,9 @@ async function saveProfileEdits() {
     year: document.getElementById('pe-year').value.trim(),
     college: document.getElementById('pe-college').value.trim(),
     summary: document.getElementById('pe-summary').value.trim(),
-    skills: { technical: skillsList, tools: [], soft: [] }
+    skills: { technical: skillsList, tools: [], soft: [] },
+    projects: peProjects,
+    ...(window._pendingDocEdits || {})
   };
 
   // Update name separately if changed
@@ -951,6 +1440,7 @@ async function saveProfileEdits() {
       stored.profile = data.profile;
       stored.name = nameVal || stored.name;
       localStorage.setItem('kairo_user', JSON.stringify(stored));
+      window._pendingDocEdits = {};
       statusEl.textContent = 'Saved successfully';
       setTimeout(() => { statusEl.textContent = ''; }, 2500);
     }
