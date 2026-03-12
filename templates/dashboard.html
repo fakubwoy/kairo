@@ -1436,11 +1436,11 @@ function openDocDetail(idx) {
   document.getElementById('docDetailTitle').textContent = name;
   document.getElementById('docDetailBody').innerHTML = bodyHtml;
   document.getElementById('docDetailDeleteBtn').onclick = function() { deleteDocument(idx); };
-  document.getElementById('docDetailModal').classList.add('open');
+  document.getElementById('docDetailModal').classList.add('active');
 }
 
 function closeDocDetail() {
-  document.getElementById('docDetailModal').classList.remove('open');
+  document.getElementById('docDetailModal').classList.remove('active');
 }
 
 async function deleteDocument(idx) {
