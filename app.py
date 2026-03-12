@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import requests
+import redis as redis_lib
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -32,6 +33,48 @@ OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
+# ── Redis (optional) ──────────────────────────────────────────────────────────
+# Used as a fast message cache. Falls back gracefully to Postgres if unavailable.
+REDIS_URL = os.environ.get('REDIS_URL', '')
+_redis = None
+
+def get_redis():
+    global _redis
+    if _redis is not None:
+        return _redis
+    if not REDIS_URL:
+        return None
+    try:
+        client = redis_lib.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+        client.ping()
+        _redis = client
+        print("Redis connected")
+        return _redis
+    except Exception as e:
+        print(f"Redis unavailable, using Postgres only: {e}")
+        return None
+
+CONV_CACHE_TTL = 60 * 60 * 24 * 7  # 7 days
+
+def cache_get_messages(conv_id):
+    r = get_redis()
+    if r:
+        try:
+            val = r.get(f"conv:{conv_id}:messages")
+            if val:
+                return json.loads(val)
+        except Exception:
+            pass
+    return None
+
+def cache_set_messages(conv_id, messages):
+    r = get_redis()
+    if r:
+        try:
+            r.setex(f"conv:{conv_id}:messages", CONV_CACHE_TTL, json.dumps(messages))
+        except Exception:
+            pass
 
 # Groq free models — fast inference, generous free tier. Primary cloud provider.
 GROQ_MODELS = [
@@ -80,6 +123,7 @@ class Conversation(db.Model):
     messages = db.Column(db.Text, default='[]')
     topic = db.Column(db.String(100), default='general')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Resume(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -482,25 +526,32 @@ def chat():
     data = request.json
     user_message = data.get('message', '')
     conversation_id = data.get('conversation_id')
-    
+
     sid = session.get('student_id')
     if not sid:
-        # Allow demo without login
         sid = 'demo'
 
     # Get or create conversation
     conv = None
     if conversation_id:
         conv = Conversation.query.get(conversation_id)
-    
+
+    if not conv and sid != 'demo':
+        # Resume latest open conversation if one exists
+        conv = Conversation.query.filter_by(
+            student_id=sid, topic='profile_building'
+        ).order_by(Conversation.created_at.desc()).first()
+
     if not conv and sid != 'demo':
         conv = Conversation(student_id=sid, topic='profile_building')
         db.session.add(conv)
         db.session.commit()
 
-    # Load messages
+    # Load messages — Redis first, Postgres fallback
     if conv:
-        messages = json.loads(conv.messages or '[]')
+        messages = cache_get_messages(conv.id)
+        if messages is None:
+            messages = json.loads(conv.messages or '[]')
     else:
         messages = data.get('messages', [])
 
@@ -526,8 +577,7 @@ def chat():
     if profile_complete:
         ai_response = ai_response.replace("PROFILE_COMPLETE", "").strip()
         messages[-1]['content'] = ai_response
-        
-        # Extract and save profile
+
         if sid and sid != 'demo':
             extracted = extract_profile_from_conversation(messages)
             student = Student.query.get(sid)
@@ -537,16 +587,19 @@ def chat():
                 student.profile_data = json.dumps(existing)
                 db.session.commit()
 
-    # Save conversation
+    # Persist — keep last 100 messages in both stores
+    trimmed = messages[-100:]
     if conv:
-        conv.messages = json.dumps(messages[-50:])  # Keep last 50 messages
+        conv.messages = json.dumps(trimmed)
+        conv.updated_at = datetime.utcnow()
         db.session.commit()
+        cache_set_messages(conv.id, trimmed)
 
     return jsonify({
         'response': ai_response,
         'conversation_id': conv.id if conv else None,
         'profile_complete': profile_complete,
-        'messages': messages
+        'messages': trimmed
     })
 
 @app.route('/api/upload', methods=['POST'])
@@ -682,6 +735,58 @@ def get_resumes():
         'job_description': r.job_description[:100] + '...' if r.job_description and len(r.job_description) > 100 else r.job_description
     } for r in resumes])
 
+@app.route('/api/conversations/active')
+def active_conversation():
+    """Return the most recent conversation with its messages for session restore."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'conversation': None})
+
+    conv = Conversation.query.filter_by(
+        student_id=sid, topic='profile_building'
+    ).order_by(Conversation.created_at.desc()).first()
+
+    if not conv:
+        return jsonify({'conversation': None})
+
+    # Try Redis first, fall back to Postgres
+    messages = cache_get_messages(conv.id)
+    if messages is None:
+        messages = json.loads(conv.messages or '[]')
+        if messages:
+            cache_set_messages(conv.id, messages)  # warm the cache
+
+    if not messages:
+        return jsonify({'conversation': None})
+
+    return jsonify({
+        'conversation': {
+            'id': conv.id,
+            'messages': messages,
+            'updated_at': (conv.updated_at or conv.created_at).isoformat(),
+            'message_count': len(messages)
+        }
+    })
+
+@app.route('/api/conversations/new', methods=['POST'])
+def new_conversation():
+    """Start a fresh conversation, archiving the current one."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    # Archive old conversations by changing their topic
+    old_convs = Conversation.query.filter_by(student_id=sid, topic='profile_building').all()
+    for c in old_convs:
+        c.topic = 'archived'
+    db.session.commit()
+
+    conv = Conversation(student_id=sid, topic='profile_building')
+    db.session.add(conv)
+    db.session.commit()
+
+    return jsonify({'conversation_id': conv.id})
+
 @app.route('/api/llm-status')
 def llm_status():
     return jsonify(get_llm_status())
@@ -694,11 +799,13 @@ def health():
 # Startup — create tables and apply any missing column migrations
 with app.app_context():
     db.create_all()
-    # Migrate: add password_hash if it doesn't exist (for pre-existing Postgres DBs)
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text(
                 "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)"
+            ))
+            conn.execute(db.text(
+                "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"
             ))
             conn.commit()
     except Exception as e:

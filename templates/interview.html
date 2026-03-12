@@ -351,8 +351,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
   </div>
   <div class="ai-status">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Connecting…</span>
+    <div class="status-dot"></div>
+    <span id="statusText">Kairo is ready</span>
   </div>
 </div>
 
@@ -424,30 +424,6 @@ const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
 let conversationId = null;
 let messages = [];
 let isTyping = false;
-
-// Check and display which backend is active
-async function checkBackend() {
-  try {
-    const res = await fetch('/api/llm-status');
-    const s = await res.json();
-    const dot = document.getElementById('statusDot');
-    const txt = document.getElementById('statusText');
-    if (s.active_backend === 'openrouter') {
-      dot.style.background = '#4caf50';
-      txt.textContent = 'Cloud AI (OpenRouter)';
-    } else if (s.active_backend === 'ollama') {
-      dot.style.background = '#ffb74d';
-      txt.textContent = `Local AI (${s.ollama.model})`;
-    } else {
-      dot.style.background = '#ef5350';
-      txt.innerHTML = `No AI backend · <a href="/dashboard" style="color:var(--gold);">Fix in Dashboard</a>`;
-    }
-  } catch(e) {
-    document.getElementById('statusText').textContent = 'Kairo is ready';
-  }
-}
-
-checkBackend();
 
 function appendMessage(role, content) {
   const container = document.getElementById('messages');
@@ -607,39 +583,107 @@ document.getElementById('msgInput').addEventListener('keydown', function(e) {
   }
 });
 
-// Init: start conversation
-async function startConversation() {
-  document.getElementById('statusText').textContent = 'Kairo is thinking...';
+// Init: restore previous session or start fresh
+async function startConversation(forceNew = false) {
+  document.getElementById('statusText').textContent = 'Loading...';
   showTyping();
-  
+
   try {
-    const greeting = user.name 
-      ? `Hi ${user.name.split(' ')[0]}!` 
-      : 'Hello!';
-      
+    // Check for an existing conversation first (unless forced new)
+    if (!forceNew && user.id) {
+      const res = await fetch('/api/conversations/active');
+      const data = await res.json();
+
+      if (data.conversation && data.conversation.messages.length > 2) {
+        hideTyping();
+        conversationId = data.conversation.id;
+        messages = data.conversation.messages;
+
+        // Replay messages into UI
+        for (const m of messages) {
+          if (m.role === 'user') appendMessage('user', m.content);
+          else if (m.role === 'assistant') appendMessage('ai', m.content);
+        }
+
+        // Show resume banner
+        showResumeBanner(data.conversation.message_count, data.conversation.updated_at);
+        document.getElementById('statusText').textContent = 'Kairo is ready';
+        updateTopicProgress();
+        return;
+      }
+    }
+
+    // No prior session — start fresh
+    if (forceNew && user.id) {
+      await fetch('/api/conversations/new', { method: 'POST' });
+      conversationId = null;
+      messages = [];
+    }
+
+    const greeting = user.name ? `Hi ${user.name.split(' ')[0]}!` : 'Hello!';
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: greeting + ' I want to build my career profile.',
-        messages: []
-      })
+      body: JSON.stringify({ message: greeting + ' I want to build my career profile.', messages: [] })
     });
-    
     const data = await res.json();
     hideTyping();
-    
+
     if (data.response) {
       appendMessage('ai', data.response);
-      messages = [{role: 'user', content: greeting + ' I want to build my career profile.'}, {role: 'assistant', content: data.response}];
+      messages = [
+        { role: 'user', content: greeting + ' I want to build my career profile.' },
+        { role: 'assistant', content: data.response }
+      ];
       conversationId = data.conversation_id;
     }
   } catch(e) {
     hideTyping();
     appendMessage('ai', "Hey! I'm Kairo, your AI career co-pilot. 👋 Let's build your profile together. What's your name, branch, and current year at VIT?");
   }
-  
+
   document.getElementById('statusText').textContent = 'Kairo is ready';
+}
+
+function showResumeBanner(msgCount, updatedAt) {
+  const existing = document.getElementById('resumeBanner');
+  if (existing) existing.remove();
+
+  const turns = Math.floor(msgCount / 2);
+  const when = updatedAt ? new Date(updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+
+  const banner = document.createElement('div');
+  banner.id = 'resumeBanner';
+  banner.style.cssText = `
+    background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.25);
+    padding: 0.7rem 1.2rem; display: flex; align-items: center;
+    justify-content: space-between; font-size: 0.82rem; flex-shrink: 0;
+    gap: 1rem; flex-wrap: wrap;
+  `;
+  banner.innerHTML = `
+    <span style="color:var(--muted);">
+      ↩ Resumed from <strong style="color:var(--cream);">${when}</strong>
+      · ${turns} exchange${turns !== 1 ? 's' : ''} so far
+    </span>
+    <button onclick="confirmNewSession()" style="
+      background:none; border:1px solid rgba(201,168,76,0.3); color:var(--gold);
+      padding:0.25rem 0.7rem; font-size:0.75rem; cursor:pointer; font-family:'DM Sans',sans-serif;
+      border-radius:2px; white-space:nowrap;
+    ">Start fresh ↺</button>
+  `;
+
+  // Insert above the input area
+  const inputArea = document.querySelector('.input-area');
+  inputArea.parentNode.insertBefore(banner, inputArea);
+}
+
+function confirmNewSession() {
+  if (confirm('Start a new conversation? Your previous chat will be archived and your saved profile stays intact.')) {
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('resumeBanner')?.remove();
+    document.getElementById('hints').style.display = 'flex';
+    startConversation(true);
+  }
 }
 
 startConversation();
