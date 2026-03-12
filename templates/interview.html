@@ -517,20 +517,41 @@ async function sendMessage() {
 }
 
 function updateTopicProgress() {
-  const topics = ['t-basic', 't-edu', 't-projects', 't-skills', 't-intern', 't-extra', 't-cert'];
-  const msgCount = messages.length;
-  
-  // Simple progression based on conversation length
-  const threshold = 4;
-  topics.forEach((t, i) => {
-    const el = document.getElementById(t);
+  // Build a single lowercase string of everything said so far
+  const transcript = messages
+    .map(m => m.content || '')
+    .join(' ')
+    .toLowerCase();
+
+  // Each topic: [element id, keywords that signal it's been covered]
+  const topicSignals = [
+    ['t-basic', ['branch', 'cse', 'ece', 'mech', 'civil', 'btech', 'year', 'batch', '1st', '2nd', '3rd', '4th', 'first year', 'second year', 'third year', 'fourth year']],
+    ['t-edu',   ['cgpa', 'gpa', 'percentage', 'marks', 'grade', 'subjects', 'data structures', 'dbms', 'machine learning', 'algorithms', 'semester']],
+    ['t-projects', ['project', 'built', 'developed', 'created', 'made', 'app', 'website', 'system', 'github']],
+    ['t-skills',   ['react', 'python', 'javascript', 'java', 'c++', 'node', 'flask', 'django', 'sql', 'mongodb', 'docker', 'aws', 'skills', 'tech stack', 'technologies']],
+    ['t-intern',   ['internship', 'intern', 'company', 'startup', 'worked at', 'job', 'role', 'techno', 'bangalore', 'mumbai', 'delhi', 'remote']],
+    ['t-extra',    ['club', 'hackathon', 'competition', 'gdsc', 'ieee', 'acm', 'volunteer', 'gravitas', 'riviera', 'fest', 'extracurricular', 'council', 'sports', 'cultural']],
+    ['t-cert',     ['certificate', 'certification', 'coursera', 'udemy', 'nptel', 'aws certified', 'google', 'microsoft', 'credential']],
+  ];
+
+  topicSignals.forEach(([id, keywords]) => {
+    const el = document.getElementById(id);
     if (!el) return;
-    const turnNeeded = i * threshold;
-    if (msgCount > turnNeeded + threshold) {
+    const covered = keywords.some(kw => transcript.includes(kw));
+    if (covered) {
       el.classList.remove('active');
       el.classList.add('done');
-    } else if (msgCount > turnNeeded) {
+    }
+  });
+
+  // Mark the first uncovered topic as "active" (currently being discussed)
+  let foundActive = false;
+  topicSignals.forEach(([id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!el.classList.contains('done') && !foundActive) {
       el.classList.add('active');
+      foundActive = true;
     }
   });
 }
