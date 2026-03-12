@@ -147,6 +147,19 @@ class ResumeVersion(db.Model):
     label = db.Column(db.String(100))         # e.g. "AI Generated", "Manually edited"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class MockInterview(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.String(36), db.ForeignKey('student.id'), nullable=False)
+    job_title = db.Column(db.String(200))
+    job_description = db.Column(db.Text)
+    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed
+    questions = db.Column(db.Text, default='[]')          # JSON list of question objects
+    transcript = db.Column(db.Text, default='[]')         # JSON list of {question, answer, timestamp}
+    report = db.Column(db.Text)                           # JSON evaluation report
+    overall_score = db.Column(db.Integer)                 # 0-100
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
 def _call_groq(messages, system_prompt):
@@ -420,6 +433,10 @@ def dashboard():
 @app.route('/interview')
 def interview():
     return render_template('interview.html')
+
+@app.route('/interview-prep')
+def interview_prep_page():
+    return render_template('interview_prep.html')
 
 @app.route('/resume')
 def resume_page():
@@ -1350,6 +1367,241 @@ def new_conversation():
 def llm_status():
     return jsonify(get_llm_status())
 
+## ── Mock Interview ────────────────────────────────────────────────────────────
+
+def get_mock_interview_questions_prompt(profile_data, job_title, job_description):
+    profile_str = json.dumps(profile_data, indent=2) if isinstance(profile_data, dict) else profile_data
+    return f"""You are an expert technical interviewer. Generate exactly 8 interview questions for a candidate.
+
+Job Title: {job_title}
+Job Description: {job_description[:1000] if job_description else 'General role'}
+
+Candidate Profile:
+{profile_str[:2000]}
+
+Generate a mix of:
+- 2 behavioural questions (past experience, teamwork, conflict)
+- 2 technical questions (specific to the role/skills)
+- 2 profile-based questions (based on candidate's projects or skills listed)
+- 1 situational question (hypothetical scenario)
+- 1 motivational/culture-fit question
+
+Return ONLY a valid JSON array, no markdown, no preamble:
+[
+  {{"id": 1, "type": "behavioural", "question": "...", "what_to_look_for": "..."}},
+  {{"id": 2, "type": "technical", "question": "...", "what_to_look_for": "..."}},
+  ...
+]"""
+
+def get_evaluation_prompt(questions, transcript, job_title):
+    qa_text = ""
+    for item in transcript:
+        qa_text += f"\nQ{item.get('question_id','')}: {item.get('question','')}\nAnswer: {item.get('answer','[No answer]')}\n"
+    
+    questions_text = json.dumps(questions, indent=2)
+    
+    return f"""You are an expert interview coach. Evaluate this mock interview for a {job_title} position.
+
+Questions asked:
+{questions_text[:2000]}
+
+Interview Transcript:
+{qa_text[:3000]}
+
+Evaluate each answer on:
+1. Relevance (did they answer the question?)
+2. Depth (was it specific and detailed?)
+3. Communication (clear and structured?)
+4. Technical accuracy (for technical questions)
+
+Return ONLY valid JSON, no markdown:
+{{
+  "overall_score": <0-100>,
+  "overall_summary": "...",
+  "strengths": ["...", "...", "..."],
+  "areas_for_improvement": ["...", "...", "..."],
+  "question_scores": [
+    {{
+      "question_id": 1,
+      "question": "...",
+      "answer": "...",
+      "score": <0-10>,
+      "feedback": "...",
+      "ideal_answer_hint": "..."
+    }}
+  ],
+  "tips": ["specific actionable tip 1", "specific actionable tip 2", "specific actionable tip 3"],
+  "readiness_level": "Not Ready / Needs Work / Almost There / Interview Ready"
+}}"""
+
+
+@app.route('/api/mock-interview/start', methods=['POST'])
+def start_mock_interview():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.get_json()
+    job_title = data.get('job_title', 'Software Engineer')
+    job_description = data.get('job_description', '')
+    
+    student = Student.query.get(session['user_id'])
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+    
+    try:
+        profile_data = json.loads(student.profile_data or '{}')
+    except:
+        profile_data = {}
+    
+    # Generate questions via LLM
+    prompt = get_mock_interview_questions_prompt(profile_data, job_title, job_description)
+    raw = call_llm([], prompt)
+    
+    try:
+        # Strip markdown fences if present
+        cleaned = raw.strip()
+        if cleaned.startswith('```'):
+            cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0]
+        questions = json.loads(cleaned)
+    except Exception as e:
+        # Fallback generic questions
+        questions = [
+            {"id": 1, "type": "behavioural", "question": "Tell me about yourself and why you're interested in this role.", "what_to_look_for": "Concise summary, enthusiasm"},
+            {"id": 2, "type": "behavioural", "question": "Describe a challenging project you worked on and how you overcame obstacles.", "what_to_look_for": "Problem-solving, resilience"},
+            {"id": 3, "type": "technical", "question": f"What technical skills are most relevant for a {job_title} role?", "what_to_look_for": "Domain knowledge"},
+            {"id": 4, "type": "technical", "question": "Walk me through how you would approach debugging a complex issue in a production system.", "what_to_look_for": "Systematic thinking"},
+            {"id": 5, "type": "profile", "question": "Tell me about your most impactful project and what you learned from it.", "what_to_look_for": "Depth, learnings"},
+            {"id": 6, "type": "profile", "question": "How have your past experiences prepared you for this role?", "what_to_look_for": "Relevance, growth"},
+            {"id": 7, "type": "situational", "question": "If you disagreed with your manager's technical decision, how would you handle it?", "what_to_look_for": "Communication, professionalism"},
+            {"id": 8, "type": "motivational", "question": "Where do you see yourself in 3 years, and how does this role fit into that?", "what_to_look_for": "Ambition, alignment"},
+        ]
+    
+    interview = MockInterview(
+        student_id=session['user_id'],
+        job_title=job_title,
+        job_description=job_description,
+        status='in_progress',
+        questions=json.dumps(questions),
+        transcript='[]'
+    )
+    db.session.add(interview)
+    db.session.commit()
+    
+    return jsonify({'interview_id': interview.id, 'questions': questions})
+
+
+@app.route('/api/mock-interview/<int:interview_id>/submit-answer', methods=['POST'])
+def submit_interview_answer(interview_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    if not interview:
+        return jsonify({'error': 'Interview not found'}), 404
+    
+    data = request.get_json()
+    question_id = data.get('question_id')
+    question_text = data.get('question')
+    answer = data.get('answer', '')
+    
+    transcript = json.loads(interview.transcript or '[]')
+    transcript.append({
+        'question_id': question_id,
+        'question': question_text,
+        'answer': answer,
+        'timestamp': datetime.utcnow().isoformat()
+    })
+    interview.transcript = json.dumps(transcript)
+    db.session.commit()
+    
+    return jsonify({'status': 'saved'})
+
+
+@app.route('/api/mock-interview/<int:interview_id>/complete', methods=['POST'])
+def complete_mock_interview(interview_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    if not interview:
+        return jsonify({'error': 'Interview not found'}), 404
+    
+    transcript = json.loads(interview.transcript or '[]')
+    questions = json.loads(interview.questions or '[]')
+    
+    # Generate evaluation
+    eval_prompt = get_evaluation_prompt(questions, transcript, interview.job_title)
+    raw = call_llm([], eval_prompt)
+    
+    try:
+        cleaned = raw.strip()
+        if cleaned.startswith('```'):
+            cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0]
+        report = json.loads(cleaned)
+    except Exception as e:
+        report = {
+            "overall_score": 65,
+            "overall_summary": "Interview completed. Detailed evaluation unavailable — please try again.",
+            "strengths": ["Completed the interview", "Provided answers to questions"],
+            "areas_for_improvement": ["Practice more structured answers", "Use STAR method for behavioural questions"],
+            "question_scores": [],
+            "tips": ["Practice with the STAR method", "Research the company before interviews", "Prepare 2-3 questions to ask the interviewer"],
+            "readiness_level": "Needs Work"
+        }
+    
+    interview.status = 'completed'
+    interview.report = json.dumps(report)
+    interview.overall_score = report.get('overall_score', 0)
+    interview.completed_at = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({'report': report, 'transcript': transcript})
+
+
+@app.route('/api/mock-interview/list', methods=['GET'])
+def list_mock_interviews():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    interviews = MockInterview.query.filter_by(
+        student_id=session['user_id'],
+        status='completed'
+    ).order_by(MockInterview.created_at.desc()).limit(20).all()
+    
+    result = []
+    for iv in interviews:
+        result.append({
+            'id': iv.id,
+            'job_title': iv.job_title,
+            'overall_score': iv.overall_score,
+            'created_at': iv.created_at.isoformat(),
+            'completed_at': iv.completed_at.isoformat() if iv.completed_at else None
+        })
+    return jsonify(result)
+
+
+@app.route('/api/mock-interview/<int:interview_id>', methods=['GET'])
+def get_mock_interview(interview_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    if not interview:
+        return jsonify({'error': 'Interview not found'}), 404
+    
+    return jsonify({
+        'id': interview.id,
+        'job_title': interview.job_title,
+        'job_description': interview.job_description,
+        'status': interview.status,
+        'questions': json.loads(interview.questions or '[]'),
+        'transcript': json.loads(interview.transcript or '[]'),
+        'report': json.loads(interview.report) if interview.report else None,
+        'overall_score': interview.overall_score,
+        'created_at': interview.created_at.isoformat(),
+        'completed_at': interview.completed_at.isoformat() if interview.completed_at else None
+    })
+
+
 @app.route('/api/health')
 def health():
     s = get_llm_status()
@@ -1381,6 +1633,5 @@ with app.app_context():
             conn.commit()
     except Exception as e:
         print(f"Migration note: {e}")
-
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
