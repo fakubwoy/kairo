@@ -125,14 +125,17 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
 .btn-sm:hover { background: rgba(201,168,76,0.1); }
 .empty-list { padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; line-height: 1.8; }
 
-/* Version/diff panel */
+/* Version/diff panel — slides in from the right over the resume */
 .version-panel {
-  position: absolute; inset: 0; z-index: 20;
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 360px; z-index: 20;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   padding: 1.2rem;
   overflow-y: auto;
   display: flex; flex-direction: column;
+  box-shadow: -6px 0 24px rgba(0,0,0,0.35);
 }
 .version-panel h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem; color: var(--cream); display: flex; align-items: center; gap: 0.4rem; }
 .version-panel-close { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; line-height: 1; }
@@ -605,9 +608,10 @@ function toggleVersionPanel() {
   if (versionPanelOpen && currentResumeId) loadVersions();
   // Reset diff when closing
   if (!versionPanelOpen) {
-    document.getElementById('diffOutput').style.display = 'none';
+    const output = document.getElementById('diffOutput');
+    output.style.display = 'none';
     const db = document.getElementById('showDiffBtn');
-    if (db) db.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
+    if (db) { db.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff'; db.dataset.diffOpen = '0'; }
   }
 }
 
@@ -644,13 +648,15 @@ async function runDiff() {
   const verB = document.getElementById('diffVerB').value;
   const output = document.getElementById('diffOutput');
   const btn = document.getElementById('showDiffBtn');
-  // Toggle off if already visible
-  if (output.style.display !== 'none' && output.style.display !== '') {
+  // Toggle off if already showing
+  if (btn.dataset.diffOpen === '1') {
     output.style.display = 'none';
+    btn.dataset.diffOpen = '0';
     btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
     return;
   }
   output.style.display = '';
+  btn.dataset.diffOpen = '1';
   output.innerHTML = '<div class="loading-state" style="height:80px"><div class="spinner"></div><span>Computing diff...</span></div>';
   btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Hide Diff';
   try {
@@ -662,6 +668,7 @@ async function runDiff() {
       ${d.html_diff || '<div style="color:var(--muted)">No differences found.</div>'}`;
   } catch(e) {
     output.innerHTML = `<div style="color:var(--muted)">Diff failed: ${e.message}</div>`;
+    btn.dataset.diffOpen = '0';
     btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
   }
 }
