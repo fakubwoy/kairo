@@ -146,16 +146,13 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
 .version-date { color: var(--muted); font-size: 0.75rem; }
 .diff-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 0.8rem; margin-top: 0.4rem; }
 .diff-controls-label { font-size: 0.82rem; color: var(--muted); width: 100%; margin-bottom: 0.2rem; }
-/* Inline diff view */
-.diff-output { margin-top: 0.8rem; flex: 1; overflow-y: auto; }
-.diff-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.diff-side { background: var(--surface2); border: 1px solid var(--border); padding: 0.7rem; }
-.diff-side-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.diff-line { font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; padding: 1px 4px; line-height: 1.6; }
-.diff-line.add { background: rgba(76,175,125,0.18); color: #7dffb3; }
-.diff-line.del { background: rgba(224,85,85,0.18); color: #ffb3b3; text-decoration: line-through; opacity: 0.8; }
-.diff-line.same { color: var(--muted); }
-.diff-line-num { display: inline-block; width: 2em; color: rgba(107,101,96,0.5); user-select: none; margin-right: 0.4rem; text-align: right; font-size: 0.72rem; }
+.diff-output { margin-top: 0.8rem; background: var(--surface2); border: 1px solid var(--border); padding: 1rem; font-size: 0.8rem; max-height: 300px; overflow-y: auto; }
+.diff-output table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78rem; }
+.diff-output td { padding: 2px 6px; white-space: pre-wrap; word-break: break-word; }
+.diff-output .diff_add { background: rgba(76,175,125,0.15); color: #7dffb3; }
+.diff-output .diff_chg { background: rgba(201,168,76,0.12); }
+.diff-output .diff_sub { background: rgba(224,85,85,0.15); color: #ffb3b3; }
+.diff-output .diff_header { color: var(--muted); font-size: 0.75rem; }
 
 /* Intro script pane */
 .script-output { background: var(--surface2); border: 1px solid var(--border); padding: 1.2rem; margin-top: 1rem; }
@@ -352,7 +349,7 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
             <select id="diffVerA" style="flex:1"><option value="1">Version 1</option></select>
             <span style="color:var(--muted)">vs</span>
             <select id="diffVerB" style="flex:1"><option value="current">Current</option></select>
-            <button class="btn-outline" id="showDiffBtn" onclick="toggleDiff()">
+            <button class="btn-outline" id="showDiffBtn" onclick="runDiff()">
               <svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff
             </button>
           </div>
@@ -606,10 +603,9 @@ function toggleVersionPanel() {
   const btn = document.getElementById('savedVersionBtn');
   if (btn) btn.classList.toggle('active-btn', versionPanelOpen);
   if (versionPanelOpen && currentResumeId) loadVersions();
-  // Hide diff when closing panel
+  // Reset diff when closing
   if (!versionPanelOpen) {
     document.getElementById('diffOutput').style.display = 'none';
-    diffVisible = false;
     const db = document.getElementById('showDiffBtn');
     if (db) db.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
   }
@@ -624,43 +620,21 @@ async function loadVersions() {
     const vers = await res.json();
     if (!vers.length) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">No versions yet. Save edits to create versions.</div>'; return; }
 
-    listEl.innerHTML = vers.map((v, i) => `
-      <div class="version-item${i === 0 ? ' selected' : ''}" onclick="selectVersion(this, '${v.id || ''}')">
+    listEl.innerHTML = vers.map(v => `
+      <div class="version-item">
         <span class="version-badge">v${v.version_number}</span>
         <span class="version-label">${v.label || 'Version'}</span>
         <span class="version-date">${fmtDate(v.created_at)}</span>
       </div>`).join('');
 
-    // Populate diff selects — oldest vs current by default
+    // Populate diff selects
     const selA = document.getElementById('diffVerA');
     const selB = document.getElementById('diffVerB');
-    selA.innerHTML = vers.filter(v => v.id).map(v => `<option value="${v.id}">v${v.version_number} — ${v.label || 'Version'}</option>`).join('');
-    selB.innerHTML = vers.map(v => v.id
-      ? `<option value="${v.id}">v${v.version_number} — ${v.label || 'Version'}</option>`
-      : `<option value="current">Current (latest)</option>`).join('');
-    selB.innerHTML += '<option value="current">Current (latest)</option>';
-    selB.value = 'current';
+    selA.innerHTML = vers.filter(v => v.id).map(v => `<option value="${v.id}">v${v.version_number} — ${v.label}</option>`).join('');
+    selB.innerHTML = vers.map(v => v.id ? `<option value="${v.id}">v${v.version_number} — ${v.label}</option>` : `<option value="current">Current</option>`).join('');
+    if (selB.options.length > 0) selB.value = 'current';
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Could not load versions.</div>';
-  }
-}
-
-function selectVersion(el, id) {
-  document.querySelectorAll('.version-item').forEach(v => v.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
-let diffVisible = false;
-
-function toggleDiff() {
-  const output = document.getElementById('diffOutput');
-  const btn = document.getElementById('showDiffBtn');
-  if (diffVisible) {
-    output.style.display = 'none';
-    diffVisible = false;
-    btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
-  } else {
-    runDiff();
   }
 }
 
@@ -670,49 +644,26 @@ async function runDiff() {
   const verB = document.getElementById('diffVerB').value;
   const output = document.getElementById('diffOutput');
   const btn = document.getElementById('showDiffBtn');
+  // Toggle off if already visible
+  if (output.style.display !== 'none' && output.style.display !== '') {
+    output.style.display = 'none';
+    btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
+    return;
+  }
   output.style.display = '';
   output.innerHTML = '<div class="loading-state" style="height:80px"><div class="spinner"></div><span>Computing diff...</span></div>';
-  diffVisible = true;
   btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Hide Diff';
   try {
     const res = await fetch(`/api/resumes/${currentResumeId}/diff?ver_a=${verA}&ver_b=${verB}`);
     const d = await res.json();
     if (d.error) { output.innerHTML = `<div style="color:var(--muted)">${d.error}</div>`; return; }
-    // Build inline split diff
-    output.innerHTML = renderInlineDiff(d);
+    output.innerHTML = `
+      <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.5rem">${d.changes} line(s) changed</div>
+      ${d.html_diff || '<div style="color:var(--muted)">No differences found.</div>'}`;
   } catch(e) {
     output.innerHTML = `<div style="color:var(--muted)">Diff failed: ${e.message}</div>`;
-    diffVisible = false;
     btn.innerHTML = '<svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff';
   }
-}
-
-function renderInlineDiff(d) {
-  if (!d.html_diff && !d.lines_a && !d.lines_b) {
-    // Fallback: show server html_diff in a styled container
-    const changes = d.changes || 0;
-    if (changes === 0) return '<div style="color:var(--muted);font-size:0.82rem;padding:0.5rem">No differences found.</div>';
-    return `<div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.5rem">${changes} change(s)</div>${d.html_diff || ''}`;
-  }
-  // If server sends line arrays, render split view
-  const la = d.lines_a || [];
-  const lb = d.lines_b || [];
-  const maxLen = Math.max(la.length, lb.length);
-  let leftRows = '', rightRows = '';
-  for (let i = 0; i < maxLen; i++) {
-    const a = la[i] || { text: '', type: 'empty' };
-    const b = lb[i] || { text: '', type: 'empty' };
-    leftRows += `<div class="diff-line ${a.type === 'del' ? 'del' : a.type === 'add' ? 'add' : 'same'}"><span class="diff-line-num">${a.type !== 'empty' ? i+1 : ''}</span>${escHtml(a.text || '')}</div>`;
-    rightRows += `<div class="diff-line ${b.type === 'add' ? 'add' : b.type === 'del' ? 'del' : 'same'}"><span class="diff-line-num">${b.type !== 'empty' ? i+1 : ''}</span>${escHtml(b.text || '')}</div>`;
-  }
-  return `<div class="diff-split">
-    <div class="diff-side"><div class="diff-side-label">Before</div>${leftRows}</div>
-    <div class="diff-side"><div class="diff-side-label">After</div>${rightRows}</div>
-  </div>`;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Saved resumes ─────────────────────────────────────────────────────────────
