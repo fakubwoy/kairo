@@ -893,10 +893,11 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
       <!-- Documents tab -->
       <div class="pe-pane" id="pepane-documents">
-        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Data extracted from your uploaded documents (transcripts, marksheets, certificates). You can edit any field and save.</p>
-        <div id="peDocumentData">
-          <div style="color:var(--muted);font-size:0.85rem;padding:1.5rem;text-align:center;border:1px dashed rgba(201,168,76,0.15)">No documents uploaded yet. <a href="javascript:openUploadModal()" style="color:var(--gold)">Upload a document</a> to extract data automatically.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <p style="color:var(--muted);font-size:0.84rem;margin:0;line-height:1.6">Uploaded documents — click any to see extracted info, or delete it from your profile.</p>
+          <button class="btn-gold" style="width:auto;margin:0;padding:0.4rem 1rem;font-size:0.8rem;white-space:nowrap;flex-shrink:0;" onclick="openUploadModal()">+ Upload</button>
         </div>
+        <div id="peDocumentData"></div>
       </div>
 
       <div class="profile-save-row">
@@ -1340,18 +1341,47 @@ function renderDocumentData(profile) {
   if (!container) return;
 
   const uploadedDocs = profile.uploaded_documents || [];
-  const doc = profile.document_data || (uploadedDocs.length ? uploadedDocs[uploadedDocs.length - 1].extracted : null) || {};
 
-  if (!doc || !Object.keys(doc).length) {
+  if (!uploadedDocs.length) {
     container.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1.5rem;text-align:center;border:1px dashed rgba(201,168,76,0.15)">No documents uploaded yet. <a href="javascript:openUploadModal()" style="color:var(--gold)">Upload a document</a> to extract data automatically.</div>';
     return;
   }
 
-  if (doc.raw_summary && Object.keys(doc).length === 1) {
-    container.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.8rem">Kairo could not extract structured fields — here is a raw summary:</div><div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.12);padding:1rem;font-size:0.85rem;line-height:1.7;color:var(--cream)">' + esc(doc.raw_summary) + '</div>';
-    return;
-  }
+  let html = '<div style="display:flex;flex-direction:column;gap:0.5rem;">';
+  uploadedDocs.forEach(function(doc, idx) {
+    const name = doc.original_name || doc.filename || 'Document ' + (idx + 1);
+    const ext = doc.extracted || {};
+    const docType = ext.document_type || 'document';
+    const typeLabel = docType.charAt(0).toUpperCase() + docType.slice(1);
+    const fieldCount = Object.values(ext).filter(v => v && (Array.isArray(v) ? v.length : true) && typeof v !== 'object').length;
+    const fieldsText = fieldCount ? fieldCount + ' field' + (fieldCount !== 1 ? 's' : '') + ' extracted' : 'Click to view extracted data';
 
+    html += `<div class="doc-list-item" onclick="openDocDetail(${idx})" style="display:flex;align-items:center;gap:0.8rem;padding:0.75rem 1rem;border:1px solid rgba(201,168,76,0.15);border-radius:6px;cursor:pointer;transition:background 0.15s;background:rgba(245,240,232,0.02);" onmouseover="this.style.background='rgba(201,168,76,0.06)'" onmouseout="this.style.background='rgba(245,240,232,0.02)'">
+      <div style="width:34px;height:34px;border-radius:5px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.85rem;color:var(--cream);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(name)}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.15rem;">${esc(typeLabel)} · ${fieldsText}</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function openDocDetail(idx) {
+  const stored = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+  const profile = stored.profile || {};
+  const uploadedDocs = profile.uploaded_documents || [];
+  const doc = uploadedDocs[idx];
+  if (!doc) return;
+
+  const ext = doc.extracted || {};
+  const name = doc.original_name || doc.filename || 'Document';
+
+  // Build extracted info HTML
   const scalarMap = {
     document_type: 'Document Type', name: 'Student Name', college: 'Institution',
     branch: 'Branch / Degree', cgpa: 'CGPA / Percentage', year: 'Year / Graduation',
@@ -1359,42 +1389,98 @@ function renderDocumentData(profile) {
   };
   const listMap = { subjects: 'Subjects / Courses', certifications: 'Certifications', achievements: 'Achievements', skills: 'Skills' };
 
-  let html = '<div class="profile-fields">';
+  let bodyHtml = '';
 
-  Object.entries(scalarMap).forEach(function([key, label]) {
-    const val = doc[key];
-    if (!val) return;
-    html += '<div class="profile-field"><label>' + label + ' <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><input type="text" value="' + esc(val) + '" oninput="updateDocField(\'' + key + '\', this.value)"></div>';
-  });
+  if (ext.raw_summary && Object.keys(ext).length === 1) {
+    bodyHtml = '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem">Raw summary (structured extraction failed):</div><div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.12);padding:0.8rem;font-size:0.83rem;line-height:1.7;color:var(--cream)">' + esc(ext.raw_summary) + '</div>';
+  } else {
+    let hasData = false;
 
-  Object.entries(listMap).forEach(function([key, label]) {
-    const val = doc[key];
-    if (!val || !val.length) return;
-    const display = Array.isArray(val) ? val.join(', ') : val;
-    html += '<div class="profile-field full-width"><label>' + label + ' <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><input type="text" value="' + esc(display) + '" oninput="updateDocField(\'' + key + '\', this.value.split(\',\').map(s=>s.trim()).filter(Boolean))"></div>';
-  });
+    Object.entries(scalarMap).forEach(function([key, label]) {
+      const val = ext[key];
+      if (!val) return;
+      hasData = true;
+      bodyHtml += `<div style="display:flex;gap:0.6rem;padding:0.45rem 0;border-bottom:1px solid rgba(201,168,76,0.07);">
+        <span style="font-size:0.75rem;color:var(--muted);width:130px;flex-shrink:0;padding-top:0.05rem">${esc(label)}</span>
+        <span style="font-size:0.83rem;color:var(--cream)">${esc(String(val))}</span>
+      </div>`;
+    });
 
-  if (doc.grades && typeof doc.grades === 'object' && Object.keys(doc.grades).length) {
-    let gradeRows = Object.entries(doc.grades).map(function([subj, grade]) {
-      return '<div style="display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid rgba(201,168,76,0.06)"><span style="color:var(--muted)">' + esc(String(subj)) + '</span><span style="color:var(--cream)">' + esc(String(grade)) + '</span></div>';
-    }).join('');
-    html += '<div class="profile-field full-width"><label>Grades <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.12);padding:0.6rem 0.8rem;font-size:0.82rem">' + gradeRows + '</div></div>';
+    Object.entries(listMap).forEach(function([key, label]) {
+      const val = ext[key];
+      if (!val || !val.length) return;
+      hasData = true;
+      const display = Array.isArray(val) ? val.join(', ') : val;
+      bodyHtml += `<div style="padding:0.45rem 0;border-bottom:1px solid rgba(201,168,76,0.07);">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.3rem">${esc(label)}</div>
+        <div style="font-size:0.82rem;color:var(--cream);line-height:1.6">${esc(display)}</div>
+      </div>`;
+    });
+
+    if (ext.grades && typeof ext.grades === 'object' && Object.keys(ext.grades).length) {
+      hasData = true;
+      let gradeRows = Object.entries(ext.grades).map(function([subj, grade]) {
+        return `<div style="display:flex;justify-content:space-between;padding:0.18rem 0;"><span style="color:var(--muted);font-size:0.8rem">${esc(String(subj))}</span><span style="color:var(--cream);font-size:0.8rem">${esc(String(grade))}</span></div>`;
+      }).join('');
+      bodyHtml += `<div style="padding:0.45rem 0;border-bottom:1px solid rgba(201,168,76,0.07);">
+        <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem">Grades</div>
+        <div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.1);padding:0.5rem 0.7rem">${gradeRows}</div>
+      </div>`;
+    }
+
+    if (!hasData) {
+      bodyHtml = '<div style="color:var(--muted);font-size:0.84rem;padding:1rem 0">No structured data could be extracted from this document.</div>';
+    }
   }
 
-  html += '</div>';
+  document.getElementById('docDetailTitle').textContent = name;
+  document.getElementById('docDetailBody').innerHTML = bodyHtml;
+  document.getElementById('docDetailDeleteBtn').onclick = function() { deleteDocument(idx); };
+  document.getElementById('docDetailModal').classList.add('open');
+}
 
-  if (uploadedDocs.length > 1) {
-    const lastName = uploadedDocs[uploadedDocs.length-1].original_name || '';
-    html += '<div style="margin-top:1rem;font-size:0.75rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;border-top:1px solid rgba(201,168,76,0.1);padding-top:0.8rem">' + uploadedDocs.length + ' documents uploaded — showing data from latest (' + esc(lastName) + ')</div>';
+function closeDocDetail() {
+  document.getElementById('docDetailModal').classList.remove('open');
+}
+
+async function deleteDocument(idx) {
+  if (!confirm('Remove this document and its extracted data from your profile?')) return;
+  const btn = document.getElementById('docDetailDeleteBtn');
+  btn.textContent = 'Removing...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/documents/' + idx, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      // Update local storage
+      const stored = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+      const docs = (stored.profile || {}).uploaded_documents || [];
+      docs.splice(idx, 1);
+      if (stored.profile) {
+        stored.profile.uploaded_documents = docs;
+        if (docs.length) {
+          stored.profile.document_data = docs[docs.length - 1].extracted || {};
+        } else {
+          delete stored.profile.document_data;
+        }
+      }
+      localStorage.setItem('kairo_user', JSON.stringify(stored));
+      closeDocDetail();
+      renderDocumentData(stored.profile || {});
+      updateProfileDisplay(stored.profile || {});
+      showToast('Document removed from your profile', true);
+    } else {
+      showToast('Could not remove document. Try again.', false);
+      btn.textContent = 'Delete from Profile';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    showToast('Error removing document.', false);
+    btn.textContent = 'Delete from Profile';
+    btn.disabled = false;
   }
+}
 
-  container.innerHTML = html;
-}
-function updateDocField(key, val) {
-  // Will be saved as part of profile on Save Changes
-  window._pendingDocEdits = window._pendingDocEdits || {};
-  window._pendingDocEdits[key] = val;
-}
 
 function populateProfileEditor(data) {
   const p = data.profile || {};
@@ -1445,8 +1531,7 @@ async function saveProfileEdits() {
     college: document.getElementById('pe-college').value.trim(),
     summary: document.getElementById('pe-summary').value.trim(),
     skills: { technical: skillsList, tools: [], soft: [] },
-    projects: peProjects,
-    ...(window._pendingDocEdits || {})
+    projects: peProjects
   };
 
   // Update name separately if changed
@@ -1484,6 +1569,26 @@ async function saveProfileEdits() {
   }
 }
 </script>
+<!-- Document detail modal -->
+<div class="modal-overlay" id="docDetailModal" onclick="if(event.target===this)closeDocDetail()">
+  <div class="modal-box" style="max-width:480px;width:92%;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem;gap:0.8rem;">
+      <div>
+        <h3 style="margin:0 0 0.2rem" id="docDetailTitle">Document</h3>
+        <p style="margin:0;font-size:0.78rem;color:var(--muted)">Extracted information from this document</p>
+      </div>
+      <button onclick="closeDocDetail()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:0.1rem;flex-shrink:0;margin-top:0.15rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="docDetailBody" style="max-height:340px;overflow-y:auto;margin-bottom:1.2rem;"></div>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button id="docDetailDeleteBtn" style="background:rgba(239,154,154,0.1);border:1px solid rgba(239,154,154,0.3);color:#ef9a9a;padding:0.5rem 1rem;border-radius:5px;cursor:pointer;font-size:0.83rem;transition:background 0.15s;" onmouseover="this.style.background='rgba(239,154,154,0.2)'" onmouseout="this.style.background='rgba(239,154,154,0.1)'">Delete from Profile</button>
+      <button class="btn-ghost" onclick="closeDocDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Edit name modal -->
 <div class="modal-overlay" id="editNameModal">
   <div class="modal-box">

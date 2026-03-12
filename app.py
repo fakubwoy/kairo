@@ -741,6 +741,66 @@ Return ONLY the JSON, no explanation, no markdown fences."""
         'structured': doc_structured
     })
 
+@app.route('/api/documents/<int:doc_index>', methods=['DELETE'])
+def delete_document(doc_index):
+    """Remove a document and its merged data contribution from the student profile."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    student = Student.query.get(sid)
+    if not student:
+        return jsonify({'error': 'Not found'}), 404
+
+    existing = json.loads(student.profile_data or '{}')
+    uploaded_docs = existing.get('uploaded_documents', [])
+
+    if doc_index < 0 or doc_index >= len(uploaded_docs):
+        return jsonify({'error': 'Document not found'}), 404
+
+    # Remove the document entry
+    removed = uploaded_docs.pop(doc_index)
+    existing['uploaded_documents'] = uploaded_docs
+
+    # Rebuild merged profile fields from remaining docs
+    # Reset fields that may have come from documents, then re-merge remaining docs
+    doc_scalar_fields = ['name', 'college', 'branch', 'cgpa', 'year', 'roll_number', 'semester']
+    # We'll only reset fields if they aren't confirmed from interview/manual edit
+    # Simple approach: rebuild from scratch using remaining docs
+    remaining_extracted = [d.get('extracted', {}) for d in uploaded_docs]
+
+    # Remove document-sourced list contributions and rebuild
+    for list_field in ['subjects', 'certifications', 'achievements']:
+        merged = []
+        for ext in remaining_extracted:
+            if ext.get(list_field):
+                merged += ext[list_field]
+        existing[list_field] = list(dict.fromkeys(merged)) if merged else existing.get(list_field, [])
+
+    # Reset skills.technical to only remaining doc skills (keep interview skills separately would be ideal,
+    # but for simplicity rebuild from remaining docs; interview-sourced skills are also in skills.technical)
+    # We keep this minimal — just remove the deleted doc's unique skills isn't easily trackable, so
+    # we leave skills untouched (they could have come from interview too).
+
+    # Update document_data to last remaining doc or empty
+    if uploaded_docs:
+        existing['document_data'] = uploaded_docs[-1].get('extracted', {})
+    else:
+        existing.pop('document_data', None)
+
+    # Try to delete the actual file
+    removed_filename = removed.get('filename', '')
+    if removed_filename:
+        try:
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], removed_filename))
+        except Exception:
+            pass
+
+    student.profile_data = json.dumps(existing)
+    db.session.commit()
+
+    return jsonify({'ok': True, 'remaining': len(uploaded_docs)})
+
+
 @app.route('/api/generate-resume', methods=['POST'])
 def generate_resume():
     data = request.json
