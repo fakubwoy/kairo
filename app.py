@@ -3,6 +3,8 @@ import json
 import uuid
 import requests
 import redis as redis_lib
+import difflib
+import re
 from flask import Flask, render_template, request, jsonify, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -33,6 +35,7 @@ OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')  # Optional: for higher rate limits
 
 # ── Redis (optional) ──────────────────────────────────────────────────────────
 # Used as a fast message cache. Falls back gracefully to Postgres if unavailable.
@@ -129,7 +132,19 @@ class Resume(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.String(36), db.ForeignKey('student.id'), nullable=False)
     job_description = db.Column(db.Text)
-    resume_data = db.Column(db.Text)
+    resume_data = db.Column(db.Text)          # current (possibly edited) JSON
+    edited_html = db.Column(db.Text)          # inline-edited HTML snapshot, if any
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    versions = db.relationship('ResumeVersion', backref='resume', lazy=True, order_by='ResumeVersion.version_number')
+
+class ResumeVersion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    resume_id = db.Column(db.Integer, db.ForeignKey('resume.id'), nullable=False)
+    version_number = db.Column(db.Integer, nullable=False, default=1)
+    resume_data = db.Column(db.Text)          # JSON snapshot at this version
+    edited_html = db.Column(db.Text)          # HTML snapshot at this version
+    label = db.Column(db.String(100))         # e.g. "AI Generated", "Manually edited"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
@@ -700,6 +715,15 @@ def generate_resume():
             resume_data=json.dumps(resume_json)
         )
         db.session.add(resume)
+        db.session.flush()  # get resume.id before commit
+        # Save initial version snapshot
+        ver = ResumeVersion(
+            resume_id=resume.id,
+            version_number=1,
+            resume_data=json.dumps(resume_json),
+            label='AI Generated'
+        )
+        db.session.add(ver)
         db.session.commit()
         resume_json['resume_id'] = resume.id
     
@@ -751,7 +775,391 @@ def get_resume(resume_id):
     data = json.loads(resume.resume_data or '{}')
     data['resume_id'] = resume.id
     data['created_at'] = resume.created_at.isoformat()
+    data['edited_html'] = resume.edited_html  # may be None
     return jsonify(data)
+
+# ── Resume inline edit & save ─────────────────────────────────────────────────
+
+@app.route('/api/resumes/<int:resume_id>/save-edit', methods=['POST'])
+def save_resume_edit(resume_id):
+    """Save inline-edited HTML and JSON for a resume, creating a new version."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    resume = Resume.query.filter_by(id=resume_id, student_id=sid).first()
+    if not resume:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    data = request.json
+    edited_html = data.get('edited_html')
+    resume_json_str = data.get('resume_data')  # optional updated JSON
+    label = data.get('label', 'Manually edited')
+
+    # Snapshot current state as a new version
+    next_ver = len(resume.versions) + 1
+    ver = ResumeVersion(
+        resume_id=resume.id,
+        version_number=next_ver,
+        resume_data=resume.resume_data,
+        edited_html=resume.edited_html,
+        label=resume.versions[-1].label if resume.versions else 'AI Generated'
+    )
+    db.session.add(ver)
+
+    # Update resume with new edit
+    if edited_html:
+        resume.edited_html = edited_html
+    if resume_json_str:
+        resume.resume_data = resume_json_str if isinstance(resume_json_str, str) else json.dumps(resume_json_str)
+    resume.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({'ok': True, 'version': next_ver + 1})
+
+
+# ── Resume versioning & diff ──────────────────────────────────────────────────
+
+@app.route('/api/resumes/<int:resume_id>/versions', methods=['GET'])
+def get_resume_versions(resume_id):
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    resume = Resume.query.filter_by(id=resume_id, student_id=sid).first()
+    if not resume:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    vers = [{
+        'id': v.id,
+        'version_number': v.version_number,
+        'label': v.label,
+        'created_at': v.created_at.isoformat()
+    } for v in resume.versions]
+
+    # Include current as "latest"
+    vers.append({
+        'id': None,
+        'version_number': len(vers) + 1,
+        'label': 'Current',
+        'created_at': resume.updated_at.isoformat() if resume.updated_at else resume.created_at.isoformat()
+    })
+    return jsonify(vers)
+
+
+@app.route('/api/resumes/<int:resume_id>/diff', methods=['GET'])
+def get_resume_diff(resume_id):
+    """Return unified diff between two versions (ver_a, ver_b query params). 
+    Use ver_id=None to mean 'current'."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    resume = Resume.query.filter_by(id=resume_id, student_id=sid).first()
+    if not resume:
+        return jsonify({'error': 'Resume not found'}), 404
+
+    ver_a_id = request.args.get('ver_a')
+    ver_b_id = request.args.get('ver_b')
+
+    def get_text(ver_id):
+        if ver_id is None or ver_id == 'current':
+            raw = resume.edited_html or json.dumps(json.loads(resume.resume_data or '{}'), indent=2)
+        else:
+            v = ResumeVersion.query.get(int(ver_id))
+            if not v or v.resume_id != resume.id:
+                return ''
+            raw = v.edited_html or json.dumps(json.loads(v.resume_data or '{}'), indent=2)
+        # Strip HTML tags for readable diff
+        return re.sub(r'<[^>]+>', '', raw)
+
+    text_a = get_text(ver_a_id).splitlines(keepends=True)
+    text_b = get_text(ver_b_id).splitlines(keepends=True)
+
+    diff_lines = list(difflib.unified_diff(text_a, text_b, fromfile=f'Version {ver_a_id}', tofile=f'Version {ver_b_id}', lineterm=''))
+
+    # Build HTML diff for display
+    html_diff = difflib.HtmlDiff(wrapcolumn=80).make_table(
+        text_a, text_b,
+        fromdesc=f'Version {ver_a_id}',
+        todesc=f'Version {ver_b_id}',
+        context=True, numlines=3
+    )
+
+    return jsonify({
+        'unified': ''.join(diff_lines),
+        'html_diff': html_diff,
+        'changes': len([l for l in diff_lines if l.startswith(('+', '-')) and not l.startswith(('+++', '---'))])
+    })
+
+
+# ── Voice / Whisper transcription ─────────────────────────────────────────────
+
+@app.route('/api/transcribe', methods=['POST'])
+def transcribe_audio():
+    """Transcribe audio using Groq Whisper (free, fast). Falls back to error if unavailable."""
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+
+    audio_file = request.files['audio']
+    if not GROQ_API_KEY:
+        return jsonify({'error': 'GROQ_API_KEY not configured. Whisper transcription requires Groq.'}), 503
+
+    try:
+        # Groq supports whisper-large-v3 via their API
+        files = {
+            'file': (audio_file.filename or 'audio.webm', audio_file.stream, audio_file.content_type or 'audio/webm'),
+            'model': (None, 'whisper-large-v3'),
+            'language': (None, 'en'),
+            'response_format': (None, 'json'),
+        }
+        resp = requests.post(
+            'https://api.groq.com/openai/v1/audio/transcriptions',
+            headers={'Authorization': f'Bearer {GROQ_API_KEY}'},
+            files=files,
+            timeout=60
+        )
+        if resp.status_code == 200:
+            text = resp.json().get('text', '').strip()
+            return jsonify({'text': text})
+        else:
+            return jsonify({'error': f'Transcription failed: {resp.text[:200]}'}), resp.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── GitHub profile scraping (via public API, no auth needed for basic use) ────
+
+@app.route('/api/github-profile', methods=['POST'])
+def github_profile():
+    """Fetch GitHub profile + top repos using GitHub public API."""
+    username = (request.json or {}).get('username', '').strip().lstrip('@')
+    if not username:
+        return jsonify({'error': 'GitHub username required'}), 400
+
+    headers = {'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Kairo-App'}
+    if GITHUB_TOKEN:
+        headers['Authorization'] = f'token {GITHUB_TOKEN}'
+
+    try:
+        # User profile
+        user_resp = requests.get(f'https://api.github.com/users/{username}', headers=headers, timeout=10)
+        if user_resp.status_code == 404:
+            return jsonify({'error': f'GitHub user "{username}" not found'}), 404
+        if user_resp.status_code == 403:
+            return jsonify({'error': 'GitHub API rate limit hit. Add GITHUB_TOKEN to env for higher limits.'}), 429
+        if user_resp.status_code != 200:
+            return jsonify({'error': 'Could not fetch GitHub profile'}), user_resp.status_code
+
+        user_data = user_resp.json()
+
+        # Repos — sort by stars, pick top 8
+        repos_resp = requests.get(
+            f'https://api.github.com/users/{username}/repos',
+            headers=headers,
+            params={'per_page': 100, 'type': 'owner', 'sort': 'updated'},
+            timeout=10
+        )
+        repos = repos_resp.json() if repos_resp.status_code == 200 else []
+
+        # Filter out forks, sort by stars
+        owned = [r for r in repos if not r.get('fork', False)]
+        owned.sort(key=lambda r: (r.get('stargazers_count', 0), r.get('watchers_count', 0)), reverse=True)
+        top_repos = owned[:8]
+
+        # For each top repo, try to get README for richer description
+        enriched_repos = []
+        for repo in top_repos[:5]:  # only top 5 to stay within rate limits
+            repo_info = {
+                'name': repo.get('name'),
+                'description': repo.get('description') or '',
+                'language': repo.get('language'),
+                'stars': repo.get('stargazers_count', 0),
+                'url': repo.get('html_url'),
+                'topics': repo.get('topics', []),
+                'updated_at': repo.get('updated_at', ''),
+            }
+            # Try README
+            try:
+                readme_resp = requests.get(
+                    f'https://api.github.com/repos/{username}/{repo["name"]}/readme',
+                    headers={**headers, 'Accept': 'application/vnd.github.v3.raw'},
+                    timeout=5
+                )
+                if readme_resp.status_code == 200:
+                    readme_text = readme_resp.text[:1500]
+                    repo_info['readme_snippet'] = readme_text
+            except Exception:
+                pass
+            enriched_repos.append(repo_info)
+
+        # Add remaining repos without README
+        for repo in top_repos[5:]:
+            enriched_repos.append({
+                'name': repo.get('name'),
+                'description': repo.get('description') or '',
+                'language': repo.get('language'),
+                'stars': repo.get('stargazers_count', 0),
+                'url': repo.get('html_url'),
+                'topics': repo.get('topics', []),
+            })
+
+        # Use LLM to extract resume-worthy projects from GitHub data
+        github_summary = call_llm(
+            [{'role': 'user', 'content': f'''GitHub username: {username}
+Bio: {user_data.get("bio", "")}
+Public repos: {user_data.get("public_repos", 0)}
+
+Top repositories:
+{json.dumps(enriched_repos, indent=2)}
+
+Extract the 3-5 best projects for a student resume. For each project provide:
+- name, description (2 sentences, impact-focused), tech stack (array), and any notable metrics (stars, etc.)
+
+Return ONLY valid JSON array: [{{"name": "", "description": "", "tech": [], "impact": "", "url": ""}}]'''}],
+            'You are a technical recruiter extracting resume-worthy projects from GitHub. Return only valid JSON.'
+        )
+
+        try:
+            clean = github_summary.strip()
+            if '```' in clean:
+                parts = clean.split('```')
+                for p in parts:
+                    if '[' in p:
+                        clean = p.lstrip('json').strip()
+                        break
+            projects = json.loads(clean)
+        except Exception:
+            projects = []
+
+        return jsonify({
+            'username': username,
+            'name': user_data.get('display_login') or user_data.get('login'),
+            'bio': user_data.get('bio'),
+            'public_repos': user_data.get('public_repos'),
+            'followers': user_data.get('followers'),
+            'profile_url': user_data.get('html_url'),
+            'avatar_url': user_data.get('avatar_url'),
+            'top_repos': enriched_repos,
+            'extracted_projects': projects
+        })
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'GitHub API timed out. Please try again.'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── LinkedIn hints (no scraping — guide-based approach) ──────────────────────
+
+@app.route('/api/linkedin-hints', methods=['POST'])
+def linkedin_hints():
+    """Parse a user-pasted LinkedIn 'About' / experience text and extract profile data."""
+    data = request.json or {}
+    linkedin_text = data.get('text', '').strip()
+    linkedin_url = data.get('url', '').strip()
+
+    if not linkedin_text:
+        return jsonify({'error': 'Please paste your LinkedIn About section or experience text'}), 400
+
+    extracted = call_llm(
+        [{'role': 'user', 'content': f'LinkedIn profile text:\n{linkedin_text[:4000]}'}],
+        '''Extract structured career profile data from this LinkedIn profile text.
+Return ONLY valid JSON:
+{
+  "summary": "",
+  "experience": [{"role": "", "company": "", "duration": "", "points": []}],
+  "skills": {"technical": [], "soft": []},
+  "education": [{"degree": "", "institution": "", "year": ""}],
+  "certifications": [],
+  "achievements": []
+}'''
+    )
+
+    try:
+        clean = extracted.strip()
+        if '```' in clean:
+            for p in clean.split('```'):
+                if '{' in p:
+                    clean = p.lstrip('json').strip()
+                    break
+        result = json.loads(clean)
+    except Exception:
+        result = {'raw': extracted}
+
+    return jsonify({'extracted': result, 'linkedin_url': linkedin_url})
+
+
+# ── Self-intro video script generation ───────────────────────────────────────
+
+@app.route('/api/generate-intro-script', methods=['POST'])
+def generate_intro_script():
+    """Generate a personalized self-introduction video script."""
+    sid = session.get('student_id')
+    data = request.json or {}
+
+    profile_data = data.get('profile_data', {})
+    job_role = data.get('job_role', '').strip()
+    duration_seconds = int(data.get('duration_seconds', 60))
+    tone = data.get('tone', 'professional')  # professional | casual | energetic
+
+    # Get from DB if logged in
+    if sid and sid != 'demo':
+        student = Student.query.get(sid)
+        if student:
+            profile_data = json.loads(student.profile_data or '{}')
+
+    if not profile_data:
+        return jsonify({'error': 'No profile data found. Complete your interview first.'}), 400
+
+    word_target = int(duration_seconds * 2.2)  # ~130 wpm, 2.2 words/sec
+
+    system = f'''You are a professional speaking coach helping a student create a compelling self-introduction video script.
+Tone: {tone}. Target duration: {duration_seconds} seconds (~{word_target} words).
+Generate a natural, spoken script — not a formal essay. Include pauses [...] where appropriate.'''
+
+    prompt = f'''Student profile:
+{json.dumps(profile_data, indent=2)}
+
+Target role/company: {job_role or 'general tech roles'}
+
+Generate a complete self-introduction video script with these sections:
+1. Hook (attention-grabbing opener)
+2. Who I am (name, college, branch)
+3. What I do / key skills
+4. Best project or achievement (1 highlight)
+5. Why this role/company
+6. Call to action / close
+
+Also provide:
+- Delivery tips (3 bullet points)
+- Key phrases to emphasize
+- Things to avoid
+
+Return as JSON:
+{{
+  "script": "full spoken script text",
+  "sections": [{{"title": "", "text": "", "duration_estimate_sec": 0}}],
+  "word_count": 0,
+  "estimated_duration_sec": 0,
+  "delivery_tips": [],
+  "key_phrases": [],
+  "avoid": []
+}}'''
+
+    result = call_llm([{'role': 'user', 'content': prompt}], system)
+
+    try:
+        clean = result.strip()
+        if '```' in clean:
+            for p in clean.split('```'):
+                if '{' in p:
+                    clean = p.lstrip('json').strip()
+                    break
+        script_data = json.loads(clean)
+    except Exception:
+        script_data = {'script': result, 'sections': [], 'delivery_tips': [], 'key_phrases': [], 'avoid': []}
+
+    return jsonify(script_data)
+
+
 
 @app.route('/api/conversations/active')
 def active_conversation():
@@ -824,6 +1232,12 @@ with app.app_context():
             ))
             conn.execute(db.text(
                 "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"
+            ))
+            conn.execute(db.text(
+                "ALTER TABLE resume ADD COLUMN IF NOT EXISTS edited_html TEXT"
+            ))
+            conn.execute(db.text(
+                "ALTER TABLE resume ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP"
             ))
             conn.commit()
     except Exception as e:

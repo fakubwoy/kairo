@@ -224,6 +224,19 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .send-btn:hover { background: var(--gold-light, #e8d5a3); }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.mic-btn {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--muted);
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 1rem; transition: all 0.2s;
+  flex-shrink: 0; border-radius: 2px;
+}
+.mic-btn:hover { border-color: var(--gold); color: var(--gold); }
+.mic-btn.recording { background: rgba(224,85,85,0.15); border-color: #e05555; color: #e05555; animation: pulse-red 1s infinite; }
+@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
 .input-hints {
   display: flex;
   gap: 0.5rem;
@@ -371,6 +384,9 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     <div class="input-area">
       <div class="input-wrapper">
         <textarea class="msg-input" id="msgInput" placeholder="Tell Kairo about yourself..." rows="1"></textarea>
+        <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Voice input (Whisper)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
       </div>
       <div class="input-hints" id="hints">
@@ -751,6 +767,80 @@ function confirmNewSession() {
 }
 
 startConversation();
+
+// ── Voice / Whisper ───────────────────────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+async function toggleVoice() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Pick best supported format
+    const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      await transcribeAudio();
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    const btn = document.getElementById('micBtn');
+    btn.classList.add('recording');
+    btn.title = 'Stop recording';
+    document.getElementById('msgInput').placeholder = '🔴 Recording... click mic to stop';
+  } catch(e) {
+    alert('Microphone access denied. Please allow microphone access in your browser.');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    const btn = document.getElementById('micBtn');
+    btn.classList.remove('recording');
+    btn.title = 'Voice input (Whisper)';
+    document.getElementById('msgInput').placeholder = 'Transcribing...';
+  }
+}
+
+async function transcribeAudio() {
+  const mimeType = (audioChunks[0] && audioChunks[0].type) || 'audio/webm';
+  const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+  const blob = new Blob(audioChunks, { type: mimeType });
+  const formData = new FormData();
+  formData.append('audio', blob, `recording.${ext}`);
+  const input = document.getElementById('msgInput');
+  try {
+    const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.text) {
+      input.placeholder = 'Tell Kairo about yourself...';
+      input.value = data.text;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      // Auto-send after short delay so user can review
+      setTimeout(() => sendMessage(), 600);
+    } else {
+      input.placeholder = 'Transcription failed — try again';
+      setTimeout(() => { input.placeholder = 'Tell Kairo about yourself...'; }, 3000);
+    }
+  } catch(e) {
+    input.placeholder = 'Transcription error — type instead';
+    setTimeout(() => { input.placeholder = 'Tell Kairo about yourself...'; }, 3000);
+  }
+}
 </script>
 </body>
 </html>

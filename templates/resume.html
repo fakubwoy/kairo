@@ -14,6 +14,8 @@
   --surface: #13110e;
   --surface2: #1c1916;
   --border: rgba(201,168,76,0.15);
+  --green: #4caf7d;
+  --red: #e05555;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
@@ -23,16 +25,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   display: flex; flex-direction: column; padding: 1.5rem 0;
   position: fixed; height: 100vh; z-index: 10;
 }
-.sidebar-logo {
-  font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900;
-  color: var(--gold); padding: 0 1.5rem 1.5rem;
-  border-bottom: 1px solid var(--border); margin-bottom: 1rem;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1.5rem;
-  color: var(--muted); font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
-  text-decoration: none; border-left: 2px solid transparent;
-}
+.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--gold); padding: 0 1.5rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1.5rem; color: var(--muted); font-size: 0.9rem; cursor: pointer; transition: all 0.2s; text-decoration: none; border-left: 2px solid transparent; }
 .nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
 .nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
@@ -42,13 +36,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 0.3rem; }
 .page-header p { color: var(--muted); font-size: 0.95rem; }
 
-.tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
-.tab-btn {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
-  padding: 0.6rem 1.2rem; cursor: pointer; transition: all 0.2s; margin-bottom: -1px;
-  display: flex; align-items: center; gap: 0.5rem;
-}
+.tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.2rem; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; padding: 0.6rem 1.2rem; cursor: pointer; transition: all 0.2s; margin-bottom: -1px; display: flex; align-items: center; gap: 0.5rem; }
 .tab-btn:hover { color: var(--cream); }
 .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
 
@@ -62,49 +51,33 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--cream); padding: 0.7rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; resize: vertical; }
 textarea:focus { border-color: rgba(201,168,76,0.4); }
 textarea::placeholder { color: rgba(245,240,232,0.2); }
+input[type="text"], input[type="url"] { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--cream); padding: 0.6rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+input:focus { border-color: rgba(201,168,76,0.4); }
+select { background: var(--surface2); border: 1px solid var(--border); color: var(--cream); padding: 0.5rem 0.8rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; outline: none; cursor: pointer; }
 
-.btn-gold {
-  background: var(--gold); color: var(--ink); border: none; padding: 0.75rem 1.5rem;
-  font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
-  cursor: pointer; width: 100%; margin-top: 1rem; transition: opacity 0.2s;
-  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
-}
+.btn-gold { background: var(--gold); color: var(--ink); border: none; padding: 0.75rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; width: 100%; margin-top: 1rem; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
 .btn-gold:hover { opacity: 0.85; }
 .btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .resume-preview { background: var(--surface); border: 1px solid var(--border); min-height: 500px; }
-.preview-toolbar { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.preview-toolbar { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
 .preview-toolbar h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+.toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-.btn-outline {
-  background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold);
-  padding: 0.4rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
-  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;
-}
+.btn-outline { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 0.4rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem; }
 .btn-outline:hover { background: rgba(201,168,76,0.1); }
+.btn-outline.active-edit { background: rgba(201,168,76,0.2); border-color: var(--gold); }
 
 .preview-body { padding: 1.5rem; }
 
-/* Professional resume document (Times-based, like attached PDF) */
-.resume-doc {
-  background: white; color: #1a1a1a; padding: 2rem 2.4rem;
-  font-family: 'Times New Roman', Times, serif; font-size: 10.5pt; line-height: 1.4;
-  max-width: 720px; margin: 0 auto;
-}
+/* Professional resume document */
+.resume-doc { background: white; color: #1a1a1a; padding: 2rem 2.4rem; font-family: 'Times New Roman', Times, serif; font-size: 10.5pt; line-height: 1.4; max-width: 720px; margin: 0 auto; }
 .resume-doc .r-name { font-size: 21pt; font-weight: 700; text-align: center; margin-bottom: 0.35rem; color: #000; }
-.resume-doc .r-contact {
-  font-size: 9pt; color: #333; text-align: center;
-  display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;
-  margin-bottom: 0.9rem; font-family: Arial, sans-serif;
-}
+.resume-doc .r-contact { font-size: 9pt; color: #333; text-align: center; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.9rem; font-family: Arial, sans-serif; }
 .resume-doc .r-contact a { color: #1a0dab; text-decoration: none; }
 .resume-doc .r-contact-sep { color: #bbb; }
 .resume-doc .r-section { margin-bottom: 0.9rem; }
-.resume-doc .r-section-title {
-  font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
-  border-bottom: 1.5px solid #000; padding-bottom: 0.12rem; margin-bottom: 0.5rem;
-  font-family: Arial, sans-serif; color: #000;
-}
+.resume-doc .r-section-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1.5px solid #000; padding-bottom: 0.12rem; margin-bottom: 0.5rem; font-family: Arial, sans-serif; color: #000; }
 .resume-doc .r-summary { font-size: 10pt; color: #222; line-height: 1.5; }
 .resume-doc .r-edu-item { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.2rem; }
 .resume-doc .r-institution { font-weight: 700; font-size: 10.5pt; }
@@ -123,14 +96,17 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
 .resume-doc .r-proj-name { font-weight: 700; font-size: 10.5pt; }
 .resume-doc .r-proj-tech { font-style: italic; color: #444; font-size: 10pt; }
 .resume-doc .r-proj-date { font-size: 10pt; color: #333; white-space: nowrap; margin-left: 1rem; }
-.resume-doc .r-pub-item { font-size: 10pt; margin-bottom: 0.3rem; line-height: 1.45; }
 .resume-doc .r-skills-row { font-size: 10pt; margin-bottom: 0.18rem; line-height: 1.5; }
 .resume-doc .r-skills-label { font-weight: 700; }
 
-.empty-preview {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 400px; color: var(--muted); text-align: center; gap: 0.3rem;
-}
+/* Edit mode highlight */
+.edit-mode .resume-doc [contenteditable] { outline: 1px dashed rgba(201,168,76,0.5); min-height: 1em; }
+.edit-mode .resume-doc [contenteditable]:hover { background: rgba(201,168,76,0.05); }
+.edit-mode .resume-doc [contenteditable]:focus { outline: 1.5px solid var(--gold); background: rgba(255,255,255,0.9); }
+.edit-banner { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.3); padding: 0.6rem 1rem; font-size: 0.82rem; color: var(--gold); display: none; }
+.edit-banner.visible { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; }
+
+.empty-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; color: var(--muted); text-align: center; gap: 0.3rem; }
 .empty-preview svg { opacity: 0.3; margin-bottom: 0.5rem; }
 .loading-state { display: flex; align-items: center; justify-content: center; height: 300px; gap: 0.5rem; color: var(--gold); }
 .spinner { width: 20px; height: 20px; border: 2px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -140,23 +116,62 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
 .resumes-viewer { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
 .resumes-sidebar { background: var(--surface); border: 1px solid var(--border); }
 .resumes-sidebar-header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); font-family: 'Playfair Display', serif; font-size: 1.05rem; }
-
-.saved-resume-item {
-  padding: 0.9rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.08);
-  cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;
-}
+.saved-resume-item { padding: 0.9rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.08); cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; }
 .saved-resume-item:hover { background: rgba(201,168,76,0.05); }
 .saved-resume-item.selected { background: rgba(201,168,76,0.08); border-left: 2px solid var(--gold); }
 .sri-title { font-size: 0.88rem; font-weight: 500; margin-bottom: 0.2rem; line-height: 1.3; }
 .sri-date { font-size: 0.73rem; color: var(--muted); }
-.btn-sm {
-  background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold);
-  padding: 0.3rem 0.7rem; font-size: 0.78rem; cursor: pointer; font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0;
-}
+.btn-sm { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold); padding: 0.3rem 0.7rem; font-size: 0.78rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0; }
 .btn-sm:hover { background: rgba(201,168,76,0.1); }
-
 .empty-list { padding: 2rem 1.5rem; text-align: center; color: var(--muted); font-size: 0.85rem; line-height: 1.8; }
+
+/* Version/diff panel */
+.version-panel { background: var(--surface); border: 1px solid var(--border); padding: 1.2rem; margin-top: 1rem; }
+.version-panel h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.8rem; color: var(--cream); display: flex; align-items: center; gap: 0.4rem; }
+.version-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.8rem; }
+.version-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; background: var(--surface2); border: 1px solid var(--border); font-size: 0.82rem; }
+.version-badge { background: rgba(201,168,76,0.15); color: var(--gold); padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 600; }
+.version-label { flex: 1; }
+.version-date { color: var(--muted); font-size: 0.75rem; }
+.diff-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.diff-output { margin-top: 0.8rem; background: var(--surface2); border: 1px solid var(--border); padding: 1rem; font-size: 0.8rem; max-height: 400px; overflow-y: auto; }
+.diff-output table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78rem; }
+.diff-output td { padding: 2px 6px; white-space: pre-wrap; word-break: break-word; }
+.diff-output .diff_add { background: rgba(76,175,125,0.15); color: #7dffb3; }
+.diff-output .diff_chg { background: rgba(201,168,76,0.12); }
+.diff-output .diff_sub { background: rgba(224,85,85,0.15); color: #ffb3b3; }
+.diff-output .diff_header { color: var(--muted); font-size: 0.75rem; }
+
+/* Intro script pane */
+.script-output { background: var(--surface2); border: 1px solid var(--border); padding: 1.2rem; margin-top: 1rem; }
+.script-section { margin-bottom: 1.2rem; }
+.script-section-title { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+.script-text { font-size: 0.9rem; line-height: 1.7; color: var(--cream); white-space: pre-wrap; }
+.script-meta { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem; flex-wrap: wrap; }
+.script-meta span { display: flex; align-items: center; gap: 0.3rem; }
+.tips-list { list-style: none; padding: 0; }
+.tips-list li { padding: 0.35rem 0; font-size: 0.85rem; color: var(--cream); display: flex; gap: 0.5rem; }
+.tips-list li::before { content: '→'; color: var(--gold); flex-shrink: 0; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tag { background: rgba(201,168,76,0.12); border: 1px solid rgba(201,168,76,0.25); color: var(--gold); padding: 0.2rem 0.6rem; font-size: 0.78rem; }
+.avoid-item { color: #ffb3b3; font-size: 0.85rem; }
+
+/* GitHub panel */
+.github-results { margin-top: 1rem; }
+.github-user { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--surface2); border: 1px solid var(--border); margin-bottom: 1rem; }
+.github-avatar { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border); }
+.github-user-info h4 { font-size: 1rem; font-weight: 600; }
+.github-user-info p { font-size: 0.82rem; color: var(--muted); }
+.project-card { background: var(--surface2); border: 1px solid var(--border); padding: 0.9rem 1rem; margin-bottom: 0.6rem; }
+.project-card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+.project-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 0.5rem; }
+.project-card .tech-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.tech-tag { background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2); color: var(--gold); padding: 0.1rem 0.5rem; font-size: 0.72rem; }
+.star-badge { color: #f0c040; font-size: 0.78rem; }
+
+.toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--surface); border: 1px solid var(--border); color: var(--cream); padding: 0.75rem 1.2rem; font-size: 0.88rem; z-index: 999; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: rgba(76,175,125,0.4); }
 
 @media (max-width: 900px) {
   .sidebar { display: none; }
@@ -175,8 +190,18 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
   <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></symbol>
+  <symbol id="i-diff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="18 13 12 19 6 13"/><polyline points="6 11 12 5 18 11"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></symbol>
+  <symbol id="i-linkedin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
 </svg>
+
+<div class="toast" id="toast"></div>
 
 <nav class="sidebar">
   <div class="sidebar-logo">Kairo</div>
@@ -188,7 +213,7 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
 <main class="main">
   <div class="page-header">
     <h1>Resumes</h1>
-    <p>Generate tailored resumes or view your saved ones</p>
+    <p>Generate tailored resumes, edit inline, track versions, and create intro scripts</p>
   </div>
 
   <div class="tab-bar">
@@ -197,11 +222,20 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
     </button>
     <button class="tab-btn" id="tab-saved" onclick="switchTab('saved')">
       <svg width="15" height="15"><use href="#i-list"/></svg> Saved Resumes
-      <span id="resumeCount" style="font-size:0.75rem; opacity:0.6"></span>
+      <span id="resumeCount" style="font-size:0.75rem;opacity:0.6"></span>
+    </button>
+    <button class="tab-btn" id="tab-github" onclick="switchTab('github')">
+      <svg width="15" height="15"><use href="#i-github"/></svg> Import GitHub
+    </button>
+    <button class="tab-btn" id="tab-linkedin" onclick="switchTab('linkedin')">
+      <svg width="15" height="15"><use href="#i-linkedin"/></svg> Import LinkedIn
+    </button>
+    <button class="tab-btn" id="tab-intro" onclick="switchTab('intro')">
+      <svg width="15" height="15"><use href="#i-video"/></svg> Intro Script
     </button>
   </div>
 
-  <!-- Generate tab -->
+  <!-- ── Generate tab ───────────────────────────────────────────────────── -->
   <div id="pane-generate">
     <div class="two-col">
       <div>
@@ -215,82 +249,235 @@ textarea::placeholder { color: rgba(245,240,232,0.2); }
         </div>
         <div class="panel" style="margin-top:1rem">
           <h2>Quick Tips</h2>
-          <ul style="color:var(--muted); font-size:0.85rem; line-height:2.1; padding-left:1.2rem;">
+          <ul style="color:var(--muted);font-size:0.85rem;line-height:2.1;padding-left:1.2rem;">
             <li>Include the full JD for best results</li>
-            <li>The more profile data you've shared, the better</li>
-            <li>You can generate multiple versions</li>
-            <li>Download as PDF for applications</li>
+            <li>Import GitHub/LinkedIn before generating</li>
+            <li>Click "Edit" on the preview to edit inline</li>
+            <li>Version history is saved automatically</li>
           </ul>
         </div>
       </div>
       <div class="resume-preview">
         <div class="preview-toolbar">
           <h2>Resume Preview</h2>
-          <button class="btn-outline" id="downloadBtn" onclick="downloadCurrentResume()" style="display:none">
-            <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
-          </button>
+          <div class="toolbar-actions">
+            <button class="btn-outline" id="editBtn" onclick="toggleEditMode('gen')" style="display:none">
+              <svg width="13" height="13"><use href="#i-edit"/></svg> Edit
+            </button>
+            <button class="btn-outline" id="saveEditBtn" onclick="saveEdit('gen')" style="display:none">
+              <svg width="13" height="13"><use href="#i-save"/></svg> Save Edits
+            </button>
+            <button class="btn-outline" id="downloadBtn" onclick="downloadCurrentResume()" style="display:none">
+              <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
+            </button>
+          </div>
+        </div>
+        <div class="edit-banner" id="editBannerGen">
+          <span>✏️ Edit mode — click any text to edit it directly</span>
+          <button class="btn-outline" onclick="cancelEdit('gen')" style="border-color:rgba(224,85,85,0.4);color:#ffb3b3;padding:0.2rem 0.6rem;font-size:0.75rem">Discard</button>
         </div>
         <div class="preview-body" id="previewBody">
           <div class="empty-preview">
             <svg width="38" height="38"><use href="#i-file"/></svg>
             <div>Your resume will appear here</div>
-            <div style="font-size:0.8rem; color:var(--muted)">Build your profile first, then generate a resume</div>
+            <div style="font-size:0.8rem;color:var(--muted)">Build your profile first, then generate a resume</div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Saved resumes tab -->
+  <!-- ── Saved resumes tab ─────────────────────────────────────────────── -->
   <div id="pane-saved" style="display:none">
     <div class="resumes-viewer">
       <div class="resumes-sidebar">
         <div class="resumes-sidebar-header">Your Resumes</div>
         <div id="savedList"><div class="empty-list">Loading...</div></div>
       </div>
-      <div class="resume-preview">
-        <div class="preview-toolbar">
-          <h2>Resume Preview</h2>
-          <button class="btn-outline" id="savedDownloadBtn" onclick="downloadSavedResume()" style="display:none">
-            <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
-          </button>
-        </div>
-        <div class="preview-body" id="savedPreviewBody">
-          <div class="empty-preview">
-            <svg width="38" height="38"><use href="#i-list"/></svg>
-            <div>Select a resume from the list</div>
+      <div>
+        <div class="resume-preview">
+          <div class="preview-toolbar">
+            <h2>Resume Preview</h2>
+            <div class="toolbar-actions">
+              <button class="btn-outline" id="savedEditBtn" onclick="toggleEditMode('saved')" style="display:none">
+                <svg width="13" height="13"><use href="#i-edit"/></svg> Edit
+              </button>
+              <button class="btn-outline" id="savedSaveEditBtn" onclick="saveEdit('saved')" style="display:none">
+                <svg width="13" height="13"><use href="#i-save"/></svg> Save Edits
+              </button>
+              <button class="btn-outline" id="savedVersionBtn" onclick="toggleVersionPanel()" style="display:none">
+                <svg width="13" height="13"><use href="#i-history"/></svg> History
+              </button>
+              <button class="btn-outline" id="savedDownloadBtn" onclick="downloadSavedResume()" style="display:none">
+                <svg width="13" height="13"><use href="#i-download"/></svg> Download PDF
+              </button>
+            </div>
           </div>
+          <div class="edit-banner" id="editBannerSaved">
+            <span>✏️ Edit mode — click any text to edit it directly</span>
+            <button class="btn-outline" onclick="cancelEdit('saved')" style="border-color:rgba(224,85,85,0.4);color:#ffb3b3;padding:0.2rem 0.6rem;font-size:0.75rem">Discard</button>
+          </div>
+          <div class="preview-body" id="savedPreviewBody">
+            <div class="empty-preview">
+              <svg width="38" height="38"><use href="#i-list"/></svg>
+              <div>Select a resume from the list</div>
+            </div>
+          </div>
+        </div>
+        <!-- Version / diff panel -->
+        <div class="version-panel" id="versionPanel" style="display:none">
+          <h3><svg width="14" height="14"><use href="#i-history"/></svg> Version History</h3>
+          <div class="version-list" id="versionList"></div>
+          <div class="diff-controls">
+            <span style="font-size:0.82rem;color:var(--muted)">Compare:</span>
+            <select id="diffVerA" style="flex:1"><option value="1">Version 1</option></select>
+            <span style="color:var(--muted)">vs</span>
+            <select id="diffVerB" style="flex:1"><option value="current">Current</option></select>
+            <button class="btn-outline" onclick="runDiff()">
+              <svg width="12" height="12"><use href="#i-diff"/></svg> Show Diff
+            </button>
+          </div>
+          <div class="diff-output" id="diffOutput" style="display:none"></div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- ── GitHub import tab ─────────────────────────────────────────────── -->
+  <div id="pane-github" style="display:none">
+    <div class="two-col">
+      <div>
+        <div class="panel">
+          <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:0.4rem"><use href="#i-github"/></svg>GitHub Profile Import</h2>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;line-height:1.6">
+            Kairo uses the <strong style="color:var(--cream)">GitHub public API</strong> to fetch your repos and README files — no scraping, no bans. 
+            Top projects are extracted and formatted for your resume automatically.
+          </p>
+          <label class="field-label">GitHub Username</label>
+          <input type="text" id="githubUsername" placeholder="e.g. torvalds" style="margin-bottom:0.8rem">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem">
+            💡 Unauthenticated: 60 requests/hr limit. Add <code style="color:var(--gold)">GITHUB_TOKEN</code> env var for 5,000/hr.
+          </div>
+          <button class="btn-gold" id="githubBtn" onclick="fetchGithub()">
+            <svg width="15" height="15"><use href="#i-github"/></svg> Fetch Profile & Projects
+          </button>
+        </div>
+      </div>
+      <div id="githubResultsPane">
+        <div class="panel" style="text-align:center;color:var(--muted);padding:3rem 1.5rem">
+          <svg width="40" height="40" style="opacity:0.3;margin-bottom:1rem"><use href="#i-github"/></svg>
+          <div>Enter your GitHub username to import your best projects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LinkedIn import tab ───────────────────────────────────────────── -->
+  <div id="pane-linkedin" style="display:none">
+    <div class="two-col">
+      <div>
+        <div class="panel">
+          <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:0.4rem"><use href="#i-linkedin"/></svg>LinkedIn Profile Import</h2>
+          <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);padding:0.8rem;font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">
+            ⚠️ LinkedIn blocks automated scraping. Instead, <strong style="color:var(--cream)">copy-paste</strong> sections from your profile below. Kairo will extract structured data from your text.
+          </div>
+          <label class="field-label">Paste your LinkedIn "About", Experience & Skills sections</label>
+          <textarea id="linkedinText" rows="12" placeholder="Copy your About section, experience entries, skills — paste it all here. The more text the better..."></textarea>
+          <label class="field-label" style="margin-top:0.8rem">LinkedIn Profile URL (optional)</label>
+          <input type="url" id="linkedinUrl" placeholder="https://linkedin.com/in/yourname">
+          <button class="btn-gold" id="linkedinBtn" onclick="parseLinkedin()">
+            <svg width="15" height="15"><use href="#i-linkedin"/></svg> Extract Profile Data
+          </button>
+        </div>
+      </div>
+      <div id="linkedinResultsPane">
+        <div class="panel" style="text-align:center;color:var(--muted);padding:3rem 1.5rem">
+          <svg width="40" height="40" style="opacity:0.3;margin-bottom:1rem"><use href="#i-linkedin"/></svg>
+          <div>Paste your LinkedIn profile text to import experience and skills</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Intro Script tab ──────────────────────────────────────────────── -->
+  <div id="pane-intro" style="display:none">
+    <div class="two-col">
+      <div>
+        <div class="panel">
+          <h2><svg width="16" height="16" style="vertical-align:-2px;margin-right:0.4rem"><use href="#i-video"/></svg>Self-Intro Video Script</h2>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;line-height:1.6">
+            Generate a personalized spoken script for job applications, hackathon pitches, or LinkedIn video introductions.
+          </p>
+          <label class="field-label">Target Role / Company (optional)</label>
+          <input type="text" id="introRole" placeholder="e.g. SDE Intern at Google, Full Stack Developer...">
+          <label class="field-label" style="margin-top:0.8rem">Duration</label>
+          <select id="introDuration" style="width:100%">
+            <option value="30">30 seconds (~65 words)</option>
+            <option value="60" selected>60 seconds (~130 words)</option>
+            <option value="90">90 seconds (~200 words)</option>
+            <option value="120">2 minutes (~265 words)</option>
+          </select>
+          <label class="field-label" style="margin-top:0.8rem">Tone</label>
+          <select id="introTone" style="width:100%">
+            <option value="professional">Professional</option>
+            <option value="casual">Casual & Friendly</option>
+            <option value="energetic">High-Energy / Startup</option>
+          </select>
+          <button class="btn-gold" id="introBtn" onclick="generateIntroScript()">
+            <svg width="15" height="15"><use href="#i-video"/></svg> Generate Script
+          </button>
+        </div>
+        <div class="panel" style="margin-top:1rem">
+          <h2>How to use</h2>
+          <ol style="color:var(--muted);font-size:0.85rem;line-height:2.2;padding-left:1.2rem;">
+            <li>Complete your profile interview first</li>
+            <li>Choose duration and tone</li>
+            <li>Practice 3-5 times before recording</li>
+            <li>Record on your phone — natural lighting</li>
+            <li>Keep it conversational, not robotic</li>
+          </ol>
+        </div>
+      </div>
+      <div id="introResultPane">
+        <div class="panel" style="text-align:center;color:var(--muted);padding:3rem 1.5rem">
+          <svg width="40" height="40" style="opacity:0.3;margin-bottom:1rem"><use href="#i-video"/></svg>
+          <div>Your personalized intro script will appear here</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <script>
 let currentGeneratedData = null;
 let currentSavedData = null;
+let currentResumeId = null;
+let editMode = { gen: false, saved: false };
+let originalHtml = { gen: null, saved: null };
+let versionPanelOpen = false;
 
+// ── Tab switching ─────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  document.getElementById('pane-generate').style.display = tab === 'generate' ? '' : 'none';
-  document.getElementById('pane-saved').style.display = tab === 'saved' ? '' : 'none';
-  document.getElementById('tab-generate').classList.toggle('active', tab === 'generate');
-  document.getElementById('tab-saved').classList.toggle('active', tab === 'saved');
+  ['generate','saved','github','linkedin','intro'].forEach(t => {
+    document.getElementById(`pane-${t}`).style.display = t === tab ? '' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
   if (tab === 'saved') loadSavedResumes();
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────
 async function generateResume() {
   const jd = document.getElementById('jdInput').value.trim();
-  if (!jd) { alert('Please paste a job description first'); return; }
+  if (!jd) { showToast('Please paste a job description first', false); return; }
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Generating...';
   document.getElementById('previewBody').innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Crafting your resume...</span></div>';
   try {
-    const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
     const res = await fetch('/api/generate-resume', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ job_description: jd, profile_data: user.profile || {} })
+      body: JSON.stringify({ job_description: jd })
     });
     const data = await res.json();
     if (data.error) {
@@ -298,14 +485,159 @@ async function generateResume() {
       return;
     }
     currentGeneratedData = data;
+    if (data.resume_id) currentResumeId = data.resume_id;
     renderResume(data, 'previewBody', 'gen');
     document.getElementById('downloadBtn').style.display = 'inline-flex';
+    document.getElementById('editBtn').style.display = 'inline-flex';
     loadResumeCount();
   } catch(e) {
     document.getElementById('previewBody').innerHTML = '<div class="empty-preview"><div>Error generating resume. Please try again.</div></div>';
   }
   btn.disabled = false;
   btn.innerHTML = '<svg width="15" height="15"><use href="#i-zap"/></svg> Generate Custom Resume';
+}
+
+// ── Inline edit ───────────────────────────────────────────────────────────────
+function toggleEditMode(scope) {
+  editMode[scope] = !editMode[scope];
+  const docId = `resume-doc-${scope}`;
+  const container = document.getElementById(scope === 'gen' ? 'previewBody' : 'savedPreviewBody');
+  const doc = document.getElementById(docId);
+  const editBtn = document.getElementById(scope === 'gen' ? 'editBtn' : 'savedEditBtn');
+  const saveBtn = document.getElementById(scope === 'gen' ? 'saveEditBtn' : 'savedSaveEditBtn');
+  const banner = document.getElementById(`editBanner${scope === 'gen' ? 'Gen' : 'Saved'}`);
+
+  if (!doc) return;
+
+  if (editMode[scope]) {
+    // Save original for cancel
+    originalHtml[scope] = doc.innerHTML;
+    // Make all text elements editable
+    doc.querySelectorAll('.r-name, .r-summary, .r-institution, .r-degree, .r-edu-right, .r-exp-company, .r-exp-role, .r-exp-date, .r-proj-name, .r-proj-tech, .r-skills-row, .r-bullets li').forEach(el => {
+      el.setAttribute('contenteditable', 'true');
+      el.setAttribute('spellcheck', 'false');
+    });
+    container.classList.add('edit-mode');
+    banner.classList.add('visible');
+    editBtn.innerHTML = '<svg width="13" height="13"><use href="#i-edit"/></svg> Editing';
+    editBtn.classList.add('active-edit');
+    saveBtn.style.display = 'inline-flex';
+  } else {
+    disableEditMode(scope);
+  }
+}
+
+function disableEditMode(scope) {
+  editMode[scope] = false;
+  const docId = `resume-doc-${scope}`;
+  const container = document.getElementById(scope === 'gen' ? 'previewBody' : 'savedPreviewBody');
+  const doc = document.getElementById(docId);
+  const editBtn = document.getElementById(scope === 'gen' ? 'editBtn' : 'savedEditBtn');
+  const saveBtn = document.getElementById(scope === 'gen' ? 'saveEditBtn' : 'savedSaveEditBtn');
+  const banner = document.getElementById(`editBanner${scope === 'gen' ? 'Gen' : 'Saved'}`);
+  if (doc) {
+    doc.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    container.classList.remove('edit-mode');
+  }
+  banner.classList.remove('visible');
+  if (editBtn) { editBtn.innerHTML = '<svg width="13" height="13"><use href="#i-edit"/></svg> Edit'; editBtn.classList.remove('active-edit'); }
+  if (saveBtn) saveBtn.style.display = 'none';
+}
+
+function cancelEdit(scope) {
+  const docId = `resume-doc-${scope}`;
+  const doc = document.getElementById(docId);
+  if (doc && originalHtml[scope]) doc.innerHTML = originalHtml[scope];
+  disableEditMode(scope);
+}
+
+async function saveEdit(scope) {
+  const docId = `resume-doc-${scope}`;
+  const doc = document.getElementById(docId);
+  if (!doc) return;
+
+  // Grab the full edited HTML
+  const editedHtml = doc.outerHTML;
+  const rid = scope === 'saved' ? currentResumeId : (currentGeneratedData && currentGeneratedData.resume_id);
+
+  if (!rid) { showToast('Save the resume first by generating with an account', false); return; }
+
+  const saveBtn = document.getElementById(scope === 'gen' ? 'saveEditBtn' : 'savedSaveEditBtn');
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:2px;margin:0"></div>';
+
+  try {
+    const res = await fetch(`/api/resumes/${rid}/save-edit`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ edited_html: editedHtml, label: 'Manually edited' })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast('✓ Edits saved — new version created', true);
+      disableEditMode(scope);
+    } else {
+      showToast(d.error || 'Save failed', false);
+    }
+  } catch(e) {
+    showToast('Save failed: ' + e.message, false);
+  }
+  saveBtn.disabled = false;
+  saveBtn.innerHTML = '<svg width="13" height="13"><use href="#i-save"/></svg> Save Edits';
+}
+
+// ── Version panel ─────────────────────────────────────────────────────────────
+function toggleVersionPanel() {
+  const panel = document.getElementById('versionPanel');
+  versionPanelOpen = !versionPanelOpen;
+  panel.style.display = versionPanelOpen ? '' : 'none';
+  if (versionPanelOpen && currentResumeId) loadVersions();
+}
+
+async function loadVersions() {
+  if (!currentResumeId) return;
+  const listEl = document.getElementById('versionList');
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Loading...</div>';
+  try {
+    const res = await fetch(`/api/resumes/${currentResumeId}/versions`);
+    const vers = await res.json();
+    if (!vers.length) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">No versions yet.</div>'; return; }
+
+    listEl.innerHTML = vers.map(v => `
+      <div class="version-item">
+        <span class="version-badge">v${v.version_number}</span>
+        <span class="version-label">${v.label || 'Version'}</span>
+        <span class="version-date">${fmtDate(v.created_at)}</span>
+      </div>`).join('');
+
+    // Populate diff selects
+    const selA = document.getElementById('diffVerA');
+    const selB = document.getElementById('diffVerB');
+    selA.innerHTML = vers.filter(v => v.id).map(v => `<option value="${v.id}">v${v.version_number} — ${v.label}</option>`).join('');
+    selB.innerHTML = vers.map(v => v.id ? `<option value="${v.id}">v${v.version_number} — ${v.label}</option>` : `<option value="current">Current</option>`).join('');
+    // Default: compare first vs current
+    if (selB.options.length > 0) selB.value = 'current';
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem">Could not load versions.</div>';
+  }
+}
+
+async function runDiff() {
+  if (!currentResumeId) return;
+  const verA = document.getElementById('diffVerA').value;
+  const verB = document.getElementById('diffVerB').value;
+  const output = document.getElementById('diffOutput');
+  output.style.display = '';
+  output.innerHTML = '<div class="loading-state" style="height:80px"><div class="spinner"></div><span>Computing diff...</span></div>';
+  try {
+    const res = await fetch(`/api/resumes/${currentResumeId}/diff?ver_a=${verA}&ver_b=${verB}`);
+    const d = await res.json();
+    if (d.error) { output.innerHTML = `<div style="color:var(--muted)">${d.error}</div>`; return; }
+    output.innerHTML = `
+      <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.5rem">${d.changes} line(s) changed</div>
+      ${d.html_diff || '<div style="color:var(--muted)">No differences found.</div>'}`;
+  } catch(e) {
+    output.innerHTML = `<div style="color:var(--muted)">Diff failed: ${e.message}</div>`;
+  }
 }
 
 // ── Saved resumes ─────────────────────────────────────────────────────────────
@@ -340,7 +672,6 @@ async function loadSavedResumes() {
           <svg width="13" height="13"><use href="#i-eye"/></svg> View
         </button>
       </div>`).join('');
-    // Auto-select first
     viewResume(resumes[0].id);
   } catch(e) {
     listEl.innerHTML = '<div class="empty-list">Could not load resumes.</div>';
@@ -348,72 +679,239 @@ async function loadSavedResumes() {
 }
 
 async function viewResume(id) {
+  currentResumeId = id;
   document.querySelectorAll('.saved-resume-item').forEach(el => el.classList.remove('selected'));
   const itemEl = document.getElementById(`sri-${id}`);
   if (itemEl) itemEl.classList.add('selected');
   const body = document.getElementById('savedPreviewBody');
   body.innerHTML = '<div class="loading-state"><div class="spinner"></div><span>Loading...</span></div>';
+  // Close version panel on new resume
+  document.getElementById('versionPanel').style.display = 'none';
+  versionPanelOpen = false;
   try {
     const res = await fetch(`/api/resumes/${id}`);
     const data = await res.json();
     if (data.error) { body.innerHTML = `<div class="empty-preview"><div>${data.error}</div></div>`; return; }
     currentSavedData = data;
-    renderResume(data, 'savedPreviewBody', 'saved');
+    // Use edited HTML if available, else render from JSON
+    if (data.edited_html) {
+      body.innerHTML = data.edited_html;
+    } else {
+      renderResume(data, 'savedPreviewBody', 'saved');
+    }
     document.getElementById('savedDownloadBtn').style.display = 'inline-flex';
+    document.getElementById('savedEditBtn').style.display = 'inline-flex';
+    document.getElementById('savedVersionBtn').style.display = 'inline-flex';
   } catch(e) {
     body.innerHTML = '<div class="empty-preview"><div>Could not load this resume.</div></div>';
   }
 }
 
-function downloadCurrentResume() { printDoc('resume-doc-gen'); }
-function downloadSavedResume() { printDoc('resume-doc-saved'); }
+// ── GitHub import ─────────────────────────────────────────────────────────────
+async function fetchGithub() {
+  const username = document.getElementById('githubUsername').value.trim();
+  if (!username) { showToast('Enter a GitHub username', false); return; }
+  const btn = document.getElementById('githubBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Fetching...';
+  const pane = document.getElementById('githubResultsPane');
+  pane.innerHTML = '<div class="panel"><div class="loading-state"><div class="spinner"></div><span>Fetching GitHub profile & analyzing projects...</span></div></div>';
+  try {
+    const res = await fetch('/api/github-profile', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username })
+    });
+    const data = await res.json();
+    if (data.error) {
+      pane.innerHTML = `<div class="panel"><div style="color:#ffb3b3;padding:1rem">${data.error}</div></div>`;
+      return;
+    }
+    renderGithubResults(data, pane);
+  } catch(e) {
+    pane.innerHTML = `<div class="panel"><div style="color:var(--muted);padding:1rem">Error: ${e.message}</div></div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="15" height="15"><use href="#i-github"/></svg> Fetch Profile & Projects';
+}
 
-// ── Resume renderer (professional Times New Roman format) ─────────────────────
+function renderGithubResults(data, pane) {
+  const projects = data.extracted_projects || [];
+  pane.innerHTML = `
+    <div class="github-user">
+      <img class="github-avatar" src="${data.avatar_url || ''}" alt="" onerror="this.style.display='none'">
+      <div class="github-user-info">
+        <h4>${esc(data.name || data.username)}</h4>
+        <p>${esc(data.bio || '')} &nbsp; ${data.public_repos} repos · ${data.followers} followers</p>
+        <a href="${data.profile_url}" target="_blank" style="color:var(--gold);font-size:0.8rem">${data.profile_url}</a>
+      </div>
+    </div>
+    <h3 style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.8rem">AI-Extracted Resume Projects</h3>
+    ${projects.map(p => `
+      <div class="project-card">
+        <h4>
+          <svg width="14" height="14"><use href="#i-github"/></svg>
+          ${esc(p.name)}
+          ${p.url ? `<a href="${esc(p.url)}" target="_blank" style="color:var(--gold);font-size:0.75rem;font-weight:400">↗ view</a>` : ''}
+        </h4>
+        <p>${esc(p.description || '')}</p>
+        ${p.impact ? `<p style="color:var(--cream);font-size:0.82rem">📈 ${esc(p.impact)}</p>` : ''}
+        <div class="tech-tags">${(p.tech||[]).map(t=>`<span class="tech-tag">${esc(t)}</span>`).join('')}</div>
+      </div>`).join('')}
+    <button class="btn-gold" onclick="addGithubToProfile(${JSON.stringify(projects).replace(/"/g,'&quot;')})" style="margin-top:1rem">
+      <svg width="15" height="15"><use href="#i-save"/></svg> Add These Projects to My Profile
+    </button>`;
+}
+
+async function addGithubToProfile(projects) {
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ github_projects: projects })
+    });
+    if (res.ok) showToast('✓ Projects added to your profile', true);
+    else showToast('Could not add projects (are you logged in?)', false);
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+// ── LinkedIn import ───────────────────────────────────────────────────────────
+async function parseLinkedin() {
+  const text = document.getElementById('linkedinText').value.trim();
+  const url = document.getElementById('linkedinUrl').value.trim();
+  if (!text) { showToast('Paste your LinkedIn profile text first', false); return; }
+  const btn = document.getElementById('linkedinBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Extracting...';
+  const pane = document.getElementById('linkedinResultsPane');
+  pane.innerHTML = '<div class="panel"><div class="loading-state"><div class="spinner"></div><span>Analysing your LinkedIn profile...</span></div></div>';
+  try {
+    const res = await fetch('/api/linkedin-hints', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text, url })
+    });
+    const data = await res.json();
+    if (data.error) { pane.innerHTML = `<div class="panel"><div style="color:#ffb3b3;padding:1rem">${data.error}</div></div>`; return; }
+    renderLinkedinResults(data.extracted, pane);
+  } catch(e) {
+    pane.innerHTML = `<div class="panel"><div style="color:var(--muted);padding:1rem">Error: ${e.message}</div></div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="15" height="15"><use href="#i-linkedin"/></svg> Extract Profile Data';
+}
+
+function renderLinkedinResults(extracted, pane) {
+  const exp = extracted.experience || [];
+  const skills = extracted.skills || {};
+  pane.innerHTML = `
+    <div class="panel">
+      <h2 style="margin-bottom:0.8rem">Extracted from LinkedIn</h2>
+      ${extracted.summary ? `<div style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;line-height:1.6">${esc(extracted.summary)}</div>` : ''}
+      ${exp.length ? `<div style="margin-bottom:1rem"><div class="field-label">Experience</div>${exp.map(e=>`
+        <div style="padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
+          <strong>${esc(e.role)}</strong> at ${esc(e.company)} &nbsp;<span style="color:var(--muted)">${esc(e.duration||'')}</span>
+          ${(e.points||[]).map(p=>`<div style="color:var(--muted);margin-top:0.2rem;padding-left:0.8rem">• ${esc(p)}</div>`).join('')}
+        </div>`).join('')}</div>` : ''}
+      ${(skills.technical||[]).length ? `<div style="margin-bottom:1rem"><div class="field-label">Technical Skills</div><div class="tag-list">${(skills.technical||[]).map(s=>`<span class="tag">${esc(s)}</span>`).join('')}</div></div>` : ''}
+      <button class="btn-gold" onclick="addLinkedinToProfile(${JSON.stringify(extracted).replace(/"/g,'&quot;')})">
+        <svg width="15" height="15"><use href="#i-save"/></svg> Add to My Profile
+      </button>
+    </div>`;
+}
+
+async function addLinkedinToProfile(extracted) {
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ linkedin_data: extracted })
+    });
+    if (res.ok) showToast('✓ LinkedIn data added to your profile', true);
+    else showToast('Could not save (are you logged in?)', false);
+  } catch(e) { showToast('Error: ' + e.message, false); }
+}
+
+// ── Intro Script ──────────────────────────────────────────────────────────────
+async function generateIntroScript() {
+  const btn = document.getElementById('introBtn');
+  const pane = document.getElementById('introResultPane');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:15px;height:15px;border-width:2px;margin:0"></div> Writing script...';
+  pane.innerHTML = '<div class="panel"><div class="loading-state"><div class="spinner"></div><span>Crafting your personalized script...</span></div></div>';
+  try {
+    const res = await fetch('/api/generate-intro-script', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        job_role: document.getElementById('introRole').value.trim(),
+        duration_seconds: parseInt(document.getElementById('introDuration').value),
+        tone: document.getElementById('introTone').value
+      })
+    });
+    const data = await res.json();
+    if (data.error) { pane.innerHTML = `<div class="panel" style="color:#ffb3b3">${data.error}</div>`; return; }
+    renderIntroScript(data, pane);
+  } catch(e) {
+    pane.innerHTML = `<div class="panel" style="color:var(--muted)">Error: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="15" height="15"><use href="#i-video"/></svg> Generate Script';
+}
+
+function renderIntroScript(data, pane) {
+  const wc = data.word_count || (data.script||'').split(/\s+/).length;
+  const dur = data.estimated_duration_sec || Math.round(wc / 2.2);
+  pane.innerHTML = `
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+        <h2 style="font-size:1.1rem">Your Intro Script</h2>
+        <button class="btn-outline" onclick="copyScript()" style="font-size:0.78rem">
+          <svg width="12" height="12"><use href="#i-copy"/></svg> Copy Script
+        </button>
+      </div>
+      <div class="script-meta">
+        <span>⏱ ~${dur}s</span>
+        <span>📝 ${wc} words</span>
+        <span style="color:var(--gold)">${document.getElementById('introTone').value} tone</span>
+      </div>
+      <div class="script-output" id="scriptOutputText">
+        ${(data.sections||[]).length ? data.sections.map(s=>`
+          <div class="script-section">
+            <div class="script-section-title">${esc(s.title)} <span style="font-size:0.7rem;color:var(--muted)">(~${s.duration_estimate_sec||'?'}s)</span></div>
+            <div class="script-text">${esc(s.text||'')}</div>
+          </div>`).join('') : `<div class="script-text">${esc(data.script||'')}</div>`}
+      </div>
+      ${data.delivery_tips && data.delivery_tips.length ? `
+        <div style="margin-top:1.2rem"><div class="field-label">Delivery Tips</div>
+        <ul class="tips-list">${data.delivery_tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
+      ${data.key_phrases && data.key_phrases.length ? `
+        <div style="margin-top:1rem"><div class="field-label">Emphasize These</div>
+        <div class="tag-list">${data.key_phrases.map(p=>`<span class="tag">${esc(p)}</span>`).join('')}</div></div>` : ''}
+      ${data.avoid && data.avoid.length ? `
+        <div style="margin-top:1rem"><div class="field-label">Avoid</div>
+        ${data.avoid.map(a=>`<div class="avoid-item">✗ ${esc(a)}</div>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+function copyScript() {
+  const el = document.getElementById('scriptOutputText');
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Script copied to clipboard', true));
+}
+
+// ── Resume renderer ───────────────────────────────────────────────────────────
 function renderResume(data, targetId, suffix) {
   if (!data || data.error) return;
   const sk = data.skills || {};
-
   const contacts = [];
   if (data.phone) contacts.push(data.phone);
   if (data.email) contacts.push(`<a href="mailto:${data.email}">${data.email}</a>`);
   if (data.linkedin) { const l = data.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//,''); contacts.push(`<a href="${ensureHttp(data.linkedin)}" target="_blank">linkedin.com/in/${l}</a>`); }
   if (data.github) { const g = data.github.replace(/^https?:\/\/(www\.)?github\.com\//,''); contacts.push(`<a href="${ensureHttp(data.github)}" target="_blank">github.com/${g}</a>`); }
-
   const sep = '<span class="r-contact-sep"> | </span>';
-
   const summaryHtml = data.summary ? `<div class="r-section"><div class="r-section-title">Summary</div><p class="r-summary">${esc(data.summary)}</p></div>` : '';
-
-  const eduHtml = arr(data.education).length ? `<div class="r-section"><div class="r-section-title">Education</div>${arr(data.education).map(e=>`
-    <div class="r-edu-item">
-      <div><div class="r-institution">${esc(e.institution||'')}</div><div class="r-degree">${esc(e.degree||'')}${e.cgpa?` &mdash; CGPA: ${esc(e.cgpa)}`:''}${e.specialization?` (${esc(e.specialization)})`:''}${e.stream?` &mdash; ${esc(e.stream)}`:''}</div></div>
-      <div class="r-edu-right">${esc(e.year||e.duration||'')}</div>
-    </div>`).join('')}</div>` : '';
-
-  const expHtml = arr(data.experience).length ? `<div class="r-section"><div class="r-section-title">Experience</div>${arr(data.experience).map(e=>`
-    <div class="r-exp-item">
-      <div class="r-exp-header">
-        <div><div class="r-exp-company">${esc(e.company||'')}${e.location?`<span class="r-exp-sub"> &mdash; ${esc(e.location)}</span>`:''}</div><div class="r-exp-role">${esc(e.role||'')}</div></div>
-        <div class="r-exp-date">${esc(e.duration||'')}</div>
-      </div>
-      ${arr(e.points).length?`<ul class="r-bullets">${arr(e.points).map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`:''}
-    </div>`).join('')}</div>` : '';
-
-  const projHtml = arr(data.projects).length ? `<div class="r-section"><div class="r-section-title">Projects</div>${arr(data.projects).map(p=>`
-    <div class="r-proj-item">
-      <div class="r-proj-header">
-        <div><span class="r-proj-name">${esc(p.name||'')}</span>${arr(p.tech).length?` <span class="r-proj-tech">| ${p.tech.map(esc).join(', ')}</span>`:''}</div>
-        ${p.year?`<div class="r-proj-date">${esc(p.year)}</div>`:''}
-      </div>
-      ${p.description||p.impact?`<ul class="r-bullets">${p.description?`<li>${esc(p.description)}</li>`:''} ${p.impact?`<li>${esc(p.impact)}</li>`:''}</ul>`:''}
-    </div>`).join('')}</div>` : '';
-
-  const pubHtml = arr(data.publications).length ? `<div class="r-section"><div class="r-section-title">Publications</div>${arr(data.publications).map(p=>`<div class="r-pub-item">${esc(typeof p==='string'?p:(p.citation||p.title||''))}</div>`).join('')}</div>` : '';
-
+  const eduHtml = arr(data.education).length ? `<div class="r-section"><div class="r-section-title">Education</div>${arr(data.education).map(e=>`<div class="r-edu-item"><div><div class="r-institution">${esc(e.institution||'')}</div><div class="r-degree">${esc(e.degree||'')}${e.cgpa?` &mdash; CGPA: ${esc(e.cgpa)}`:''}${e.specialization?` (${esc(e.specialization)})`:''}${e.stream?` &mdash; ${esc(e.stream)}`:''}</div></div><div class="r-edu-right">${esc(e.year||e.duration||'')}</div></div>`).join('')}</div>` : '';
+  const expHtml = arr(data.experience).length ? `<div class="r-section"><div class="r-section-title">Experience</div>${arr(data.experience).map(e=>`<div class="r-exp-item"><div class="r-exp-header"><div><div class="r-exp-company">${esc(e.company||'')}${e.location?`<span class="r-exp-sub"> &mdash; ${esc(e.location)}</span>`:''}</div><div class="r-exp-role">${esc(e.role||'')}</div></div><div class="r-exp-date">${esc(e.duration||'')}</div></div>${arr(e.points).length?`<ul class="r-bullets">${arr(e.points).map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`:''}</div>`).join('')}</div>` : '';
+  const projHtml = arr(data.projects).length ? `<div class="r-section"><div class="r-section-title">Projects</div>${arr(data.projects).map(p=>`<div class="r-proj-item"><div class="r-proj-header"><div><span class="r-proj-name">${esc(p.name||'')}</span>${arr(p.tech).length?` <span class="r-proj-tech">| ${p.tech.map(esc).join(', ')}</span>`:''}</div>${p.year?`<div class="r-proj-date">${esc(p.year)}</div>`:''}</div>${p.description||p.impact?`<ul class="r-bullets">${p.description?`<li>${esc(p.description)}</li>`:''} ${p.impact?`<li>${esc(p.impact)}</li>`:''}</ul>`:''}</div>`).join('')}</div>` : '';
   const certHtml = arr(data.certifications).length ? `<div class="r-section"><div class="r-section-title">Certifications</div><ul class="r-bullets">${arr(data.certifications).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>` : '';
-
   const achHtml = arr(data.achievements).length ? `<div class="r-section"><div class="r-section-title">Key Achievements</div><ul class="r-bullets">${arr(data.achievements).map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>` : '';
-
-  // Skills — structured rows matching attached PDF format
   const allTech = [...arr(sk.technical||[]), ...arr(sk.tools||[])];
   const skillRows = [];
   if (arr(sk.languages).length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Languages:</span> ${sk.languages.map(esc).join(', ')}</div>`);
@@ -422,14 +920,15 @@ function renderResume(data, targetId, suffix) {
   if (arr(sk.soft).length) skillRows.push(`<div class="r-skills-row"><span class="r-skills-label">Key Areas:</span> ${sk.soft.map(esc).join(', ')}</div>`);
   if (!skillRows.length && allTech.length) skillRows.push(`<div class="r-skills-row">${allTech.map(esc).join(', ')}</div>`);
   const skillHtml = skillRows.length ? `<div class="r-section"><div class="r-section-title">Technical Skills</div>${skillRows.join('')}</div>` : '';
-
-  document.getElementById(targetId).innerHTML = `
-    <div class="resume-doc" id="resume-doc-${suffix}">
-      <div class="r-name">${esc(data.name||'Your Name')}</div>
-      <div class="r-contact">${contacts.join(sep)}</div>
-      ${summaryHtml}${eduHtml}${expHtml}${projHtml}${pubHtml}${certHtml}${achHtml}${skillHtml}
-    </div>`;
+  document.getElementById(targetId).innerHTML = `<div class="resume-doc" id="resume-doc-${suffix}">${'' +
+    `<div class="r-name">${esc(data.name||'Your Name')}</div>` +
+    `<div class="r-contact">${contacts.join(sep)}</div>` +
+    summaryHtml + eduHtml + expHtml + projHtml + certHtml + achHtml + skillHtml
+  }</div>`;
 }
+
+function downloadCurrentResume() { printDoc('resume-doc-gen'); }
+function downloadSavedResume() { printDoc('resume-doc-saved'); }
 
 function printDoc(docId) {
   const doc = document.getElementById(docId);
@@ -446,29 +945,30 @@ function printDoc(docId) {
     .r-section-title{font-size:10pt;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border-bottom:1.5px solid #000;padding-bottom:.1rem;margin-bottom:.45rem;font-family:Arial,sans-serif;color:#000}
     .r-summary{font-size:10pt;line-height:1.5}
     .r-edu-item{display:flex;justify-content:space-between;margin-bottom:.2rem}
-    .r-institution{font-weight:700}
-    .r-degree{font-style:italic;font-size:10pt;color:#333}
+    .r-institution{font-weight:700}.r-degree{font-style:italic;font-size:10pt;color:#333}
     .r-edu-right{text-align:right;font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem}
-    .r-exp-item{margin-bottom:.5rem}
-    .r-exp-header{display:flex;justify-content:space-between}
-    .r-exp-company{font-weight:700}
-    .r-exp-sub{font-weight:400}
-    .r-exp-role{font-style:italic;font-size:10pt}
+    .r-exp-item{margin-bottom:.5rem}.r-exp-header{display:flex;justify-content:space-between}
+    .r-exp-company{font-weight:700}.r-exp-sub{font-weight:400}.r-exp-role{font-style:italic;font-size:10pt}
     .r-exp-date{font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem;text-align:right}
     .r-bullets{padding-left:1.3rem;list-style-type:disc;margin-top:.18rem}
     .r-bullets li{font-size:10pt;margin-bottom:.1rem;line-height:1.4}
-    .r-proj-item{margin-bottom:.45rem}
-    .r-proj-header{display:flex;justify-content:space-between;align-items:baseline}
-    .r-proj-name{font-weight:700}
-    .r-proj-tech{font-style:italic;color:#444;font-size:10pt}
+    .r-proj-item{margin-bottom:.45rem}.r-proj-header{display:flex;justify-content:space-between;align-items:baseline}
+    .r-proj-name{font-weight:700}.r-proj-tech{font-style:italic;color:#444;font-size:10pt}
     .r-proj-date{font-size:10pt;color:#333;white-space:nowrap;margin-left:1rem}
-    .r-pub-item{font-size:10pt;margin-bottom:.25rem;line-height:1.45}
-    .r-skills-row{font-size:10pt;margin-bottom:.15rem;line-height:1.5}
-    .r-skills-label{font-weight:700}
+    .r-skills-row{font-size:10pt;margin-bottom:.15rem;line-height:1.5}.r-skills-label{font-weight:700}
     @media print{body{padding:0}}
   </style></head><body>${doc.outerHTML}</body></html>`);
   w.document.close();
   setTimeout(() => { w.print(); w.close(); }, 600);
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, success = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (success ? ' success' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
