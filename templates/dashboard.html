@@ -1109,22 +1109,26 @@ function openUploadModal() {
 function closeUploadModal() {
   document.getElementById('uploadModal').classList.remove('active');
 }
-document.getElementById('uploadModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('uploadModal')) closeUploadModal();
-});
 
-const dropZone = document.getElementById('uploadDropZone');
-const fileInput = document.getElementById('uploadFileInput');
+// Wire up upload interactions after DOM is fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('uploadModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('uploadModal')) closeUploadModal();
+  });
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files[0]);
+  const dropZone = document.getElementById('uploadDropZone');
+  const fileInput = document.getElementById('uploadFileInput');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files[0]);
+  });
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { if (fileInput.files.length) handleUpload(fileInput.files[0]); });
 });
-dropZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => { if (fileInput.files.length) handleUpload(fileInput.files[0]); });
 
 async function handleUpload(file) {
   const status = document.getElementById('uploadStatus');
