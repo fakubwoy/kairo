@@ -653,19 +653,92 @@ def upload_file():
         except Exception as e:
             extracted_text = f"Could not extract text: {e}"
     
-    # Use LLM to extract structured info from document
-    doc_insights = ""
-    if extracted_text:
-        doc_insights = call_llm(
-            [{"role": "user", "content": f"Extract key information from this document:\n{extracted_text[:3000]}"}],
-            "You are analyzing a student document (transcript, certificate, or resume). Extract key information in a brief, structured summary. Focus on: courses/grades, achievements, certifications, skills."
+    # Use LLM to extract structured info from document as JSON
+    doc_insights_raw = ""
+    doc_structured = {}
+    if extracted_text and extracted_text.strip() and not extracted_text.startswith("Could not"):
+        doc_insights_raw = call_llm(
+            [{"role": "user", "content": f"Document text:\n{extracted_text[:4000]}"}],
+            """You are analyzing a student academic document (transcript, marksheet, certificate, or resume).
+Extract ALL useful information and return ONLY a valid JSON object with these fields (omit fields that are not present):
+{
+  "name": "student full name if found",
+  "college": "institution name",
+  "branch": "degree/program/branch",
+  "cgpa": "CGPA or percentage",
+  "year": "graduation year or semester info",
+  "roll_number": "roll/registration number",
+  "semester": "current semester if found",
+  "subjects": ["list of course/subject names"],
+  "grades": {"subject_name": "grade/marks"},
+  "certifications": ["list of certifications"],
+  "achievements": ["list of achievements/awards"],
+  "skills": ["skills mentioned"],
+  "document_type": "transcript|marksheet|certificate|resume|other"
+}
+Return ONLY the JSON, no explanation, no markdown fences."""
         )
-    
+        # Parse LLM response as JSON
+        try:
+            clean = doc_insights_raw.strip()
+            if "```" in clean:
+                for part in clean.split("```"):
+                    if '{' in part:
+                        clean = part.lstrip("json").strip()
+                        break
+            doc_structured = json.loads(clean)
+        except Exception:
+            # Fallback: store raw text under a key so frontend can still show something
+            doc_structured = {"raw_summary": doc_insights_raw}
+
+    # Save extracted document data into student's profile
+    if sid and doc_structured:
+        student = Student.query.get(sid)
+        if student:
+            existing = json.loads(student.profile_data or '{}')
+            # Merge document data — keep a list of uploaded docs and merge structured fields
+            uploaded_docs = existing.get('uploaded_documents', [])
+            uploaded_docs.append({
+                'filename': unique_name,
+                'original_name': filename,
+                'extracted': doc_structured
+            })
+            existing['uploaded_documents'] = uploaded_docs
+
+            # Merge top-level fields into profile only if not already set
+            mergeable = ['name', 'college', 'branch', 'cgpa', 'year', 'roll_number', 'semester']
+            for field in mergeable:
+                if doc_structured.get(field) and not existing.get(field):
+                    existing[field] = doc_structured[field]
+
+            # Merge lists (subjects, certifications, achievements, skills)
+            for list_field in ['subjects', 'certifications', 'achievements']:
+                if doc_structured.get(list_field):
+                    existing_list = existing.get(list_field, [])
+                    merged = list({v: True for v in (existing_list + doc_structured[list_field])}.keys())
+                    existing[list_field] = merged
+
+            # Merge skills into structured skills object
+            if doc_structured.get('skills'):
+                sk = existing.get('skills', {})
+                if isinstance(sk, dict):
+                    tech = sk.get('technical', [])
+                    merged_skills = list({v: True for v in (tech + doc_structured['skills'])}.keys())
+                    sk['technical'] = merged_skills
+                    existing['skills'] = sk
+
+            # Store the full structured doc data for display in dashboard
+            existing['document_data'] = doc_structured
+
+            student.profile_data = json.dumps(existing)
+            db.session.commit()
+
     return jsonify({
         'filename': unique_name,
         'original_name': filename,
-        'extracted_text': extracted_text[:1000],
-        'insights': doc_insights
+        'extracted_text': extracted_text[:500] if extracted_text else '',
+        'insights': doc_insights_raw,
+        'structured': doc_structured
     })
 
 @app.route('/api/generate-resume', methods=['POST'])

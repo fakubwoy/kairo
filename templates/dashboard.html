@@ -1337,29 +1337,59 @@ function peApplyLinkedin(extracted) {
 // ── Document data tab ─────────────────────────────────────────────────────────
 function renderDocumentData(profile) {
   const container = document.getElementById('peDocumentData');
-  const doc = profile.document_data || profile.extracted_from_docs || {};
-  if (!doc || !Object.keys(doc).length) return;
+  if (!container) return;
+
+  const uploadedDocs = profile.uploaded_documents || [];
+  const doc = profile.document_data || (uploadedDocs.length ? uploadedDocs[uploadedDocs.length - 1].extracted : null) || {};
+
+  if (!doc || !Object.keys(doc).length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1.5rem;text-align:center;border:1px dashed rgba(201,168,76,0.15)">No documents uploaded yet. <a href="javascript:openUploadModal()" style="color:var(--gold)">Upload a document</a> to extract data automatically.</div>';
+    return;
+  }
+
+  if (doc.raw_summary && Object.keys(doc).length === 1) {
+    container.innerHTML = '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.8rem">Kairo could not extract structured fields — here is a raw summary:</div><div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.12);padding:1rem;font-size:0.85rem;line-height:1.7;color:var(--cream)">' + esc(doc.raw_summary) + '</div>';
+    return;
+  }
+
+  const scalarMap = {
+    document_type: 'Document Type', name: 'Student Name', college: 'Institution',
+    branch: 'Branch / Degree', cgpa: 'CGPA / Percentage', year: 'Year / Graduation',
+    roll_number: 'Roll Number', semester: 'Semester'
+  };
+  const listMap = { subjects: 'Subjects / Courses', certifications: 'Certifications', achievements: 'Achievements', skills: 'Skills' };
 
   let html = '<div class="profile-fields">';
-  const fieldMap = {
-    name: 'Full Name', cgpa: 'CGPA', branch: 'Branch / Degree',
-    college: 'College', year: 'Graduation Year', roll_number: 'Roll Number',
-    semester: 'Semester', subjects: 'Subjects / Courses', certifications: 'Certifications',
-    achievements: 'Achievements'
-  };
-  Object.entries(doc).forEach(([key, val]) => {
-    const label = fieldMap[key] || key.replace(/_/g,' ').replace(/\w/g,c=>c.toUpperCase());
-    const isArray = Array.isArray(val);
-    const displayVal = isArray ? val.join(', ') : (val||'');
-    html += `<div class="profile-field${isArray || String(displayVal).length > 60 ? ' full-width' : ''}">
-      <label>${label} <span style="font-size:0.65rem;color:rgba(201,168,76,0.5);font-style:italic;margin-left:0.3rem">from document</span></label>
-      <input type="text" value="${esc(displayVal)}" oninput="updateDocField('${key}', this.value)" placeholder="${label}">
-    </div>`;
+
+  Object.entries(scalarMap).forEach(function([key, label]) {
+    const val = doc[key];
+    if (!val) return;
+    html += '<div class="profile-field"><label>' + label + ' <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><input type="text" value="' + esc(val) + '" oninput="updateDocField(\'' + key + '\', this.value)"></div>';
   });
+
+  Object.entries(listMap).forEach(function([key, label]) {
+    const val = doc[key];
+    if (!val || !val.length) return;
+    const display = Array.isArray(val) ? val.join(', ') : val;
+    html += '<div class="profile-field full-width"><label>' + label + ' <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><input type="text" value="' + esc(display) + '" oninput="updateDocField(\'' + key + '\', this.value.split(\',\').map(s=>s.trim()).filter(Boolean))"></div>';
+  });
+
+  if (doc.grades && typeof doc.grades === 'object' && Object.keys(doc.grades).length) {
+    let gradeRows = Object.entries(doc.grades).map(function([subj, grade]) {
+      return '<div style="display:flex;justify-content:space-between;padding:0.2rem 0;border-bottom:1px solid rgba(201,168,76,0.06)"><span style="color:var(--muted)">' + esc(String(subj)) + '</span><span style="color:var(--cream)">' + esc(String(grade)) + '</span></div>';
+    }).join('');
+    html += '<div class="profile-field full-width"><label>Grades <span style="font-size:0.65rem;color:rgba(201,168,76,0.45);font-style:italic">from document</span></label><div style="background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.12);padding:0.6rem 0.8rem;font-size:0.82rem">' + gradeRows + '</div></div>';
+  }
+
   html += '</div>';
+
+  if (uploadedDocs.length > 1) {
+    const lastName = uploadedDocs[uploadedDocs.length-1].original_name || '';
+    html += '<div style="margin-top:1rem;font-size:0.75rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;border-top:1px solid rgba(201,168,76,0.1);padding-top:0.8rem">' + uploadedDocs.length + ' documents uploaded — showing data from latest (' + esc(lastName) + ')</div>';
+  }
+
   container.innerHTML = html;
 }
-
 function updateDocField(key, val) {
   // Will be saved as part of profile on Save Changes
   window._pendingDocEdits = window._pendingDocEdits || {};
@@ -1386,10 +1416,14 @@ function populateProfileEditor(data) {
   renderProjectsList();
   // Document data
   renderDocumentData(p);
-  // Pre-fill GitHub username from URL
-  const ghUrl = p.github || '';
-  const ghMatch = ghUrl.match(/github\.com\/([^/]+)/);
-  if (ghMatch) document.getElementById('pe-githubUsername').value = ghMatch[1];
+  // Pre-fill GitHub username from saved URL (handles https://github.com/user, github.com/user, or bare username)
+  const ghUrl = (p.github || '').trim();
+  const ghMatch = ghUrl.match(/github\.com\/([^/?#\s]+)/);
+  if (ghMatch) {
+    document.getElementById('pe-githubUsername').value = ghMatch[1].replace(/\/$/, '');
+  } else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) {
+    document.getElementById('pe-githubUsername').value = ghUrl;
+  }
 }
 
 async function saveProfileEdits() {
@@ -1620,6 +1654,17 @@ document.addEventListener('DOMContentLoaded', () => {
   fileInput.addEventListener('change', () => { if (fileInput.files.length) handleUpload(fileInput.files[0]); });
 });
 
+async function loadProfile() {
+  try {
+    const data = await fetch('/api/auth/me').then(r => r.json());
+    if (data.profile) {
+      updateProfileDisplay(data.profile);
+      localStorage.setItem('kairo_user', JSON.stringify(data));
+      populateProfileEditor(data);
+    }
+  } catch(e) {}
+}
+
 async function handleUpload(file) {
   const status = document.getElementById('uploadStatus');
   const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
@@ -1636,13 +1681,43 @@ async function handleUpload(file) {
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
     const d = await res.json();
     if (d.error) throw new Error(d.error);
-    status.textContent = '\u2713 Uploaded! Kairo extracted information from your document.';
+
+    const structured = d.structured || {};
+    const hasData = Object.keys(structured).length > 0 && !structured.raw_summary;
+
+    if (hasData) {
+      status.innerHTML = '\u2713 Extracted successfully! <span style="color:var(--gold);cursor:pointer;text-decoration:underline" onclick="openProfileEditorToDocuments()">View in Profile → Documents</span>';
+    } else if (structured.raw_summary) {
+      status.textContent = '\u2713 Uploaded. Some data was extracted — check Profile → Documents.';
+    } else {
+      status.textContent = '\u2713 Uploaded. Could not extract structured data (scanned image?).';
+    }
     status.style.color = '#7dffb3';
-    setTimeout(() => { loadProfile(); closeUploadModal(); }, 1800);
+
+    // Refresh profile so document tab is populated
+    await loadProfile();
+
+    // Auto-open Documents tab if editor is already open
+    const editorOpen = document.getElementById('profileEditorBody').classList.contains('open');
+    if (editorOpen) switchPeTab('documents');
+
+    setTimeout(() => closeUploadModal(), 3000);
   } catch(e) {
     status.textContent = '\u2717 Upload failed: ' + e.message;
     status.style.color = '#ffb3b3';
   }
+}
+
+function openProfileEditorToDocuments() {
+  closeUploadModal();
+  const body = document.getElementById('profileEditorBody');
+  const btn = document.getElementById('profileEditorToggle');
+  if (!body.classList.contains('open')) {
+    body.classList.add('open');
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Close';
+  }
+  switchPeTab('documents');
+  document.querySelector('.profile-editor-card').scrollIntoView({ behavior: 'smooth' });
 }
 </script>
 
