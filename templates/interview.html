@@ -517,43 +517,72 @@ async function sendMessage() {
 }
 
 function updateTopicProgress() {
-  // Build a single lowercase string of everything said so far
-  const transcript = messages
+  // Split transcript by role — only user answers should mark topics DONE
+  const userText = messages
+    .filter(m => m.role === 'user' && !m._silent)
     .map(m => m.content || '')
     .join(' ')
     .toLowerCase();
 
-  // Each topic: [element id, keywords that signal it's been covered]
+  // Latest AI message tells us what topic is currently being ASKED about
+  const lastAiText = [...messages].reverse()
+    .find(m => m.role === 'assistant')
+    ?.content?.toLowerCase() || '';
+
   const topicSignals = [
-    ['t-basic', ['branch', 'cse', 'ece', 'mech', 'civil', 'btech', 'year', 'batch', '1st', '2nd', '3rd', '4th', 'first year', 'second year', 'third year', 'fourth year']],
-    ['t-edu',   ['cgpa', 'gpa', 'percentage', 'marks', 'grade', 'subjects', 'data structures', 'dbms', 'machine learning', 'algorithms', 'semester']],
-    ['t-projects', ['project', 'built', 'developed', 'created', 'made', 'app', 'website', 'system', 'github']],
-    ['t-skills',   ['react', 'python', 'javascript', 'java', 'c++', 'node', 'flask', 'django', 'sql', 'mongodb', 'docker', 'aws', 'skills', 'tech stack', 'technologies']],
-    ['t-intern',   ['internship', 'intern', 'company', 'startup', 'worked at', 'job', 'role', 'techno', 'bangalore', 'mumbai', 'delhi', 'remote']],
-    ['t-extra',    ['club', 'hackathon', 'competition', 'gdsc', 'ieee', 'acm', 'volunteer', 'gravitas', 'riviera', 'fest', 'extracurricular', 'council', 'sports', 'cultural']],
-    ['t-cert',     ['certificate', 'certification', 'coursera', 'udemy', 'nptel', 'aws certified', 'google', 'microsoft', 'credential']],
+    ['t-basic',   ['branch', 'cse', 'ece', 'mech', 'civil', 'btech', 'b.tech', 'year', 'batch', '1st year', '2nd year', '3rd year', '4th year', 'first year', 'second year', 'third year', 'fourth year']],
+    ['t-edu',     ['cgpa', 'gpa', 'percentage', 'marks', 'grade', 'data structures', 'dbms', 'machine learning', 'algorithms', 'operating systems', 'computer networks', 'subjects', 'semester']],
+    ['t-projects',['project', 'built', 'developed', 'created', 'made an app', 'full stack', 'fullstack', 'github', 'deployed', 'tech stack']],
+    ['t-skills',  ['react', 'python', 'javascript', 'java', 'c++', 'node', 'flask', 'django', 'sql', 'mongodb', 'docker', 'aws', 'my skills', 'i know', 'i use', 'i work with', 'proficient']],
+    ['t-intern',  ['internship', 'interned', 'i worked at', 'i was a', 'backend intern', 'frontend intern', 'software intern', 'startup', 'company']],
+    ['t-extra',   ['club', 'hackathon', 'won', 'competition', 'gdsc', 'ieee', 'acm', 'volunteer', 'gravitas', 'riviera', 'fest', 'extracurricular', 'council', 'sports', 'cultural', 'member of']],
+    ['t-cert',    ['certificate', 'certification', 'coursera', 'udemy', 'nptel', 'google certified', 'aws certified', 'microsoft', 'credential', 'completed a course']],
   ];
 
+  // AI question keywords — what topic is Kairo currently asking about
+  const aiQuestionSignals = [
+    ['t-basic',   ['branch', 'course', 'year', 'pursuing', 'studying']],
+    ['t-edu',     ['cgpa', 'gpa', 'grades', 'subjects', 'academic', 'percentage']],
+    ['t-projects',['project', 'built', 'developed', 'showcase']],
+    ['t-skills',  ['skills', 'technologies', 'tech stack', 'programming']],
+    ['t-intern',  ['internship', 'work experience', 'company', 'industry']],
+    ['t-extra',   ['extracurricular', 'club', 'hackathon', 'activities', 'positions']],
+    ['t-cert',    ['certification', 'certificate', 'courses', 'credential']],
+  ];
+
+  // Mark topics DONE based only on what the user has said
   topicSignals.forEach(([id, keywords]) => {
     const el = document.getElementById(id);
     if (!el) return;
-    const covered = keywords.some(kw => transcript.includes(kw));
-    if (covered) {
+    if (keywords.some(kw => userText.includes(kw))) {
       el.classList.remove('active');
       el.classList.add('done');
     }
   });
 
-  // Mark the first uncovered topic as "active" (currently being discussed)
-  let foundActive = false;
-  topicSignals.forEach(([id]) => {
+  // Mark ACTIVE: the first undone topic that the AI is currently asking about
+  let markedActive = false;
+  aiQuestionSignals.forEach(([id, keywords]) => {
     const el = document.getElementById(id);
-    if (!el) return;
-    if (!el.classList.contains('done') && !foundActive) {
+    if (!el || el.classList.contains('done')) return;
+    if (!markedActive && keywords.some(kw => lastAiText.includes(kw))) {
       el.classList.add('active');
-      foundActive = true;
+      markedActive = true;
+    } else {
+      el.classList.remove('active');
     }
   });
+
+  // Fallback: if nothing matched as active, highlight first incomplete topic
+  if (!markedActive) {
+    let found = false;
+    topicSignals.forEach(([id]) => {
+      const el = document.getElementById(id);
+      if (!el || el.classList.contains('done') || found) return;
+      el.classList.add('active');
+      found = true;
+    });
+  }
 }
 
 function useHint(el) {
