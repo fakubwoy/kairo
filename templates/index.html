@@ -313,8 +313,16 @@ nav-links { display: flex; gap: 2rem; align-items: center; }
 }
 
 .step-icon {
-  font-size: 1.5rem;
   margin-bottom: 0.8rem;
+}
+.step-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke: var(--gold);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Login Modal */
@@ -449,7 +457,7 @@ footer {
       </div>
     </div>
     <div class="chat-body">
-      <div class="msg msg-ai">Hey! I'm Kairo 👋 Let's build your profile. What's your branch and current year at VIT?</div>
+      <div class="msg msg-ai">Hey! I'm Kairo — Let's build your profile. What's your branch and current year at VIT?</div>
       <div class="msg msg-user">I'm in CSE, 3rd year. I've done some web dev projects and one internship.</div>
       <div class="msg msg-ai">That's great! Tell me about your most impactful project — what did you build, and what problem did it solve?</div>
       <div class="msg msg-user">I built a college event management system using React and Node. It reduced manual work by 60%.</div>
@@ -466,25 +474,25 @@ footer {
   <div class="steps-grid">
     <div class="step">
       <div class="step-num">01</div>
-      <div class="step-icon">🎤</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
       <h3>Talk to Kairo</h3>
       <p>Have a 20-minute conversation. Share your courses, projects, internships, and clubs. No forms, just talk.</p>
     </div>
     <div class="step">
       <div class="step-num">02</div>
-      <div class="step-icon">🧠</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/><line x1="12" y1="6" x2="12" y2="18"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg></div>
       <h3>Build Your Profile</h3>
       <p>Kairo extracts every detail — grades, tech stacks, achievements — and builds a rich career profile.</p>
     </div>
     <div class="step">
       <div class="step-num">03</div>
-      <div class="step-icon">📄</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
       <h3>Generate Resumes</h3>
       <p>Paste any job description. Kairo instantly creates an ATS-optimized, tailored resume in seconds.</p>
     </div>
     <div class="step">
       <div class="step-num">04</div>
-      <div class="step-icon">🚀</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
       <h3>Apply & Land</h3>
       <p>Download your custom resume. Apply confidently. Track your applications and iterate.</p>
     </div>
