@@ -351,8 +351,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
   </div>
   <div class="ai-status">
-    <div class="status-dot"></div>
-    <span id="statusText">Kairo is ready</span>
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Connecting…</span>
   </div>
 </div>
 
@@ -424,6 +424,30 @@ const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
 let conversationId = null;
 let messages = [];
 let isTyping = false;
+
+// Check and display which backend is active
+async function checkBackend() {
+  try {
+    const res = await fetch('/api/llm-status');
+    const s = await res.json();
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if (s.active_backend === 'openrouter') {
+      dot.style.background = '#4caf50';
+      txt.textContent = 'Cloud AI (OpenRouter)';
+    } else if (s.active_backend === 'ollama') {
+      dot.style.background = '#ffb74d';
+      txt.textContent = `Local AI (${s.ollama.model})`;
+    } else {
+      dot.style.background = '#ef5350';
+      txt.innerHTML = `No AI backend · <a href="/dashboard" style="color:var(--gold);">Fix in Dashboard</a>`;
+    }
+  } catch(e) {
+    document.getElementById('statusText').textContent = 'Kairo is ready';
+  }
+}
+
+checkBackend();
 
 function appendMessage(role, content) {
   const container = document.getElementById('messages');

@@ -198,11 +198,173 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   border: 1px dashed rgba(201,168,76,0.2);
 }
 
+/* LLM Status Panel */
+.llm-panel {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.llm-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.llm-panel-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+}
+
+.llm-backends {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.backend-card {
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 1rem 1.2rem;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.backend-card.active-backend {
+  border-color: rgba(201,168,76,0.5);
+  background: rgba(201,168,76,0.04);
+}
+
+.backend-card.active-backend::after {
+  content: 'ACTIVE';
+  position: absolute;
+  top: 0.7rem; right: 0.8rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  background: rgba(201,168,76,0.12);
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+}
+
+.backend-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.backend-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+}
+
+.backend-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.status-badge.ok { background: rgba(76,175,80,0.15); color: #81c784; }
+.status-badge.warn { background: rgba(255,152,0,0.15); color: #ffb74d; }
+.status-badge.err { background: rgba(239,83,80,0.15); color: #ef9a9a; }
+
+.status-dot-sm {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ok .status-dot-sm { background: #81c784; }
+.warn .status-dot-sm { background: #ffb74d; }
+.err .status-dot-sm { background: #ef9a9a; }
+
+/* Ollama setup guide */
+.ollama-guide {
+  margin-top: 0.8rem;
+  border-top: 1px solid rgba(201,168,76,0.1);
+  padding-top: 0.8rem;
+  display: none;
+}
+
+.ollama-guide.visible { display: block; }
+
+.guide-step {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+  line-height: 1.5;
+}
+
+.guide-step strong { color: var(--cream); }
+
+.code-block {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(201,168,76,0.15);
+  padding: 0.5rem 0.8rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--gold);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.4rem 0;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.code-block:hover { border-color: rgba(201,168,76,0.4); }
+
+.copy-hint {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  flex-shrink: 0;
+}
+
+.model-info-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.model-tag {
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+}
+
+.size-tag {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main { margin-left: 0; }
   .cards-grid { grid-template-columns: 1fr; }
   .profile-sections { grid-template-columns: repeat(2,1fr); }
+  .llm-backends { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -223,6 +385,39 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   <div class="page-header">
     <h1>Good to see you, <span id="userName">—</span></h1>
     <p>Your AI career co-pilot is ready. Let's build something great.</p>
+  </div>
+
+  <!-- LLM Status Panel -->
+  <div class="llm-panel">
+    <div class="llm-panel-header">
+      <h2>AI Engine</h2>
+      <span id="llmActiveLabel" style="font-size:0.8rem; color:var(--muted)">Checking...</span>
+    </div>
+    <div class="llm-backends">
+
+      <!-- OpenRouter -->
+      <div class="backend-card" id="card-openrouter">
+        <div class="backend-name">☁️ OpenRouter <span style="font-size:0.65rem; background:rgba(201,168,76,0.12); color:var(--gold); padding:0.1rem 0.4rem; border-radius:2px;">RECOMMENDED</span></div>
+        <div class="backend-desc">Free cloud LLM — no install needed. Uses Llama 3.2 via OpenRouter's free tier. Just add an API key.</div>
+        <div class="backend-status" id="openrouter-status">
+          <span class="status-badge warn"><span class="status-dot-sm"></span> Checking…</span>
+        </div>
+        <div style="margin-top:0.8rem;" id="openrouter-key-hint"></div>
+      </div>
+
+      <!-- Ollama -->
+      <div class="backend-card" id="card-ollama">
+        <div class="backend-name">🖥️ Ollama <span style="font-size:0.65rem; color:var(--muted); font-weight:400;">Local fallback</span></div>
+        <div class="backend-desc">Run LLMs fully offline on your machine. No API key needed. Slower first run, but private.</div>
+        <div class="backend-status" id="ollama-status">
+          <span class="status-badge warn"><span class="status-dot-sm"></span> Checking…</span>
+        </div>
+        <div class="ollama-guide" id="ollamaGuide">
+          <div class="guide-step" id="ollamaGuideContent">Loading setup guide…</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <div class="profile-card">
@@ -338,6 +533,101 @@ async function loadResumes() {
 // Init
 if (user.profile) updateProfileDisplay(user.profile);
 loadResumes();
+
+// ── LLM Status Panel ────────────────────────────────────────────────────────
+
+function copyCode(text, el) {
+  navigator.clipboard.writeText(text).then(() => {
+    const hint = el.querySelector('.copy-hint');
+    if (hint) { hint.textContent = 'Copied!'; setTimeout(() => hint.textContent = 'click to copy', 1500); }
+  });
+}
+
+function renderLLMStatus(s) {
+  // Active label
+  const activeLabels = {
+    openrouter: '☁️ Using OpenRouter (cloud)',
+    ollama: '🖥️ Using Ollama (local)',
+    null: '⚠️ No AI backend active'
+  };
+  document.getElementById('llmActiveLabel').textContent = activeLabels[s.active_backend] || activeLabels[null];
+  document.getElementById('llmActiveLabel').style.color = s.active_backend ? 'var(--gold)' : '#ef9a9a';
+
+  // Mark active card
+  if (s.active_backend === 'openrouter') document.getElementById('card-openrouter').classList.add('active-backend');
+  if (s.active_backend === 'ollama') document.getElementById('card-ollama').classList.add('active-backend');
+
+  // OpenRouter status
+  const orEl = document.getElementById('openrouter-status');
+  const orHint = document.getElementById('openrouter-key-hint');
+  if (!s.openrouter.configured) {
+    orEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> No API key set</span>`;
+    orHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted); line-height:1.6;">
+      Add <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">OPENROUTER_API_KEY</code> to your <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">.env</code> file.<br>
+      Get a free key at <a href="https://openrouter.ai" target="_blank" style="color:var(--gold);">openrouter.ai</a> — no credit card needed.
+    </div>`;
+  } else if (s.openrouter.ok) {
+    orEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected · Llama 3.2 (free)</span>`;
+  } else {
+    orEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Key found but API unreachable</span>`;
+    orHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted);">Check your key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--gold);">openrouter.ai/keys</a></div>`;
+  }
+
+  // Ollama status
+  const rec = s.ollama.recommended;
+  const olEl = document.getElementById('ollama-status');
+  const guide = document.getElementById('ollamaGuide');
+  const guideContent = document.getElementById('ollamaGuideContent');
+
+  if (!s.ollama.installed) {
+    olEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> Ollama not detected</span>`;
+    guide.classList.add('visible');
+    guideContent.innerHTML = `
+      <div class="guide-step"><strong>Step 1 — Install Ollama</strong><br>Download and install from <a href="https://ollama.ai" target="_blank" style="color:var(--gold);">ollama.ai</a> (macOS, Linux, Windows).</div>
+      <div class="guide-step"><strong>Step 2 — Pull the recommended model</strong></div>
+      <div class="model-info-row" style="margin-bottom:0.6rem;">
+        <span class="model-tag">${rec.name}</span>
+        <span class="size-tag">~${rec.size_gb} GB download</span>
+        <span style="font-size:0.72rem; color:var(--muted);">${rec.description}</span>
+      </div>
+      <div class="code-block" onclick="copyCode('${rec.pull_cmd}', this)">
+        <span>${rec.pull_cmd}</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+      <div class="guide-step" style="margin-top:0.4rem; color:rgba(107,101,96,0.7);">Kairo will automatically detect Ollama once it's running.</div>
+    `;
+  } else if (!s.ollama.model_available) {
+    olEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Ollama installed · model missing</span>`;
+    guide.classList.add('visible');
+    guideContent.innerHTML = `
+      <div class="guide-step">Ollama is running but the <strong>${s.ollama.model}</strong> model isn't pulled yet.</div>
+      <div class="model-info-row" style="margin-bottom:0.6rem;">
+        <span class="model-tag">${rec.name}</span>
+        <span class="size-tag">~${rec.size_gb} GB</span>
+        <span style="font-size:0.72rem; color:var(--muted);">${rec.description}</span>
+      </div>
+      <div class="code-block" onclick="copyCode('${rec.pull_cmd}', this)">
+        <span>${rec.pull_cmd}</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+      ${s.ollama.available_models?.length ? `<div class="guide-step" style="margin-top:0.5rem;">Other models on your machine: <span style="color:var(--cream);">${s.ollama.available_models.join(', ')}</span></div>` : ''}
+    `;
+  } else {
+    olEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> ${s.ollama.model} · ready</span>`;
+  }
+}
+
+async function loadLLMStatus() {
+  try {
+    const res = await fetch('/api/llm-status');
+    const data = await res.json();
+    renderLLMStatus(data);
+  } catch(e) {
+    document.getElementById('llmActiveLabel').textContent = 'Could not reach server';
+  }
+}
+
+loadLLMStatus();
 
 // Refresh profile from API
 fetch('/api/auth/me').then(r => r.json()).then(data => {

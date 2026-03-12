@@ -31,6 +31,15 @@ OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 
+# Recommended Ollama model config (shown in UI setup guide)
+OLLAMA_RECOMMENDED = {
+    "name": "llama3.2",
+    "display": "Llama 3.2 (3B)",
+    "size_gb": 2.0,
+    "pull_cmd": "ollama pull llama3.2",
+    "description": "Fast, capable — ideal for interview + resume tasks"
+}
+
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('instance', exist_ok=True)
 
@@ -63,11 +72,12 @@ class Resume(db.Model):
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
 def call_llm(messages, system_prompt=""):
-    """Call LLM - tries OpenRouter (free models) first, then Ollama locally"""
-    
-    # Try OpenRouter with free models first
+    """Call LLM — OpenRouter (cloud) is the default. Ollama is an optional local fallback."""
+
+    # ── Primary: OpenRouter (free cloud LLM) ──────────────────────────────────
     if OPENROUTER_API_KEY:
         try:
+            full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
             headers = {
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
@@ -76,35 +86,93 @@ def call_llm(messages, system_prompt=""):
             }
             payload = {
                 "model": "meta-llama/llama-3.2-3b-instruct:free",
-                "messages": [{"role": "system", "content": system_prompt}] + messages if system_prompt else messages,
+                "messages": full_messages,
                 "max_tokens": 1000
             }
-            resp = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                                 headers=headers, json=payload, timeout=30)
+            resp = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers, json=payload, timeout=30
+            )
             if resp.status_code == 200:
                 return resp.json()['choices'][0]['message']['content']
+            else:
+                print(f"OpenRouter non-200: {resp.status_code} {resp.text[:200]}")
         except Exception as e:
             print(f"OpenRouter error: {e}")
 
-    # Fallback to local Ollama
+    # ── Fallback: Local Ollama (only if OLLAMA_BASE_URL is explicitly set or Ollama is running) ──
     try:
+        # Check Ollama is actually up before attempting
+        ping = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        if ping.status_code != 200:
+            raise ConnectionError("Ollama not reachable")
+
         formatted = ""
         if system_prompt:
             formatted += f"<|system|>\n{system_prompt}\n"
         for m in messages:
-            role = m['role']
-            formatted += f"<|{role}|>\n{m['content']}\n"
+            formatted += f"<|{m['role']}|>\n{m['content']}\n"
         formatted += "<|assistant|>\n"
 
-        resp = requests.post(f"{OLLAMA_BASE_URL}/api/generate",
-                             json={"model": OLLAMA_MODEL, "prompt": formatted, "stream": False},
-                             timeout=60)
+        resp = requests.post(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            json={"model": OLLAMA_MODEL, "prompt": formatted, "stream": False},
+            timeout=90
+        )
         if resp.status_code == 200:
+            print("Used Ollama fallback")
             return resp.json().get('response', '')
     except Exception as e:
-        print(f"Ollama error: {e}")
+        print(f"Ollama fallback error: {e}")
 
-    return "I'm having trouble connecting to the AI service. Please check your configuration."
+    return "I'm having trouble connecting to the AI service. Please add your OpenRouter API key in the settings, or set up Ollama locally."
+
+
+def get_llm_status():
+    """Return detailed status of both LLM backends for the UI."""
+    status = {
+        "openrouter": {"configured": False, "ok": False, "model": "meta-llama/llama-3.2-3b-instruct:free"},
+        "ollama": {
+            "installed": False, "model_available": False,
+            "model": OLLAMA_MODEL,
+            "recommended": OLLAMA_RECOMMENDED,
+            "url": OLLAMA_BASE_URL
+        },
+        "active_backend": None
+    }
+
+    # Check OpenRouter
+    if OPENROUTER_API_KEY:
+        status["openrouter"]["configured"] = True
+        try:
+            resp = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+                timeout=6
+            )
+            status["openrouter"]["ok"] = resp.status_code == 200
+        except:
+            status["openrouter"]["ok"] = False
+
+    # Check Ollama
+    try:
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        if resp.status_code == 200:
+            status["ollama"]["installed"] = True
+            models_data = resp.json().get("models", [])
+            model_names = [m.get("name", "").split(":")[0] for m in models_data]
+            status["ollama"]["model_available"] = OLLAMA_MODEL in model_names
+            status["ollama"]["available_models"] = model_names
+    except:
+        pass
+
+    # Determine active backend
+    if status["openrouter"]["ok"]:
+        status["active_backend"] = "openrouter"
+    elif status["ollama"]["installed"] and status["ollama"]["model_available"]:
+        status["active_backend"] = "ollama"
+
+    return status
 
 
 def get_interview_system_prompt(profile_data):
@@ -463,11 +531,17 @@ def get_resumes():
         'job_description': r.job_description[:100] + '...' if r.job_description and len(r.job_description) > 100 else r.job_description
     } for r in resumes])
 
+@app.route('/api/llm-status')
+def llm_status():
+    return jsonify(get_llm_status())
+
 @app.route('/api/health')
 def health():
-    return jsonify({'status': 'ok', 'model': OLLAMA_MODEL})
+    s = get_llm_status()
+    return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, port=5000)
+    
