@@ -29,24 +29,13 @@ kairo/
 
 ## Features
 
-| Feature | Status |
-|---------|--------|
-| Landing page with login | Done |
-| Student auth (email + password) | Done |
-| AI chat interview interface | Done |
-| Profile extraction from chat | Done |
-| Manual profile editing from dashboard | Done |
-| Document upload (PDF/image) | Done |
-| Resume generation from JD | Done |
-| Saved resumes list with viewer | Done |
-| Resume preview & PDF download | Done |
-| Professional resume format (ATS-friendly) | Done |
-| Dashboard with profile progress | Done |
-| SQLite/Postgres persistence | Done |
-| Groq free LLM integration (primary) | Done |
-| OpenRouter free LLM fallback | Done |
-| Local Ollama fallback | Done |
-| Railway deployment ready | Done |
+**Profile & Auth** — email login, AI chat interview, profile extraction, manual editing, document upload (PDF/image drag & drop), profile completion tracker
+
+**Resumes** — JD-based generation, ATS-friendly format, inline editing, PDF download, saved resumes viewer, version history with inline side-by-side diff
+
+**Imports & Tools** — GitHub profile import, LinkedIn text import, self-intro video script generator
+
+**Infrastructure** — SQLite/Postgres, Groq (primary) + OpenRouter + Ollama LLM fallbacks, Railway deployment
 
 ---
 
@@ -170,17 +159,24 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ---
 
+## Recent UI Changes
+
+| Change | Description |
+|--------|-------------|
+| Upload Documents | Dashboard upload card now opens a drag-and-drop modal wired to `/api/upload` |
+| Version History panel | Clicking "History" overlays the resume preview instead of pushing content below |
+| Inline diff view | Side-by-side split diff (Before / After columns) with line-level highlighting |
+| Diff toggle | "Show Diff" button toggles — clicking again hides the diff |
+| GitHub / LinkedIn tabs | Moved to the right side of the tab bar; no longer show scraping/rate-limit notices |
+
 ## Roadmap
 
 - [ ] Voice/audio conversation with Whisper (open-source STT)
-- [ ] LinkedIn/GitHub profile scraping hints
 - [ ] Chrome extension for job application
 - [ ] VIT email validation enforcement
 - [ ] Credit system for usage limits
-- [ ] Resume versioning and diff view
 - [ ] Faculty reference suggestions
 - [ ] Campus ambassador referral system
-- [ ] Self-intro video script generation
 
 ---
 

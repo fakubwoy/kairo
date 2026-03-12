@@ -661,7 +661,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <p>Paste a job description and get a custom, ATS-optimized resume tailored to that role in seconds.</p>
       <div class="card-action">Create Resume →</div>
     </a>
-    <div class="card" onclick="alert('Upload a PDF transcript or certificate to extract information automatically.')">
+    <div class="card" onclick="openUploadModal()">
       <div class="card-icon"><svg width="22" height="22"><use href="#i-folder"/></svg></div>
       <h3>Upload Documents</h3>
       <p>Upload your transcripts, certificates, or marksheets. Kairo will extract details automatically.</p>
@@ -1099,6 +1099,81 @@ async function saveChangePassword() {
 document.getElementById('changePasswordModal').addEventListener('click', e => {
   if (e.target === document.getElementById('changePasswordModal')) closeChangePassword();
 });
+
+// ── Upload Documents ──────────────────────────────────────────────────────────
+function openUploadModal() {
+  document.getElementById('uploadModal').classList.add('active');
+  document.getElementById('uploadStatus').textContent = '';
+  document.getElementById('uploadFileInput').value = '';
+}
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('active');
+}
+document.getElementById('uploadModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('uploadModal')) closeUploadModal();
+});
+
+const dropZone = document.getElementById('uploadDropZone');
+const fileInput = document.getElementById('uploadFileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files[0]);
+});
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => { if (fileInput.files.length) handleUpload(fileInput.files[0]); });
+
+async function handleUpload(file) {
+  const status = document.getElementById('uploadStatus');
+  const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+  if (!allowed.includes(file.type)) {
+    status.textContent = '\u26a0 Only PDF, PNG, or JPG files are supported.';
+    status.style.color = '#ffb3b3';
+    return;
+  }
+  status.textContent = '\u23f3 Uploading and extracting\u2026';
+  status.style.color = 'var(--gold)';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    status.textContent = '\u2713 Uploaded! Kairo extracted information from your document.';
+    status.style.color = '#7dffb3';
+    setTimeout(() => { loadProfile(); closeUploadModal(); }, 1800);
+  } catch(e) {
+    status.textContent = '\u2717 Upload failed: ' + e.message;
+    status.style.color = '#ffb3b3';
+  }
+}
 </script>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal-box" style="max-width:440px">
+    <h3>Upload Document</h3>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.2rem;line-height:1.6">
+      Upload a PDF transcript, certificate, or marksheet. Kairo will extract details and update your profile automatically.
+    </p>
+    <div id="uploadDropZone" style="border:2px dashed rgba(201,168,76,0.3);padding:2rem;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:1rem;color:var(--muted);font-size:0.88rem">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 0.7rem;opacity:0.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Drag &amp; drop your file here, or <span style="color:var(--gold)">click to browse</span><br>
+      <span style="font-size:0.78rem;opacity:0.6;margin-top:0.4rem;display:block">PDF, PNG, JPG supported</span>
+    </div>
+    <input type="file" id="uploadFileInput" accept=".pdf,.png,.jpg,.jpeg" style="display:none">
+    <div id="uploadStatus" style="font-size:0.85rem;min-height:1.2rem;margin-bottom:0.8rem"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeUploadModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<style>
+#uploadDropZone.dragover { border-color: var(--gold); background: rgba(201,168,76,0.06); }
+</style>
 </body>
 </html>
