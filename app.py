@@ -19,6 +19,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'kairo-secret-key-2026')
 
+# On Railway (HTTPS) the session cookie must be Secure so it is sent with
+# same-origin fetches. On local HTTP dev, Secure must be False.
+_is_prod = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DATABASE_URL','').startswith('postgresql'))
+app.config['SESSION_COOKIE_SECURE']   = _is_prod
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+
 # Fix Railway's postgres:// URL (SQLAlchemy requires postgresql://)
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///kairo.db')
 if database_url.startswith('postgres://'):
@@ -1437,13 +1444,14 @@ Return ONLY valid JSON, no markdown:
 
 @app.route('/api/mock-interview/start', methods=['POST'])
 def start_mock_interview():
-    if 'user_id' not in session:
+    sid = session.get('student_id')
+    if not sid:
         return jsonify({'error': 'Not authenticated'}), 401
     data = request.get_json()
     job_title = data.get('job_title', 'Software Engineer')
     job_description = data.get('job_description', '')
     
-    student = Student.query.get(session['user_id'])
+    student = Student.query.get(sid)
     if not student:
         return jsonify({'error': 'Student not found'}), 404
     
@@ -1476,7 +1484,7 @@ def start_mock_interview():
         ]
     
     interview = MockInterview(
-        student_id=session['user_id'],
+        student_id=sid,
         job_title=job_title,
         job_description=job_description,
         status='in_progress',
@@ -1491,10 +1499,11 @@ def start_mock_interview():
 
 @app.route('/api/mock-interview/<int:interview_id>/submit-answer', methods=['POST'])
 def submit_interview_answer(interview_id):
-    if 'user_id' not in session:
+    sid = session.get('student_id')
+    if not sid:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=sid).first()
     if not interview:
         return jsonify({'error': 'Interview not found'}), 404
     
@@ -1518,10 +1527,11 @@ def submit_interview_answer(interview_id):
 
 @app.route('/api/mock-interview/<int:interview_id>/complete', methods=['POST'])
 def complete_mock_interview(interview_id):
-    if 'user_id' not in session:
+    sid = session.get('student_id')
+    if not sid:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=sid).first()
     if not interview:
         return jsonify({'error': 'Interview not found'}), 404
     
@@ -1559,11 +1569,12 @@ def complete_mock_interview(interview_id):
 
 @app.route('/api/mock-interview/list', methods=['GET'])
 def list_mock_interviews():
-    if 'user_id' not in session:
+    sid = session.get('student_id')
+    if not sid:
         return jsonify({'error': 'Not authenticated'}), 401
     
     interviews = MockInterview.query.filter_by(
-        student_id=session['user_id'],
+        student_id=sid,
         status='completed'
     ).order_by(MockInterview.created_at.desc()).limit(20).all()
     
@@ -1581,10 +1592,11 @@ def list_mock_interviews():
 
 @app.route('/api/mock-interview/<int:interview_id>', methods=['GET'])
 def get_mock_interview(interview_id):
-    if 'user_id' not in session:
+    sid = session.get('student_id')
+    if not sid:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    interview = MockInterview.query.filter_by(id=interview_id, student_id=session['user_id']).first()
+    interview = MockInterview.query.filter_by(id=interview_id, student_id=sid).first()
     if not interview:
         return jsonify({'error': 'Interview not found'}), 404
     

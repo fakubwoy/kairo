@@ -681,7 +681,7 @@ function fetchUser() {
   if (!user.id) { window.location.href = '/'; return; }
   document.getElementById('sidebarName').textContent = user.name || user.email || '—';
   document.getElementById('sidebarEmail').textContent = user.email || '—';
-  fetch('/api/auth/me').then(r => r.json()).then(d => {
+  fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).then(d => {
     if (d.name) document.getElementById('sidebarName').textContent = d.name;
     if (d.email) document.getElementById('sidebarEmail').textContent = d.email;
     if (d.id) { const u = JSON.parse(localStorage.getItem('kairo_user')||'{}'); Object.assign(u, d); localStorage.setItem('kairo_user', JSON.stringify(u)); }
@@ -696,14 +696,14 @@ document.addEventListener('click', e => {
   if (card && !card.contains(e.target)) document.getElementById('accountMenu').classList.remove('open');
 });
 async function doSignOut() {
-  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch(e) {}
+  try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch(e) {}
   localStorage.removeItem('kairo_user');
   window.location.href = '/';
 }
 
 async function loadPastSessions() {
   try {
-    const r = await fetch('/api/mock-interview/list');
+    const r = await fetch('/api/mock-interview/list', {credentials:'include'});
     const sessions = await r.json();
     const container = document.getElementById('session-list');
     if (!sessions.length) {
@@ -768,6 +768,7 @@ async function startInterview() {
     const r = await fetch('/api/mock-interview/start', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
+      credentials: 'include',
       body: JSON.stringify({ job_title: jobTitle, job_description: jd })
     });
     const data = await r.json();
@@ -932,7 +933,7 @@ async function transcribeAudio() {
   formData.append('audio', blob, `answer.${ext}`);
 
   try {
-    const r = await fetch('/api/transcribe', { method: 'POST', body: formData });
+    const r = await fetch('/api/transcribe', { method: 'POST', credentials: 'include', body: formData });
     const data = await r.json();
     if (data.text) {
       const current = document.getElementById('answer-input').value.trim();
@@ -960,6 +961,7 @@ async function submitAnswer() {
   fetch(`/api/mock-interview/${interviewId}/submit-answer`, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
+    credentials: 'include',
     body: JSON.stringify({ question_id: q.id, question: q.question, answer })
   }).catch(() => {});
 
@@ -991,7 +993,7 @@ async function finishInterview() {
   showLoading('Evaluating your interview…');
 
   try {
-    const r = await fetch(`/api/mock-interview/${interviewId}/complete`, { method: 'POST' });
+    const r = await fetch(`/api/mock-interview/${interviewId}/complete`, { method: 'POST', credentials:'include' });
     const data = await r.json();
     hideLoading();
     if (currentSpeech) window.speechSynthesis.cancel();
@@ -1089,7 +1091,7 @@ function toggleTranscript() {
 async function viewReport(id) {
   showLoading('Loading report…');
   try {
-    const r = await fetch(`/api/mock-interview/${id}`);
+    const r = await fetch(`/api/mock-interview/${id}`, {credentials:'include'});
     const data = await r.json();
     hideLoading();
     if (data.report) {
