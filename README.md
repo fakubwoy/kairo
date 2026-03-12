@@ -1,12 +1,12 @@
-# 🌟 Kairo — AI Career Co-pilot for Students
+# Kairo — AI Career Co-pilot for Students
 
 > A conversational AI platform that interviews students, builds their career profiles, and generates tailored resumes for every job application.
 
-Built with Python (Flask) + vanilla HTML/CSS/JS. Uses open-source LLMs via OpenRouter (free tier) or local Ollama.
+Built with Python (Flask) + vanilla HTML/CSS/JS. Uses open-source LLMs via Groq (free tier), OpenRouter, or local Ollama.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 kairo/
@@ -20,33 +20,37 @@ kairo/
 ├── instance/               # SQLite DB (auto-created)
 └── templates/
     ├── index.html          # Landing page
-    ├── dashboard.html      # User dashboard
+    ├── dashboard.html      # User dashboard + profile editor
     ├── interview.html      # AI chat interface (profile builder)
-    └── resume.html         # Resume generator page
+    └── resume.html         # Resume generator + saved resumes viewer
 ```
 
 ---
 
-## ✅ Features (Working - ~45% of full vision)
+## Features
 
 | Feature | Status |
 |---------|--------|
-| Landing page with login | ✅ Done |
-| Student auth (email-based) | ✅ Done |
-| AI chat interview interface | ✅ Done |
-| Profile extraction from chat | ✅ Done |
-| Document upload (PDF/image) | ✅ Done |
-| Resume generation from JD | ✅ Done |
-| Resume preview & PDF download | ✅ Done |
-| Dashboard with profile progress | ✅ Done |
-| SQLite/Postgres persistence | ✅ Done |
-| OpenRouter free LLM integration | ✅ Done |
-| Local Ollama fallback | ✅ Done |
-| Railway deployment ready | ✅ Done |
+| Landing page with login | Done |
+| Student auth (email + password) | Done |
+| AI chat interview interface | Done |
+| Profile extraction from chat | Done |
+| Manual profile editing from dashboard | Done |
+| Document upload (PDF/image) | Done |
+| Resume generation from JD | Done |
+| Saved resumes list with viewer | Done |
+| Resume preview & PDF download | Done |
+| Professional resume format (ATS-friendly) | Done |
+| Dashboard with profile progress | Done |
+| SQLite/Postgres persistence | Done |
+| Groq free LLM integration (primary) | Done |
+| OpenRouter free LLM fallback | Done |
+| Local Ollama fallback | Done |
+| Railway deployment ready | Done |
 
 ---
 
-## 🚀 Local Setup
+## Local Setup
 
 ### 1. Clone and install
 
@@ -65,11 +69,16 @@ cp .env.example .env
 
 ### 3. Get a free LLM API key
 
-**Recommended: OpenRouter (free)**
+**Recommended: Groq (free, fastest)**
+1. Go to [console.groq.com](https://console.groq.com)
+2. Sign up → API Keys → Create key
+3. Add to `.env`: `GROQ_API_KEY=gsk_...`
+4. Models used: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`
+
+**Alternative: OpenRouter (free)**
 1. Go to [openrouter.ai](https://openrouter.ai)
 2. Sign up → API Keys → Create key
 3. Add to `.env`: `OPENROUTER_API_KEY=sk-or-...`
-4. Free models used: `meta-llama/llama-3.2-3b-instruct:free`
 
 **Alternative: Local Ollama**
 ```bash
@@ -87,7 +96,7 @@ python app.py
 
 ---
 
-## 🚂 Deploy to Railway
+## Deploy to Railway
 
 ### Step 1: Push to GitHub
 ```bash
@@ -109,7 +118,7 @@ In Railway dashboard → your service → **Variables** tab, add:
 
 ```
 SECRET_KEY=<generate a random 32-char string>
-OPENROUTER_API_KEY=<your openrouter key>
+GROQ_API_KEY=<your groq key>
 ```
 
 ### Step 4: (Optional) Add Postgres database
@@ -123,49 +132,72 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ---
 
-## 🔧 Environment Variables
+## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `SECRET_KEY` | Yes | Flask session secret (random string) |
-| `OPENROUTER_API_KEY` | Yes* | Free LLM API key from openrouter.ai |
+| `GROQ_API_KEY` | Yes* | Free LLM API key from console.groq.com |
+| `OPENROUTER_API_KEY` | No | Fallback LLM key from openrouter.ai |
 | `DATABASE_URL` | Auto | Set by Railway Postgres add-on |
 | `OLLAMA_BASE_URL` | No | Local Ollama URL (local dev only) |
 | `OLLAMA_MODEL` | No | Ollama model name (default: llama3.2) |
+| `REDIS_URL` | No | Optional Redis for conversation caching |
 
-*Required for Railway deployment. For local dev, can use Ollama instead.
+*Groq is the primary provider. For local dev, Ollama works without any API key.
 
 ---
 
-## 🛣️ Roadmap (Next 50%)
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Login or register |
+| GET | `/api/auth/me` | Get current user + profile |
+| POST | `/api/auth/logout` | Clear session |
+| POST | `/api/auth/update-name` | Update display name |
+| POST | `/api/auth/change-password` | Change password |
+| GET, PUT | `/api/profile` | Get or update profile data |
+| POST | `/api/chat` | Send message to Kairo interview AI |
+| GET | `/api/conversations/active` | Get latest conversation |
+| POST | `/api/conversations/new` | Start a fresh conversation |
+| POST | `/api/generate-resume` | Generate resume from JD |
+| GET | `/api/resumes` | List all saved resumes |
+| GET | `/api/resumes/<id>` | Get a specific saved resume |
+| POST | `/api/upload` | Upload PDF/image document |
+| GET | `/api/llm-status` | Check LLM backend status |
+| GET | `/api/health` | Health check |
+
+---
+
+## Roadmap
 
 - [ ] Voice/audio conversation with Whisper (open-source STT)
 - [ ] LinkedIn/GitHub profile scraping hints
 - [ ] Chrome extension for job application
 - [ ] VIT email validation enforcement
 - [ ] Credit system for usage limits
-- [ ] Multi-resume management & versioning
+- [ ] Resume versioning and diff view
 - [ ] Faculty reference suggestions
 - [ ] Campus ambassador referral system
 - [ ] Self-intro video script generation
 
 ---
 
-## 🤖 Open Source Stack
+## Stack
 
 | Component | Technology |
 |-----------|-----------|
 | Backend | Flask (Python) |
 | Database | SQLite / PostgreSQL |
-| LLM | Llama 3.2 via OpenRouter (free) |
+| LLM (primary) | Llama 3.3 70B via Groq (free) |
+| LLM (fallback) | Llama 3.2 via OpenRouter (free) |
+| LLM (local) | Llama 3.2 via Ollama |
+| Caching | Redis (optional) |
 | PDF extraction | pdfplumber |
 | Frontend | Vanilla HTML/CSS/JS |
 | Deployment | Railway |
 
-**No paid APIs required.** OpenRouter provides free access to Llama 3.2 (3B) and other models.
+No paid APIs required. Groq provides free access to Llama 3.3 70B with a generous rate limit.
 
 ---
-
-## 📝 License
-
-MIT — build on it freely.
