@@ -107,11 +107,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .camera-preview-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--gold); }
 #setup-video-container {
   width: 100%; aspect-ratio: 16/9; background: #000; position: relative; overflow: hidden; margin-bottom: 1rem;
-  display: flex; align-items: center; justify-content: center;
 }
-#setup-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.cam-placeholder { color: var(--muted); font-size: 0.85rem; text-align: center; }
-.cam-placeholder svg { width: 48px; height: 48px; margin-bottom: 0.5rem; opacity: 0.4; }
+#setup-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: none; }
+.cam-placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 0.85rem; text-align: center; gap: 0.5rem;
+}
+.cam-placeholder svg { width: 48px; height: 48px; opacity: 0.3; }
 
 .device-info { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
@@ -734,8 +737,8 @@ async function startDevices() {
     stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     const setupVid = document.getElementById('setup-video');
     setupVid.srcObject = stream;
-    document.getElementById('cam-placeholder').style.display = 'none';
     setupVid.style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
     document.getElementById('cam-dot').classList.add('active');
     document.getElementById('cam-status').textContent = 'Camera: Ready';
     document.getElementById('mic-dot').classList.add('active');
