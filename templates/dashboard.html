@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Kairo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --cream: #f5f0e8;
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --muted: #6b6560;
+  --surface: #13110e;
+  --surface2: #1c1916;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: var(--surface);
+  border-right: 1px solid rgba(201,168,76,0.12);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  position: fixed;
+  height: 100vh;
+  z-index: 10;
+}
+
+.sidebar-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gold);
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+  margin-bottom: 1rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+.nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(201,168,76,0.12);
+}
+
+.user-info { font-size: 0.8rem; color: var(--muted); }
+.user-name { font-size: 0.9rem; color: var(--cream); margin-bottom: 0.2rem; font-weight: 500; }
+
+/* Main */
+.main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
+
+.page-header { margin-bottom: 2rem; }
+.page-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.page-header p { color: var(--muted); font-size: 0.95rem; }
+
+/* Cards */
+.cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.card:hover { border-color: rgba(201,168,76,0.4); transform: translateY(-2px); }
+
+.card-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
+.card h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.3rem; }
+.card p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+
+.card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 1rem;
+  color: var(--gold);
+  font-size: 0.8rem;
+}
+
+/* Profile completeness */
+.profile-card {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.12);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.profile-card h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  margin-bottom: 1.2rem;
+}
+
+.progress-bar {
+  height: 4px;
+  background: rgba(201,168,76,0.1);
+  border-radius: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.profile-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-top: 1.2rem; }
+
+.profile-section {
+  padding: 0.8rem;
+  border: 1px solid rgba(201,168,76,0.1);
+  font-size: 0.8rem;
+}
+
+.profile-section.filled { border-color: rgba(201,168,76,0.4); }
+.profile-section-label { color: var(--muted); margin-bottom: 0.3rem; }
+.profile-section-status { font-size: 0.75rem; }
+.profile-section.filled .profile-section-status { color: var(--gold); }
+
+/* Recent resumes */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+}
+
+.resumes-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.resume-item {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.1);
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.resume-item:hover { border-color: rgba(201,168,76,0.3); }
+.resume-item-title { font-size: 0.9rem; margin-bottom: 0.2rem; }
+.resume-item-date { font-size: 0.75rem; color: var(--muted); }
+
+.btn-sm {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.btn-sm:hover { background: rgba(201,168,76,0.1); }
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  border: 1px dashed rgba(201,168,76,0.2);
+}
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .cards-grid { grid-template-columns: 1fr; }
+  .profile-sections { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">Kairo</div>
+  <a href="/dashboard" class="nav-item active"><span class="nav-icon">⊞</span> Dashboard</a>
+  <a href="/interview" class="nav-item"><span class="nav-icon">🎤</span> Build Profile</a>
+  <a href="/resume" class="nav-item"><span class="nav-icon">📄</span> My Resumes</a>
+  <div class="sidebar-bottom">
+    <div class="user-name" id="sidebarName">Loading...</div>
+    <div class="user-info" id="sidebarEmail">—</div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Good to see you, <span id="userName">—</span></h1>
+    <p>Your AI career co-pilot is ready. Let's build something great.</p>
+  </div>
+
+  <div class="profile-card">
+    <h2>Profile Completeness</h2>
+    <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+      <span id="completeLabel" style="font-size:0.85rem; color:var(--muted)">Getting started...</span>
+      <span id="completePercent" style="font-size:0.85rem; color:var(--gold); font-weight:500">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="profile-sections" id="profileSections">
+      <div class="profile-section" id="ps-basic"><div class="profile-section-label">Basic Info</div><div class="profile-section-status">—</div></div>
+      <div class="profile-section" id="ps-edu"><div class="profile-section-label">Education</div><div class="profile-section-status">—</div></div>
+      <div class="profile-section" id="ps-projects"><div class="profile-section-label">Projects</div><div class="profile-section-status">—</div></div>
+      <div class="profile-section" id="ps-skills"><div class="profile-section-label">Skills</div><div class="profile-section-status">—</div></div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <a href="/interview" class="card">
+      <div class="card-icon">🎤</div>
+      <h3>Talk to Kairo</h3>
+      <p>Have a conversation to build your profile. Share your experiences, projects, and skills naturally.</p>
+      <div class="card-action">Start Interview →</div>
+    </a>
+    <a href="/resume" class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Generate Resume</h3>
+      <p>Paste a job description and get a custom, ATS-optimized resume tailored to that role in seconds.</p>
+      <div class="card-action">Create Resume →</div>
+    </a>
+    <div class="card" onclick="alert('Upload a PDF transcript or certificate to extract information automatically.')">
+      <div class="card-icon">📂</div>
+      <h3>Upload Documents</h3>
+      <p>Upload your transcripts, certificates, or marksheets. Kairo will extract details automatically.</p>
+      <div class="card-action">Upload Files →</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2>Recent Resumes</h2>
+    <a href="/resume" class="btn-sm">View All</a>
+  </div>
+  <div class="resumes-list" id="resumesList">
+    <div class="empty-state">No resumes yet. Build your profile and generate your first resume!</div>
+  </div>
+</main>
+
+<script>
+const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+
+if (!user.id) {
+  window.location.href = '/';
+}
+
+document.getElementById('userName').textContent = user.name?.split(' ')[0] || 'there';
+document.getElementById('sidebarName').textContent = user.name || '—';
+document.getElementById('sidebarEmail').textContent = user.email || '—';
+
+function updateProfileDisplay(profile) {
+  let filled = 0;
+  const total = 4;
+  
+  if (profile.name || profile.email) {
+    document.getElementById('ps-basic').classList.add('filled');
+    document.getElementById('ps-basic').querySelector('.profile-section-status').textContent = '✓ Complete';
+    filled++;
+  }
+  if (profile.branch || profile.subjects?.length) {
+    document.getElementById('ps-edu').classList.add('filled');
+    document.getElementById('ps-edu').querySelector('.profile-section-status').textContent = '✓ Complete';
+    filled++;
+  }
+  if (profile.projects?.length) {
+    document.getElementById('ps-projects').classList.add('filled');
+    document.getElementById('ps-projects').querySelector('.profile-section-status').textContent = `✓ ${profile.projects.length} projects`;
+    filled++;
+  }
+  if (profile.skills?.technical?.length) {
+    document.getElementById('ps-skills').classList.add('filled');
+    document.getElementById('ps-skills').querySelector('.profile-section-status').textContent = '✓ Complete';
+    filled++;
+  }
+  
+  const pct = Math.round((filled / total) * 100);
+  document.getElementById('completePercent').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('completeLabel').textContent = 
+    pct === 0 ? 'Start by talking to Kairo' :
+    pct < 50 ? 'Good start! Keep going' :
+    pct < 100 ? 'Almost there!' : 'Profile complete! 🎉';
+}
+
+async function loadResumes() {
+  try {
+    const res = await fetch('/api/resumes');
+    const resumes = await res.json();
+    const list = document.getElementById('resumesList');
+    if (resumes.length === 0) return;
+    list.innerHTML = resumes.slice(0,5).map(r => `
+      <div class="resume-item">
+        <div>
+          <div class="resume-item-title">${r.job_description || 'Custom Resume'}</div>
+          <div class="resume-item-date">${new Date(r.created_at).toLocaleDateString()}</div>
+        </div>
+        <button class="btn-sm" onclick="window.location.href='/resume'">View</button>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+// Init
+if (user.profile) updateProfileDisplay(user.profile);
+loadResumes();
+
+// Refresh profile from API
+fetch('/api/auth/me').then(r => r.json()).then(data => {
+  if (data.profile) {
+    updateProfileDisplay(data.profile);
+    localStorage.setItem('kairo_user', JSON.stringify(data));
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>

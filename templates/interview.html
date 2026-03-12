@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Profile — Kairo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --cream: #f5f0e8;
+  --gold: #c9a84c;
+  --muted: #6b6560;
+  --surface: #13110e;
+  --surface2: #1c1916;
+  --border: rgba(201,168,76,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.header-left { display: flex; align-items: center; gap: 1rem; }
+.back-btn {
+  background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-size: 1rem; padding: 0.3rem;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--cream); }
+
+.header-logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 900; color: var(--gold); }
+.header-title { font-size: 0.9rem; color: var(--muted); }
+
+.ai-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  background: #4caf50;
+  border-radius: 50%;
+  animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Layout */
+.chat-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Chat area */
+.chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  scroll-behavior: smooth;
+}
+
+.messages-container::-webkit-scrollbar { width: 4px; }
+.messages-container::-webkit-scrollbar-track { background: transparent; }
+.messages-container::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+
+/* Messages */
+.message { display: flex; gap: 0.8rem; max-width: 720px; animation: msgIn 0.3s ease; }
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user { flex-direction: row-reverse; align-self: flex-end; }
+
+.msg-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.msg-avatar.ai {
+  background: linear-gradient(135deg, var(--gold), #8b6914);
+  color: var(--ink);
+  font-family: 'Playfair Display', serif;
+}
+
+.msg-avatar.user-av {
+  background: rgba(245,240,232,0.1);
+  color: var(--cream);
+  border: 1px solid rgba(245,240,232,0.2);
+}
+
+.msg-bubble {
+  padding: 0.85rem 1.1rem;
+  border-radius: 2px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: calc(100% - 50px);
+}
+
+.message.ai .msg-bubble {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--cream);
+  border-radius: 0 8px 8px 8px;
+}
+
+.message.user .msg-bubble {
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.25);
+  color: var(--cream);
+  border-radius: 8px 0 8px 8px;
+}
+
+.typing-bubble {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  border-radius: 0 8px 8px 8px;
+}
+
+.typing-bubble span {
+  width: 7px; height: 7px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: typingDot 1.2s infinite;
+}
+.typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+.typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-5px); }
+}
+
+/* Input area */
+.input-area {
+  padding: 1.2rem 2rem;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-end;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  transition: border-color 0.2s;
+}
+
+.input-wrapper:focus-within { border-color: rgba(201,168,76,0.4); }
+
+.msg-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  resize: none;
+  max-height: 120px;
+  line-height: 1.5;
+  padding: 0.3rem 0;
+}
+
+.msg-input::placeholder { color: rgba(245,240,232,0.25); }
+
+.send-btn {
+  background: var(--gold);
+  border: none;
+  color: var(--ink);
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.send-btn:hover { background: var(--gold-light, #e8d5a3); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.input-hints {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.hint-chip {
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: rgba(245,240,232,0.6);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.hint-chip:hover { background: rgba(201,168,76,0.12); color: var(--cream); }
+
+/* Sidebar */
+.info-sidebar {
+  width: 280px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-section h3 {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+}
+
+.topic-list { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.topic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.topic-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(201,168,76,0.3);
+  flex-shrink: 0;
+}
+
+.topic-item.done .topic-dot { background: var(--gold); }
+.topic-item.done { color: var(--cream); }
+.topic-item.active { color: var(--gold); }
+.topic-item.active .topic-dot { background: var(--gold); animation: statusPulse 1.5s infinite; }
+
+/* Upload section */
+.upload-area {
+  border: 1px dashed rgba(201,168,76,0.3);
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.upload-area:hover { border-color: rgba(201,168,76,0.6); color: var(--gold); }
+
+/* Profile complete banner */
+.complete-banner {
+  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.05));
+  border: 1px solid rgba(201,168,76,0.4);
+  padding: 1rem 1.5rem;
+  margin: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  display: none;
+}
+
+.complete-banner.show { display: flex; }
+.complete-banner h4 { font-size: 0.9rem; color: var(--gold); margin-bottom: 0.2rem; }
+.complete-banner p { font-size: 0.8rem; color: var(--muted); }
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  padding: 0.5rem 1.2rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.btn-gold:hover { opacity: 0.85; }
+
+@media (max-width: 768px) {
+  .info-sidebar { display: none; }
+  .messages-container { padding: 1rem; }
+  .input-area { padding: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <button class="back-btn" onclick="window.location.href='/dashboard'">← Back</button>
+    <div>
+      <div class="header-logo">Kairo</div>
+      <div class="header-title">Profile Builder</div>
+    </div>
+  </div>
+  <div class="ai-status">
+    <div class="status-dot"></div>
+    <span id="statusText">Kairo is ready</span>
+  </div>
+</div>
+
+<div class="chat-layout">
+  <div class="chat-area">
+    <div class="messages-container" id="messages"></div>
+    
+    <div class="complete-banner" id="completeBanner">
+      <div>
+        <h4>🎉 Profile Complete!</h4>
+        <p>Your profile has been saved. Ready to generate resumes!</p>
+      </div>
+      <button class="btn-gold" onclick="window.location.href='/resume'">Create Resume →</button>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea class="msg-input" id="msgInput" placeholder="Tell Kairo about yourself..." rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="input-hints" id="hints">
+        <div class="hint-chip" onclick="useHint(this)">CSE, 3rd year</div>
+        <div class="hint-chip" onclick="useHint(this)">I built a web app</div>
+        <div class="hint-chip" onclick="useHint(this)">I did an internship</div>
+        <div class="hint-chip" onclick="useHint(this)">I know React & Python</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-sidebar">
+    <div class="sidebar-section">
+      <h3>Topics to Cover</h3>
+      <div class="topic-list">
+        <div class="topic-item active" id="t-basic"><span class="topic-dot"></span> Basic Info & Branch</div>
+        <div class="topic-item" id="t-edu"><span class="topic-dot"></span> Courses & Grades</div>
+        <div class="topic-item" id="t-projects"><span class="topic-dot"></span> Projects Built</div>
+        <div class="topic-item" id="t-skills"><span class="topic-dot"></span> Technical Skills</div>
+        <div class="topic-item" id="t-intern"><span class="topic-dot"></span> Internships</div>
+        <div class="topic-item" id="t-extra"><span class="topic-dot"></span> Clubs & Hackathons</div>
+        <div class="topic-item" id="t-cert"><span class="topic-dot"></span> Certifications</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Upload Documents</h3>
+      <div class="upload-area" onclick="document.getElementById('fileUpload').click()">
+        <div style="font-size:1.5rem; margin-bottom:0.4rem;">📂</div>
+        <div>Upload transcript or certificate</div>
+        <div style="font-size:0.7rem; margin-top:0.3rem; color:rgba(107,101,96,0.7)">PDF, PNG, JPG</div>
+      </div>
+      <input type="file" id="fileUpload" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="handleUpload(this)">
+      <div id="uploadStatus" style="margin-top:0.5rem; font-size:0.75rem; color:var(--muted);"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Tips</h3>
+      <ul style="color:var(--muted); font-size:0.8rem; line-height:1.8; padding-left:1rem;">
+        <li>Be specific — numbers help!</li>
+        <li>Mention technologies used</li>
+        <li>Share outcomes and impact</li>
+        <li>Don't worry about formatting</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+let conversationId = null;
+let messages = [];
+let isTyping = false;
+
+function appendMessage(role, content) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  
+  const initials = role === 'ai' ? 'K' : (user.name?.[0] || 'U');
+  
+  div.innerHTML = `
+    <div class="msg-avatar ${role === 'ai' ? 'ai' : 'user-av'}">${initials}</div>
+    <div class="msg-bubble">${content.replace(/\n/g, '<br>')}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message ai';
+  div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="msg-avatar ai">K</div>
+    <div class="typing-bubble"><span></span><span></span><span></span></div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text || isTyping) return;
+  
+  input.value = '';
+  input.style.height = 'auto';
+  
+  appendMessage('user', text);
+  messages.push({role: 'user', content: text});
+  
+  // Hide hints after first message
+  document.getElementById('hints').style.display = 'none';
+  
+  isTyping = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('statusText').textContent = 'Kairo is thinking...';
+  showTyping();
+  
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: text,
+        conversation_id: conversationId,
+        messages: messages.slice(-20)
+      })
+    });
+    
+    const data = await res.json();
+    hideTyping();
+    
+    if (data.response) {
+      appendMessage('ai', data.response);
+      messages.push({role: 'assistant', content: data.response});
+      conversationId = data.conversation_id;
+      
+      if (data.profile_complete) {
+        document.getElementById('completeBanner').classList.add('show');
+        if (data.profile) {
+          const userData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+          userData.profile = data.profile;
+          localStorage.setItem('kairo_user', JSON.stringify(userData));
+        }
+      }
+      
+      // Update topic progress based on message count (simple heuristic)
+      updateTopicProgress();
+    }
+  } catch(e) {
+    hideTyping();
+    appendMessage('ai', 'Sorry, I had trouble connecting. Please try again.');
+  }
+  
+  isTyping = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('statusText').textContent = 'Kairo is ready';
+}
+
+function updateTopicProgress() {
+  const topics = ['t-basic', 't-edu', 't-projects', 't-skills', 't-intern', 't-extra', 't-cert'];
+  const msgCount = messages.length;
+  
+  // Simple progression based on conversation length
+  const threshold = 4;
+  topics.forEach((t, i) => {
+    const el = document.getElementById(t);
+    if (!el) return;
+    const turnNeeded = i * threshold;
+    if (msgCount > turnNeeded + threshold) {
+      el.classList.remove('active');
+      el.classList.add('done');
+    } else if (msgCount > turnNeeded) {
+      el.classList.add('active');
+    }
+  });
+}
+
+function useHint(el) {
+  document.getElementById('msgInput').value = el.textContent;
+  document.getElementById('msgInput').focus();
+}
+
+async function handleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  const status = document.getElementById('uploadStatus');
+  status.textContent = 'Uploading...';
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    
+    if (data.insights) {
+      status.textContent = '✓ Document analyzed';
+      // Inject insights into chat
+      const msgInput = document.getElementById('msgInput');
+      msgInput.value = `I've uploaded a document. Here are the key details: ${data.insights.slice(0, 200)}`;
+    } else {
+      status.textContent = '✓ Uploaded';
+    }
+  } catch(e) {
+    status.textContent = '✗ Upload failed';
+  }
+}
+
+// Auto-resize textarea
+document.getElementById('msgInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Enter to send
+document.getElementById('msgInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Init: start conversation
+async function startConversation() {
+  document.getElementById('statusText').textContent = 'Kairo is thinking...';
+  showTyping();
+  
+  try {
+    const greeting = user.name 
+      ? `Hi ${user.name.split(' ')[0]}!` 
+      : 'Hello!';
+      
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: greeting + ' I want to build my career profile.',
+        messages: []
+      })
+    });
+    
+    const data = await res.json();
+    hideTyping();
+    
+    if (data.response) {
+      appendMessage('ai', data.response);
+      messages = [{role: 'user', content: greeting + ' I want to build my career profile.'}, {role: 'assistant', content: data.response}];
+      conversationId = data.conversation_id;
+    }
+  } catch(e) {
+    hideTyping();
+    appendMessage('ai', "Hey! I'm Kairo, your AI career co-pilot. 👋 Let's build your profile together. What's your name, branch, and current year at VIT?");
+  }
+  
+  document.getElementById('statusText').textContent = 'Kairo is ready';
+}
+
+startConversation();
+</script>
+</body>
+</html>

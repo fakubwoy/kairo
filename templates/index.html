@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kairo — Your AI Career Co-pilot</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --cream: #f5f0e8;
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --warm: #1a1410;
+  --muted: #6b6560;
+  --surface: #13110e;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--ink);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 4rem;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  position: sticky;
+  top: 0;
+  background: rgba(10,10,15,0.9);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+}
+
+.logo span { color: var(--cream); }
+
+nav-links { display: flex; gap: 2rem; align-items: center; }
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  padding: 0.6rem 1.5rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+
+/* Hero */
+.hero {
+  min-height: 88vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 0 4rem;
+  gap: 4rem;
+  position: relative;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -10%;
+  top: -20%;
+  width: 60%;
+  height: 140%;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgba(201,168,76,0.4);
+  color: var(--gold);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.hero-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.8rem, 5vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.05;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.hero h1 em {
+  color: var(--gold);
+  font-style: italic;
+}
+
+.hero p {
+  color: rgba(245,240,232,0.6);
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
+  max-width: 45ch;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--cream);
+  border: 1px solid rgba(245,240,232,0.3);
+  padding: 0.6rem 1.5rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Chat preview */
+.hero-visual {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  animation: floatIn 0.8s ease-out 0.3s both;
+}
+
+@keyframes floatIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.ai-avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--gold), #8b6914);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.chat-title { font-size: 0.85rem; font-weight: 500; }
+.chat-subtitle { font-size: 0.75rem; color: var(--muted); }
+
+.chat-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+
+.msg {
+  max-width: 80%;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border-radius: 2px;
+}
+
+.msg-ai {
+  background: rgba(201,168,76,0.1);
+  border-left: 2px solid var(--gold);
+  align-self: flex-start;
+  color: var(--cream);
+}
+
+.msg-user {
+  background: rgba(245,240,232,0.08);
+  align-self: flex-end;
+  color: rgba(245,240,232,0.8);
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 0.7rem 1rem;
+  background: rgba(201,168,76,0.1);
+  border-left: 2px solid var(--gold);
+}
+
+.typing-indicator span {
+  width: 6px; height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: typing 1.2s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
+}
+
+/* Steps */
+.steps-section {
+  padding: 6rem 4rem;
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+
+.section-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.8rem;
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 700;
+  margin-bottom: 3rem;
+  letter-spacing: -0.02em;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(201,168,76,0.15);
+}
+
+.step {
+  background: var(--ink);
+  padding: 2rem;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.step:hover { background: var(--surface); }
+
+.step-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem;
+  font-weight: 900;
+  color: rgba(201,168,76,0.15);
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.step h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.step p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.step-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.8rem;
+}
+
+/* Login Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 420px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  margin-bottom: 0.4rem;
+}
+
+.modal p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+
+.form-group { margin-bottom: 1rem; }
+
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.form-group input {
+  width: 100%;
+  background: rgba(245,240,232,0.05);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  padding: 0.7rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus { border-color: var(--gold); }
+.form-group input::placeholder { color: rgba(245,240,232,0.2); }
+
+.modal .btn-primary { width: 100%; padding: 0.8rem; font-size: 1rem; margin-top: 0.5rem; }
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  background: none; border: none;
+  color: var(--muted); font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.disclaimer {
+  margin-top: 1.2rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Footer */
+footer {
+  padding: 2rem 4rem;
+  border-top: 1px solid rgba(201,168,76,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; padding: 2rem; }
+  .hero-visual { display: none; }
+  nav { padding: 1rem 2rem; }
+  .steps-grid { grid-template-columns: 1fr 1fr; }
+  .steps-section { padding: 3rem 2rem; }
+  footer { padding: 1.5rem 2rem; flex-direction: column; gap: 0.5rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Kai<span>ro</span></div>
+  <button class="btn-primary" onclick="showLogin()">Get Started →</button>
+</nav>
+
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-tag">VIT Vellore · Beta</div>
+    <h1>Your career story,<br><em>told brilliantly.</em></h1>
+    <p>Talk to Kairo for 20 minutes. Share your projects, experiences, and ideas. We build your professional profile and generate custom resumes for every job you apply to.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="showLogin()">Start Your Profile →</button>
+      <button class="btn-secondary" onclick="window.location.href='/interview'">Try Demo</button>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="chat-header">
+      <div class="ai-avatar">K</div>
+      <div>
+        <div class="chat-title">Kairo</div>
+        <div class="chat-subtitle">AI Career Coach</div>
+      </div>
+    </div>
+    <div class="chat-body">
+      <div class="msg msg-ai">Hey! I'm Kairo 👋 Let's build your profile. What's your branch and current year at VIT?</div>
+      <div class="msg msg-user">I'm in CSE, 3rd year. I've done some web dev projects and one internship.</div>
+      <div class="msg msg-ai">That's great! Tell me about your most impactful project — what did you build, and what problem did it solve?</div>
+      <div class="msg msg-user">I built a college event management system using React and Node. It reduced manual work by 60%.</div>
+      <div class="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="steps-section">
+  <div class="section-label">How it works</div>
+  <div class="section-title">Four steps to your dream job</div>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon">🎤</div>
+      <h3>Talk to Kairo</h3>
+      <p>Have a 20-minute conversation. Share your courses, projects, internships, and clubs. No forms, just talk.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon">🧠</div>
+      <h3>Build Your Profile</h3>
+      <p>Kairo extracts every detail — grades, tech stacks, achievements — and builds a rich career profile.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon">📄</div>
+      <h3>Generate Resumes</h3>
+      <p>Paste any job description. Kairo instantly creates an ATS-optimized, tailored resume in seconds.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-icon">🚀</div>
+      <h3>Apply & Land</h3>
+      <p>Download your custom resume. Apply confidently. Track your applications and iterate.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="hideLogin()">✕</button>
+    <h2>Join Kairo</h2>
+    <p>Sign up with your VIT email to get started</p>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="loginName" placeholder="Your full name">
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="yourname@vit.ac.in">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Continue →</button>
+    <div class="disclaimer">By continuing, you agree that your data is used only to build your career profile and will not be shared with third parties.</div>
+  </div>
+</div>
+
+<footer>
+  <div>© 2024 Kairo · Built for VIT Vellore</div>
+  <div>Fresher-focused · AI-powered · Open source</div>
+</footer>
+
+<script>
+function showLogin() {
+  document.getElementById('loginModal').classList.add('active');
+}
+function hideLogin() {
+  document.getElementById('loginModal').classList.remove('active');
+}
+
+async function doLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!name || !email) { alert('Please fill in all fields'); return; }
+  
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, email})
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    localStorage.setItem('kairo_user', JSON.stringify(data));
+    window.location.href = '/dashboard';
+  } catch(e) {
+    alert('Login failed. Please try again.');
+  }
+}
+
+document.getElementById('loginEmail').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// Close on backdrop click
+document.getElementById('loginModal').addEventListener('click', function(e) {
+  if (e.target === this) hideLogin();
+});
+</script>
+</body>
+</html>

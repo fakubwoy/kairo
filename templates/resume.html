@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumes — Kairo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --cream: #f5f0e8;
+  --gold: #c9a84c;
+  --muted: #6b6560;
+  --surface: #13110e;
+  --surface2: #1c1916;
+  --border: rgba(201,168,76,0.15);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
+
+.sidebar {
+  width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  position: fixed;
+  height: 100vh;
+  z-index: 10;
+}
+
+.sidebar-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gold);
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+}
+
+.nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+.main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
+
+.page-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 0.3rem; }
+.page-header p { color: var(--muted); font-size: 0.95rem; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+
+/* JD Input */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.panel h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.field-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+  display: block;
+}
+
+textarea, input[type="text"], input[type="url"] {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--cream);
+  padding: 0.7rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: vertical;
+}
+
+textarea:focus, input:focus { border-color: rgba(201,168,76,0.4); }
+textarea::placeholder, input::placeholder { color: rgba(245,240,232,0.2); }
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 1rem;
+  transition: opacity 0.2s;
+}
+
+.btn-gold:hover { opacity: 0.85; }
+.btn-gold:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Resume preview */
+.resume-preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-height: 500px;
+}
+
+.preview-toolbar {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-toolbar h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+  padding: 0.4rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover { background: rgba(201,168,76,0.1); }
+
+.preview-body { padding: 1.5rem; }
+
+/* Resume document style */
+.resume-doc {
+  background: white;
+  color: #1a1a1a;
+  padding: 2.5rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border-radius: 2px;
+}
+
+.resume-doc .r-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0a0a0f;
+  margin-bottom: 0.3rem;
+}
+
+.resume-doc .r-contact {
+  font-size: 0.8rem;
+  color: #555;
+  margin-bottom: 1.2rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.resume-doc .r-section {
+  margin-bottom: 1.2rem;
+}
+
+.resume-doc .r-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #c9a84c;
+  border-bottom: 1px solid #c9a84c;
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.7rem;
+}
+
+.resume-doc .r-item { margin-bottom: 0.7rem; }
+.resume-doc .r-item-header { display: flex; justify-content: space-between; }
+.resume-doc .r-item-title { font-weight: 600; font-size: 0.9rem; }
+.resume-doc .r-item-subtitle { color: #555; font-size: 0.8rem; }
+.resume-doc .r-item-date { color: #888; font-size: 0.8rem; white-space: nowrap; }
+.resume-doc .r-bullets { margin-top: 0.3rem; padding-left: 1.2rem; }
+.resume-doc .r-bullets li { margin-bottom: 0.2rem; color: #333; }
+.resume-doc .r-skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.resume-doc .r-skill-tag {
+  background: #f5f0e8;
+  border: 1px solid #e8d5a3;
+  color: #555;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 2px;
+}
+
+.empty-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-preview-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.4; }
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  gap: 0.5rem;
+  color: var(--gold);
+}
+
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(201,168,76,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .two-col { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">Kairo</div>
+  <a href="/dashboard" class="nav-item"><span>⊞</span> Dashboard</a>
+  <a href="/interview" class="nav-item"><span>🎤</span> Build Profile</a>
+  <a href="/resume" class="nav-item active"><span>📄</span> My Resumes</a>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1>Resume Generator</h1>
+      <p>Paste a job description and get a tailored resume in seconds</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <h2>Job Description</h2>
+        <label class="field-label">Paste the JD or describe the role</label>
+        <textarea id="jdInput" rows="10" placeholder="Paste the full job description here...
+
+Example:
+We are looking for a Software Development Engineer with experience in React, Node.js, and AWS. The candidate should have strong problem-solving skills and experience with REST APIs..."></textarea>
+        <button class="btn-gold" id="generateBtn" onclick="generateResume()">⚡ Generate Custom Resume</button>
+      </div>
+
+      <div class="panel" style="margin-top: 1rem;">
+        <h2>Quick Tips</h2>
+        <ul style="color:var(--muted); font-size:0.85rem; line-height:2; padding-left:1.2rem;">
+          <li>Include the full JD for best results</li>
+          <li>The more profile data you've shared, the better</li>
+          <li>You can generate multiple versions</li>
+          <li>Download as PDF for applications</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="resume-preview">
+      <div class="preview-toolbar">
+        <h2>Resume Preview</h2>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn-outline" id="downloadBtn" onclick="downloadResume()" style="display:none">↓ Download PDF</button>
+        </div>
+      </div>
+      <div class="preview-body" id="previewBody">
+        <div class="empty-preview">
+          <div class="empty-preview-icon">📄</div>
+          <div>Your resume will appear here</div>
+          <div style="font-size:0.8rem; margin-top:0.4rem;">Build your profile first, then generate a resume</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+let currentResumeData = null;
+
+async function generateResume() {
+  const jd = document.getElementById('jdInput').value.trim();
+  if (!jd) { alert('Please paste a job description first'); return; }
+  
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+  
+  document.getElementById('previewBody').innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <span>Kairo is crafting your resume...</span>
+    </div>
+  `;
+  
+  try {
+    const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+    
+    const res = await fetch('/api/generate-resume', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        job_description: jd,
+        profile_data: user.profile || {}
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (data.error) {
+      document.getElementById('previewBody').innerHTML = `
+        <div class="empty-preview">
+          <div class="empty-preview-icon">⚠️</div>
+          <div>${data.error}</div>
+          <div style="margin-top:1rem;"><a href="/interview" style="color:var(--gold)">→ Build your profile first</a></div>
+        </div>
+      `;
+      return;
+    }
+    
+    currentResumeData = data;
+    renderResume(data);
+    document.getElementById('downloadBtn').style.display = 'inline-flex';
+    
+  } catch(e) {
+    document.getElementById('previewBody').innerHTML = `<div class="empty-preview"><div>Error generating resume. Please try again.</div></div>`;
+  }
+  
+  btn.disabled = false;
+  btn.textContent = '⚡ Generate Custom Resume';
+}
+
+function renderResume(data) {
+  if (!data || data.error) return;
+  
+  const skills = data.skills || {};
+  const allSkills = [...(skills.technical || []), ...(skills.tools || [])];
+  
+  const experienceHTML = (data.experience || []).map(e => `
+    <div class="r-item">
+      <div class="r-item-header">
+        <div><div class="r-item-title">${e.role || ''}</div><div class="r-item-subtitle">${e.company || ''}</div></div>
+        <div class="r-item-date">${e.duration || ''}</div>
+      </div>
+      ${(e.points || []).length > 0 ? `<ul class="r-bullets">${e.points.map(p => `<li>${p}</li>`).join('')}</ul>` : ''}
+    </div>
+  `).join('');
+  
+  const projectsHTML = (data.projects || []).map(p => `
+    <div class="r-item">
+      <div class="r-item-title">${p.name || ''} <span style="font-weight:400;color:#888;">${(p.tech || []).join(', ')}</span></div>
+      <div style="color:#333; margin-top:0.2rem;">${p.description || ''}</div>
+      ${p.impact ? `<div style="color:#555; font-style:italic; margin-top:0.2rem;">${p.impact}</div>` : ''}
+    </div>
+  `).join('');
+  
+  const educationHTML = (data.education || []).map(e => `
+    <div class="r-item">
+      <div class="r-item-header">
+        <div><div class="r-item-title">${e.degree || ''}</div><div class="r-item-subtitle">${e.institution || ''}</div></div>
+        <div><div class="r-item-date">${e.year || ''}</div>${e.cgpa ? `<div class="r-item-date">CGPA: ${e.cgpa}</div>` : ''}</div>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('previewBody').innerHTML = `
+    <div class="resume-doc" id="resumeDoc">
+      <div class="r-name">${data.name || 'Your Name'}</div>
+      <div class="r-contact">
+        ${data.email ? `<span>✉ ${data.email}</span>` : ''}
+        ${data.phone ? `<span>☏ ${data.phone}</span>` : ''}
+        ${data.linkedin ? `<span>in ${data.linkedin}</span>` : ''}
+        ${data.github ? `<span>⎋ ${data.github}</span>` : ''}
+      </div>
+      
+      ${data.summary ? `
+      <div class="r-section">
+        <div class="r-section-title">Professional Summary</div>
+        <p style="color:#333;">${data.summary}</p>
+      </div>` : ''}
+      
+      ${educationHTML ? `
+      <div class="r-section">
+        <div class="r-section-title">Education</div>
+        ${educationHTML}
+      </div>` : ''}
+      
+      ${allSkills.length > 0 ? `
+      <div class="r-section">
+        <div class="r-section-title">Technical Skills</div>
+        <div class="r-skills">
+          ${allSkills.map(s => `<span class="r-skill-tag">${s}</span>`).join('')}
+        </div>
+        ${skills.soft?.length > 0 ? `<div style="margin-top:0.5rem; color:#555; font-size:0.8rem;">Soft Skills: ${skills.soft.join(', ')}</div>` : ''}
+      </div>` : ''}
+      
+      ${projectsHTML ? `
+      <div class="r-section">
+        <div class="r-section-title">Projects</div>
+        ${projectsHTML}
+      </div>` : ''}
+      
+      ${experienceHTML ? `
+      <div class="r-section">
+        <div class="r-section-title">Experience</div>
+        ${experienceHTML}
+      </div>` : ''}
+      
+      ${(data.certifications || []).length > 0 ? `
+      <div class="r-section">
+        <div class="r-section-title">Certifications</div>
+        <ul class="r-bullets">
+          ${data.certifications.map(c => `<li>${c}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+      
+      ${(data.achievements || []).length > 0 ? `
+      <div class="r-section">
+        <div class="r-section-title">Achievements</div>
+        <ul class="r-bullets">
+          ${data.achievements.map(a => `<li>${a}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+      
+      ${(data.extracurriculars || []).length > 0 ? `
+      <div class="r-section">
+        <div class="r-section-title">Extracurriculars</div>
+        <ul class="r-bullets">
+          ${data.extracurriculars.map(e => `<li>${e}</li>`).join('')}
+        </ul>
+      </div>` : ''}
+    </div>
+  `;
+}
+
+function downloadResume() {
+  const doc = document.getElementById('resumeDoc');
+  if (!doc) return;
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Resume - Kairo</title>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+      <style>
+        body { margin: 0; padding: 2rem; font-family: 'DM Sans', sans-serif; background: white; color: #1a1a1a; }
+        ${doc.parentElement.innerHTML.includes('r-name') ? '' : ''}
+        .r-name { font-size: 1.6rem; font-weight: 700; color: #0a0a0f; margin-bottom: 0.3rem; }
+        .r-contact { font-size: 0.8rem; color: #555; margin-bottom: 1.2rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .r-section { margin-bottom: 1.2rem; }
+        .r-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #c9a84c; border-bottom: 1px solid #c9a84c; padding-bottom: 0.3rem; margin-bottom: 0.7rem; }
+        .r-item { margin-bottom: 0.7rem; }
+        .r-item-header { display: flex; justify-content: space-between; }
+        .r-item-title { font-weight: 600; font-size: 0.9rem; }
+        .r-item-subtitle { color: #555; font-size: 0.8rem; }
+        .r-item-date { color: #888; font-size: 0.8rem; }
+        .r-bullets { margin-top: 0.3rem; padding-left: 1.2rem; }
+        .r-bullets li { margin-bottom: 0.2rem; color: #333; }
+        .r-skills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .r-skill-tag { background: #f5f0e8; border: 1px solid #e8d5a3; color: #555; padding: 0.2rem 0.6rem; font-size: 0.75rem; }
+        @media print { body { padding: 0; } }
+      </style>
+    </head>
+    <body>${doc.outerHTML}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+}
+</script>
+</body>
+</html>
