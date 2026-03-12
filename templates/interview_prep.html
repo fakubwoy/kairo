@@ -827,6 +827,12 @@ function askQuestion(index) {
   document.getElementById('answer-input').value = '';
   document.getElementById('submit-btn').disabled = true;
 
+  // Record that this question was asked — answer will be filled in on submit
+  // If entry already exists (re-asked), don't duplicate
+  if (!transcript.find(t => String(t.question_id) === String(q.id))) {
+    transcript.push({ question_id: q.id, question: q.question, answer: '', timestamp: new Date().toISOString() });
+  }
+
   setStatus('speaking', 'Kairo is speaking…');
   setAiSpeaking(true);
 
@@ -955,7 +961,14 @@ async function submitAnswer() {
   if (!answer) { showToast('Please provide an answer first'); return; }
 
   const q = questions[currentQIndex];
-  transcript.push({ question_id: q.id, question: q.question, answer, timestamp: new Date().toISOString() });
+  // Update existing entry (set in askQuestion) with the actual answer
+  const existing = transcript.find(t => String(t.question_id) === String(q.id));
+  if (existing) {
+    existing.answer = answer;
+    existing.answered_at = new Date().toISOString();
+  } else {
+    transcript.push({ question_id: q.id, question: q.question, answer, timestamp: new Date().toISOString() });
+  }
 
   // Save to server
   fetch(`/api/mock-interview/${interviewId}/submit-answer`, {
@@ -989,6 +1002,25 @@ async function finishInterview() {
   clearInterval(timerInterval);
 
   speakText("Thank you for your time. I'm now evaluating your responses. Please hold on.", null);
+
+  showLoading('Saving transcript…');
+
+  // Flush entire local transcript to server — catches all asked questions
+  // including any that were skipped (answer stays blank)
+  try {
+    await Promise.all(transcript.map(item =>
+      fetch(`/api/mock-interview/${interviewId}/submit-answer`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify({
+          question_id: item.question_id,
+          question: item.question,
+          answer: item.answer || ''
+        })
+      }).catch(() => {})
+    ));
+  } catch(e) {}
 
   showLoading('Evaluating your interview…');
 

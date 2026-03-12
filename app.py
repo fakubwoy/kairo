@@ -1401,44 +1401,64 @@ Return ONLY a valid JSON array, no markdown, no preamble:
 ]"""
 
 def get_evaluation_prompt(questions, transcript, job_title):
+    # Build a map of question_id -> answer from transcript
+    answer_map = {str(item.get('question_id','')): item.get('answer','') for item in transcript}
+    
+    # Build full QA list — every question gets a row, unanswered = blank
+    qa_rows = []
+    for q in questions:
+        qid = str(q.get('id', ''))
+        answer = answer_map.get(qid, '').strip()
+        qa_rows.append({
+            'id': qid,
+            'type': q.get('type',''),
+            'question': q.get('question',''),
+            'answer': answer if answer else '[No answer given]'
+        })
+    
+    answered_count = sum(1 for r in qa_rows if r['answer'] != '[No answer given]')
+    total = len(qa_rows)
+    
     qa_text = ""
-    for item in transcript:
-        qa_text += f"\nQ{item.get('question_id','')}: {item.get('question','')}\nAnswer: {item.get('answer','[No answer]')}\n"
+    for r in qa_rows:
+        qa_text += f"\nQ{r['id']} [{r['type']}]: {r['question']}\nCandidate answer: {r['answer']}\n"
     
-    questions_text = json.dumps(questions, indent=2)
-    
-    return f"""You are an expert interview coach. Evaluate this mock interview for a {job_title} position.
+    return f"""You are a strict but fair interview coach evaluating a mock interview for a {job_title} position.
 
-Questions asked:
-{questions_text[:2000]}
+The candidate answered {answered_count} out of {total} questions.
 
-Interview Transcript:
-{qa_text[:3000]}
+Full interview — questions and answers:
+{qa_text[:4000]}
 
-Evaluate each answer on:
-1. Relevance (did they answer the question?)
-2. Depth (was it specific and detailed?)
-3. Communication (clear and structured?)
-4. Technical accuracy (for technical questions)
+STRICT SCORING RULES:
+- An unanswered question ([No answer given]) scores 0/10, no exceptions.
+- A one-word or very short answer scores at most 2/10.
+- A decent but vague answer scores 4-5/10.
+- A good structured answer with examples scores 7-8/10.
+- An excellent answer with specific details, metrics, or examples scores 9-10/10.
+- If the candidate answered fewer than half the questions, overall_score must be below 30.
+- If the candidate answered zero questions, overall_score must be 0.
+- Do NOT give credit for effort alone. Score only the quality of actual answers given.
+- overall_score is the weighted average of question scores scaled to 100, rounded to nearest integer.
 
-Return ONLY valid JSON, no markdown:
+Return ONLY a valid JSON object, no markdown fences, no extra text:
 {{
-  "overall_score": <0-100>,
-  "overall_summary": "...",
-  "strengths": ["...", "...", "..."],
-  "areas_for_improvement": ["...", "...", "..."],
+  "overall_score": <integer 0-100, strictly calculated from question scores>,
+  "overall_summary": "<2-3 honest sentences about the interview performance>",
+  "strengths": ["<only list genuine strengths shown in answers, or 'None demonstrated' if applicable>"],
+  "areas_for_improvement": ["<specific, actionable items based on what was weak or missing>"],
   "question_scores": [
     {{
-      "question_id": 1,
-      "question": "...",
-      "answer": "...",
+      "question_id": "<id>",
+      "question": "<question text>",
+      "answer": "<answer given or blank>",
       "score": <0-10>,
-      "feedback": "...",
-      "ideal_answer_hint": "..."
+      "feedback": "<specific feedback on this answer>",
+      "ideal_answer_hint": "<what a strong answer would have included>"
     }}
   ],
-  "tips": ["specific actionable tip 1", "specific actionable tip 2", "specific actionable tip 3"],
-  "readiness_level": "Not Ready / Needs Work / Almost There / Interview Ready"
+  "tips": ["<3 specific tips based on actual weaknesses seen>"],
+  "readiness_level": "<one of: Not Ready / Needs Work / Almost There / Interview Ready>"
 }}"""
 
 
@@ -1513,12 +1533,18 @@ def submit_interview_answer(interview_id):
     answer = data.get('answer', '')
     
     transcript = json.loads(interview.transcript or '[]')
-    transcript.append({
-        'question_id': question_id,
-        'question': question_text,
-        'answer': answer,
-        'timestamp': datetime.utcnow().isoformat()
-    })
+    # Upsert — update existing entry if question_id already present, else append
+    existing = next((t for t in transcript if str(t.get('question_id','')) == str(question_id)), None)
+    if existing:
+        existing['answer'] = answer
+        existing['updated_at'] = datetime.utcnow().isoformat()
+    else:
+        transcript.append({
+            'question_id': question_id,
+            'question': question_text,
+            'answer': answer,
+            'timestamp': datetime.utcnow().isoformat()
+        })
     interview.transcript = json.dumps(transcript)
     db.session.commit()
     
@@ -1543,19 +1569,43 @@ def complete_mock_interview(interview_id):
     raw = call_llm([], eval_prompt)
     
     try:
-        cleaned = raw.strip()
+        cleaned = raw.strip() if raw else ''
+        # Strip markdown fences if present
         if cleaned.startswith('```'):
-            cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0]
+            cleaned = cleaned.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        # Find the outermost JSON object in case there's leading text
+        start = cleaned.find('{')
+        end = cleaned.rfind('}')
+        if start != -1 and end != -1:
+            cleaned = cleaned[start:end+1]
         report = json.loads(cleaned)
+        # Validate required fields exist
+        if 'overall_score' not in report:
+            raise ValueError("Missing overall_score")
     except Exception as e:
+        print(f"Evaluation parse error: {e}\nRaw LLM output: {raw[:500] if raw else 'None'}")
+        # Build an honest fallback based on actual transcript
+        transcript_len = len(transcript)
+        questions_len = len(questions)
+        answered = sum(1 for t in transcript if t.get('answer','').strip())
+        score = max(0, int((answered / max(questions_len, 1)) * 40))  # max 40 for just answering
         report = {
-            "overall_score": 65,
-            "overall_summary": "Interview completed. Detailed evaluation unavailable — please try again.",
-            "strengths": ["Completed the interview", "Provided answers to questions"],
-            "areas_for_improvement": ["Practice more structured answers", "Use STAR method for behavioural questions"],
-            "question_scores": [],
-            "tips": ["Practice with the STAR method", "Research the company before interviews", "Prepare 2-3 questions to ask the interviewer"],
-            "readiness_level": "Needs Work"
+            "overall_score": score,
+            "overall_summary": f"The candidate answered {answered} of {questions_len} questions. Automated scoring unavailable — score reflects participation only.",
+            "strengths": ["Participated in the mock interview"] if answered > 0 else ["None demonstrated"],
+            "areas_for_improvement": ["Answer all questions", "Use the STAR method for behavioural questions", "Practice speaking in complete sentences"],
+            "question_scores": [
+                {
+                    "question_id": str(q.get('id','')),
+                    "question": q.get('question',''),
+                    "answer": next((t.get('answer','') for t in transcript if str(t.get('question_id','')) == str(q.get('id',''))), ''),
+                    "score": 0,
+                    "feedback": "No answer was provided for this question.",
+                    "ideal_answer_hint": "Prepare a structured answer using the STAR method."
+                } for q in questions
+            ],
+            "tips": ["Answer every question, even if briefly", "Research common interview questions for your target role", "Practice out loud — recording yourself helps"],
+            "readiness_level": "Not Ready" if answered == 0 else "Needs Work"
         }
     
     interview.status = 'completed'
