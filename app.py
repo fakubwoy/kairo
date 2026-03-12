@@ -565,9 +565,10 @@ def chat():
     # Add user message
     messages.append({"role": "user", "content": user_message})
 
-    # Call LLM
+    # Call LLM — strip any UI-only metadata (_silent) before sending
+    llm_messages = [{"role": m["role"], "content": m["content"]} for m in messages]
     system_prompt = get_interview_system_prompt(profile_data)
-    ai_response = call_llm(messages, system_prompt)
+    ai_response = call_llm(llm_messages, system_prompt)
 
     # Add AI response
     messages.append({"role": "assistant", "content": ai_response})

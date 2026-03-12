@@ -462,21 +462,21 @@ async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
   if (!text || isTyping) return;
-  
+
   input.value = '';
   input.style.height = 'auto';
-  
+
   appendMessage('user', text);
-  messages.push({role: 'user', content: text});
-  
-  // Hide hints after first message
+
+  // Hide hints after first real message
   document.getElementById('hints').style.display = 'none';
-  
+  document.getElementById('resumeBanner')?.remove();
+
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
   document.getElementById('statusText').textContent = 'Kairo is thinking...';
   showTyping();
-  
+
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
@@ -484,35 +484,33 @@ async function sendMessage() {
       body: JSON.stringify({
         message: text,
         conversation_id: conversationId,
-        messages: messages.slice(-20)
+        // Don't send local messages — server is the source of truth
       })
     });
-    
+
     const data = await res.json();
     hideTyping();
-    
+
     if (data.response) {
       appendMessage('ai', data.response);
-      messages.push({role: 'assistant', content: data.response});
       conversationId = data.conversation_id;
-      
+      // Always sync from server so in-memory state never drifts
+      messages = data.messages || messages;
+
       if (data.profile_complete) {
         document.getElementById('completeBanner').classList.add('show');
-        if (data.profile) {
-          const userData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-          userData.profile = data.profile;
-          localStorage.setItem('kairo_user', JSON.stringify(userData));
-        }
+        const userData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+        if (data.profile) userData.profile = data.profile;
+        localStorage.setItem('kairo_user', JSON.stringify(userData));
       }
-      
-      // Update topic progress based on message count (simple heuristic)
+
       updateTopicProgress();
     }
   } catch(e) {
     hideTyping();
     appendMessage('ai', 'Sorry, I had trouble connecting. Please try again.');
   }
-  
+
   isTyping = false;
   document.getElementById('sendBtn').disabled = false;
   document.getElementById('statusText').textContent = 'Kairo is ready';
@@ -589,23 +587,29 @@ async function startConversation(forceNew = false) {
   showTyping();
 
   try {
-    // Check for an existing conversation first (unless forced new)
+    if (forceNew && user.id) {
+      await fetch('/api/conversations/new', { method: 'POST' });
+      conversationId = null;
+      messages = [];
+    }
+
+    // Try to restore an existing conversation
     if (!forceNew && user.id) {
       const res = await fetch('/api/conversations/active');
       const data = await res.json();
 
-      if (data.conversation && data.conversation.messages.length > 2) {
+      if (data.conversation && data.conversation.messages.length >= 2) {
         hideTyping();
         conversationId = data.conversation.id;
         messages = data.conversation.messages;
 
-        // Replay messages into UI
         for (const m of messages) {
+          // Skip the silent greeting message we use to bootstrap
+          if (m._silent) continue;
           if (m.role === 'user') appendMessage('user', m.content);
           else if (m.role === 'assistant') appendMessage('ai', m.content);
         }
 
-        // Show resume banner
         showResumeBanner(data.conversation.message_count, data.conversation.updated_at);
         document.getElementById('statusText').textContent = 'Kairo is ready';
         updateTopicProgress();
@@ -613,26 +617,30 @@ async function startConversation(forceNew = false) {
       }
     }
 
-    // No prior session — start fresh
-    if (forceNew && user.id) {
-      await fetch('/api/conversations/new', { method: 'POST' });
-      conversationId = null;
-      messages = [];
-    }
-
+    // Fresh start — send a silent bootstrap message to get the AI's opening line.
+    // We mark it _silent so it's never shown in the UI on resume.
     const greeting = user.name ? `Hi ${user.name.split(' ')[0]}!` : 'Hello!';
+    const bootstrapMsg = greeting + ' I want to build my career profile.';
+
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ message: greeting + ' I want to build my career profile.', messages: [] })
+      body: JSON.stringify({
+        message: bootstrapMsg,
+        conversation_id: conversationId,
+        messages: [],
+        silent_bootstrap: true   // hint for future use; server stores it either way
+      })
     });
     const data = await res.json();
     hideTyping();
 
     if (data.response) {
+      // Only show the AI's opening line — don't show the bootstrap user message
       appendMessage('ai', data.response);
+      // Store both in messages but tag the user turn as silent
       messages = [
-        { role: 'user', content: greeting + ' I want to build my career profile.' },
+        { role: 'user', content: bootstrapMsg, _silent: true },
         { role: 'assistant', content: data.response }
       ];
       conversationId = data.conversation_id;
@@ -649,30 +657,33 @@ function showResumeBanner(msgCount, updatedAt) {
   const existing = document.getElementById('resumeBanner');
   if (existing) existing.remove();
 
+  // Count only real (non-silent) user turns
   const turns = Math.floor(msgCount / 2);
-  const when = updatedAt ? new Date(updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const when = updatedAt
+    ? new Date(updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : '';
 
   const banner = document.createElement('div');
   banner.id = 'resumeBanner';
   banner.style.cssText = `
     background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.25);
-    padding: 0.7rem 1.2rem; display: flex; align-items: center;
+    border-left: none; border-right: none;
+    padding: 0.6rem 2rem; display: flex; align-items: center;
     justify-content: space-between; font-size: 0.82rem; flex-shrink: 0;
     gap: 1rem; flex-wrap: wrap;
   `;
   banner.innerHTML = `
     <span style="color:var(--muted);">
-      ↩ Resumed from <strong style="color:var(--cream);">${when}</strong>
+      ↩ Resumed · <strong style="color:var(--cream);">${when}</strong>
       · ${turns} exchange${turns !== 1 ? 's' : ''} so far
     </span>
     <button onclick="confirmNewSession()" style="
       background:none; border:1px solid rgba(201,168,76,0.3); color:var(--gold);
-      padding:0.25rem 0.7rem; font-size:0.75rem; cursor:pointer; font-family:'DM Sans',sans-serif;
-      border-radius:2px; white-space:nowrap;
+      padding:0.25rem 0.7rem; font-size:0.75rem; cursor:pointer;
+      font-family:'DM Sans',sans-serif; white-space:nowrap;
     ">Start fresh ↺</button>
   `;
 
-  // Insert above the input area
   const inputArea = document.querySelector('.input-area');
   inputArea.parentNode.insertBefore(banner, inputArea);
 }
