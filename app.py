@@ -30,6 +30,23 @@ db = SQLAlchemy(app)
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+
+# Groq free models — fast inference, generous free tier. Primary cloud provider.
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",   # best quality on groq free tier
+    "llama-3.1-8b-instant",      # fastest, good for chat
+    "gemma2-9b-it",              # google gemma fallback
+    "mixtral-8x7b-32768",        # mistral fallback
+]
+
+# OpenRouter free models — secondary cloud fallback if Groq is unavailable
+OPENROUTER_FREE_MODELS = [
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "google/gemma-2-9b-it:free",
+    "qwen/qwen-2-7b-instruct:free",
+]
 
 # Recommended Ollama model config (shown in UI setup guide)
 OLLAMA_RECOMMENDED = {
@@ -71,81 +88,119 @@ class Resume(db.Model):
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
-# Free models tried in order — if one is rate-limited, the next is attempted.
-# All are free-tier on OpenRouter; ordered by quality/availability.
-OPENROUTER_FREE_MODELS = [
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
-    "google/gemma-2-9b-it:free",
-    "qwen/qwen-2-7b-instruct:free",
-]
-
-
-def call_llm(messages, system_prompt=""):
-    """Call LLM — OpenRouter (cloud) is the default. Ollama is an optional local fallback.
-    Tries multiple free models in sequence if one is rate-limited (429)."""
-
-    # ── Primary: OpenRouter — walk through free model list until one succeeds ──
-    if OPENROUTER_API_KEY:
-        full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://kairo.app",
-            "X-Title": "Kairo"
-        }
-        for model in OPENROUTER_FREE_MODELS:
-            try:
-                resp = requests.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json={"model": model, "messages": full_messages, "max_tokens": 1000},
-                    timeout=30
-                )
-                if resp.status_code == 200:
-                    return resp.json()['choices'][0]['message']['content']
-                elif resp.status_code == 429:
-                    print(f"OpenRouter 429 on {model}, trying next model...")
-                    continue  # rate-limited — try next model
-                else:
-                    print(f"OpenRouter {resp.status_code} on {model}: {resp.text[:120]}")
-                    break  # non-rate-limit error, don't bother retrying
-            except Exception as e:
-                print(f"OpenRouter error on {model}: {e}")
+def _call_groq(messages, system_prompt):
+    """Try Groq models in order. Returns response string or None."""
+    if not GROQ_API_KEY:
+        return None
+    full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    for model in GROQ_MODELS:
+        try:
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                json={"model": model, "messages": full_messages, "max_tokens": 1000},
+                timeout=30
+            )
+            if resp.status_code == 200:
+                return resp.json()['choices'][0]['message']['content']
+            elif resp.status_code == 429:
+                print(f"Groq 429 on {model}, trying next...")
+                continue
+            else:
+                print(f"Groq {resp.status_code} on {model}: {resp.text[:120]}")
                 break
+        except Exception as e:
+            print(f"Groq error on {model}: {e}")
+            break
+    return None
 
-    # ── Fallback: Local Ollama — only attempt if it's actually reachable ──────
-    # Silently skip if Ollama isn't running (e.g. cloud deployment on Railway).
+
+def _call_openrouter(messages, system_prompt):
+    """Try OpenRouter free models in order. Returns response string or None."""
+    if not OPENROUTER_API_KEY:
+        return None
+    full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://kairo.app",
+        "X-Title": "Kairo"
+    }
+    for model in OPENROUTER_FREE_MODELS:
+        try:
+            resp = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json={"model": model, "messages": full_messages, "max_tokens": 1000},
+                timeout=30
+            )
+            if resp.status_code == 200:
+                return resp.json()['choices'][0]['message']['content']
+            elif resp.status_code in (429, 404):
+                print(f"OpenRouter {resp.status_code} on {model}, trying next...")
+                continue
+            else:
+                print(f"OpenRouter {resp.status_code} on {model}: {resp.text[:120]}")
+                break
+        except Exception as e:
+            print(f"OpenRouter error on {model}: {e}")
+            break
+    return None
+
+
+def _call_ollama(messages, system_prompt):
+    """Try local Ollama. Returns response string or None. Fully silent if not running."""
     try:
         ping = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
         if ping.status_code != 200:
-            raise ConnectionError("Ollama not reachable")
+            return None
+    except Exception:
+        return None  # not running — no log spam on Railway
 
+    try:
         formatted = ""
         if system_prompt:
             formatted += f"<|system|>\n{system_prompt}\n"
         for m in messages:
             formatted += f"<|{m['role']}|>\n{m['content']}\n"
         formatted += "<|assistant|>\n"
-
         resp = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={"model": OLLAMA_MODEL, "prompt": formatted, "stream": False},
             timeout=90
         )
         if resp.status_code == 200:
-            print("Used Ollama fallback")
             return resp.json().get('response', '')
     except Exception as e:
-        print(f"Ollama fallback error: {e}")
+        print(f"Ollama generate error: {e}")
+    return None
 
-    return "I'm having trouble connecting to the AI service. Please add your OpenRouter API key in the settings, or set up Ollama locally."
+
+def call_llm(messages, system_prompt=""):
+    """Call LLM with provider priority: Groq → OpenRouter → Ollama."""
+    result = _call_groq(messages, system_prompt)
+    if result:
+        return result
+
+    result = _call_openrouter(messages, system_prompt)
+    if result:
+        return result
+
+    result = _call_ollama(messages, system_prompt)
+    if result:
+        return result
+
+    return "I'm having trouble connecting to the AI service. Please add a GROQ_API_KEY (free at console.groq.com) to your environment variables."
 
 
 def get_llm_status():
-    """Return detailed status of both LLM backends for the UI."""
+    """Return detailed status of all LLM backends for the UI."""
     status = {
+        "groq": {"configured": False, "ok": False, "models": GROQ_MODELS},
         "openrouter": {"configured": False, "ok": False, "models": OPENROUTER_FREE_MODELS},
         "ollama": {
             "installed": False, "model_available": False,
@@ -155,6 +210,19 @@ def get_llm_status():
         },
         "active_backend": None
     }
+
+    # Check Groq
+    if GROQ_API_KEY:
+        status["groq"]["configured"] = True
+        try:
+            resp = requests.get(
+                "https://api.groq.com/openai/v1/models",
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+                timeout=6
+            )
+            status["groq"]["ok"] = resp.status_code == 200
+        except Exception:
+            status["groq"]["ok"] = False
 
     # Check OpenRouter
     if OPENROUTER_API_KEY:
@@ -166,23 +234,25 @@ def get_llm_status():
                 timeout=6
             )
             status["openrouter"]["ok"] = resp.status_code == 200
-        except:
+        except Exception:
             status["openrouter"]["ok"] = False
 
-    # Check Ollama
+    # Check Ollama — silent if not reachable
     try:
-        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
         if resp.status_code == 200:
             status["ollama"]["installed"] = True
             models_data = resp.json().get("models", [])
             model_names = [m.get("name", "").split(":")[0] for m in models_data]
             status["ollama"]["model_available"] = OLLAMA_MODEL in model_names
             status["ollama"]["available_models"] = model_names
-    except:
-        pass
+    except Exception:
+        pass  # not running — expected on cloud deployments
 
-    # Determine active backend
-    if status["openrouter"]["ok"]:
+    # Determine active backend (first one that's working)
+    if status["groq"]["ok"]:
+        status["active_backend"] = "groq"
+    elif status["openrouter"]["ok"]:
         status["active_backend"] = "openrouter"
     elif status["ollama"]["installed"] and status["ollama"]["model_available"]:
         status["active_backend"] = "ollama"

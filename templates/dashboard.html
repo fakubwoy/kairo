@@ -220,7 +220,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 .llm-backends {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
 
@@ -395,10 +395,20 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
     <div class="llm-backends">
 
+      <!-- Groq -->
+      <div class="backend-card" id="card-groq">
+        <div class="backend-name">⚡ Groq <span style="font-size:0.65rem; background:rgba(201,168,76,0.12); color:var(--gold); padding:0.1rem 0.4rem; border-radius:2px;">RECOMMENDED</span></div>
+        <div class="backend-desc">Free cloud LLM with blazing fast inference. Uses Llama 3.3 70B — the best free model available. Just add a key.</div>
+        <div class="backend-status" id="groq-status">
+          <span class="status-badge warn"><span class="status-dot-sm"></span> Checking…</span>
+        </div>
+        <div style="margin-top:0.8rem;" id="groq-key-hint"></div>
+      </div>
+
       <!-- OpenRouter -->
       <div class="backend-card" id="card-openrouter">
-        <div class="backend-name">☁️ OpenRouter <span style="font-size:0.65rem; background:rgba(201,168,76,0.12); color:var(--gold); padding:0.1rem 0.4rem; border-radius:2px;">RECOMMENDED</span></div>
-        <div class="backend-desc">Free cloud LLM — no install needed. Tries Llama 3.2 → Llama 3.1 → Mistral 7B → Gemma 2 in order. Automatically skips rate-limited models.</div>
+        <div class="backend-name">☁️ OpenRouter <span style="font-size:0.65rem; color:var(--muted); font-weight:400;">Fallback</span></div>
+        <div class="backend-desc">Secondary cloud fallback. Tries Llama 3.2 → Mistral 7B → Gemma 2 in order, skipping rate-limited models automatically.</div>
         <div class="backend-status" id="openrouter-status">
           <span class="status-badge warn"><span class="status-dot-sm"></span> Checking…</span>
         </div>
@@ -408,7 +418,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <!-- Ollama -->
       <div class="backend-card" id="card-ollama">
         <div class="backend-name">🖥️ Ollama <span style="font-size:0.65rem; color:var(--muted); font-weight:400;">Local fallback</span></div>
-        <div class="backend-desc">Run LLMs fully offline on your machine. No API key needed. Slower first run, but private.</div>
+        <div class="backend-desc">Run LLMs fully offline on your machine. No API key needed. Slower first run, completely private.</div>
         <div class="backend-status" id="ollama-status">
           <span class="status-badge warn"><span class="status-dot-sm"></span> Checking…</span>
         </div>
@@ -546,35 +556,57 @@ function copyCode(text, el) {
 function renderLLMStatus(s) {
   // Active label
   const activeLabels = {
+    groq: '⚡ Using Groq (cloud)',
     openrouter: '☁️ Using OpenRouter (cloud)',
     ollama: '🖥️ Using Ollama (local)',
-    null: '⚠️ No AI backend active'
   };
-  document.getElementById('llmActiveLabel').textContent = activeLabels[s.active_backend] || activeLabels[null];
+  const activeLabel = activeLabels[s.active_backend] || '⚠️ No AI backend active';
+  document.getElementById('llmActiveLabel').textContent = activeLabel;
   document.getElementById('llmActiveLabel').style.color = s.active_backend ? 'var(--gold)' : '#ef9a9a';
 
   // Mark active card
-  if (s.active_backend === 'openrouter') document.getElementById('card-openrouter').classList.add('active-backend');
-  if (s.active_backend === 'ollama') document.getElementById('card-ollama').classList.add('active-backend');
+  ['groq','openrouter','ollama'].forEach(b => {
+    document.getElementById(`card-${b}`)?.classList.remove('active-backend');
+  });
+  if (s.active_backend) document.getElementById(`card-${s.active_backend}`)?.classList.add('active-backend');
 
-  // OpenRouter status
+  // ── Groq status ──────────────────────────────────────────────────────────
+  const grEl = document.getElementById('groq-status');
+  const grHint = document.getElementById('groq-key-hint');
+  if (!s.groq.configured) {
+    grEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> No API key set</span>`;
+    grHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted); line-height:1.6;">
+      Add <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">GROQ_API_KEY</code> to your <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">.env</code>.<br>
+      Get a free key at <a href="https://console.groq.com" target="_blank" style="color:var(--gold);">console.groq.com</a> — no credit card needed.
+    </div>`;
+  } else if (s.groq.ok) {
+    const modelList = (s.groq.models || []).map(m => m.split('-').slice(0,3).join('-')).join(' → ');
+    grEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected · Llama 3.3 70B</span>`;
+    grHint.innerHTML = `<div style="font-size:0.72rem; color:var(--muted); margin-top:0.4rem; line-height:1.6;">
+      Fallback order: <span style="color:rgba(245,240,232,0.6);">${modelList}</span>
+    </div>`;
+  } else {
+    grEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Key found but API unreachable</span>`;
+    grHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted);">Check your key at <a href="https://console.groq.com/keys" target="_blank" style="color:var(--gold);">console.groq.com/keys</a></div>`;
+  }
+
+  // ── OpenRouter status ─────────────────────────────────────────────────────
   const orEl = document.getElementById('openrouter-status');
   const orHint = document.getElementById('openrouter-key-hint');
   if (!s.openrouter.configured) {
     orEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> No API key set</span>`;
     orHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted); line-height:1.6;">
-      Add <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">OPENROUTER_API_KEY</code> to your <code style="color:var(--gold); background:rgba(201,168,76,0.08); padding:0.1rem 0.3rem;">.env</code> file.<br>
-      Get a free key at <a href="https://openrouter.ai" target="_blank" style="color:var(--gold);">openrouter.ai</a> — no credit card needed.
+      Optional — only used if Groq is unavailable.<br>
+      Get a free key at <a href="https://openrouter.ai" target="_blank" style="color:var(--gold);">openrouter.ai</a>.
     </div>`;
   } else if (s.openrouter.ok) {
     const modelList = (s.openrouter.models || []).map(m => m.split('/')[1]?.replace(':free','')).join(' → ');
-    orEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected · auto-fallback enabled</span>`;
+    orEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected · fallback ready</span>`;
     orHint.innerHTML = `<div style="font-size:0.72rem; color:var(--muted); margin-top:0.4rem; line-height:1.6;">
-      Tries in order: <span style="color:rgba(245,240,232,0.6);">${modelList}</span>
+      Tries: <span style="color:rgba(245,240,232,0.6);">${modelList}</span>
     </div>`;
   } else {
-    orEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Key found but API unreachable</span>`;
-    orHint.innerHTML = `<div style="font-size:0.75rem; color:var(--muted);">Check your key at <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--gold);">openrouter.ai/keys</a></div>`;
+    orEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Key found but unreachable</span>`;
   }
 
   // Ollama status
