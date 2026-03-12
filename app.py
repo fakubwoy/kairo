@@ -1224,18 +1224,13 @@ def health():
 
 # Startup — create tables and apply any missing column migrations
 with app.app_context():
-    # Use checkfirst=True — skips tables that already exist in Postgres
-    # instead of crashing with a duplicate-type constraint error.
-    try:
-        db.create_all(checkfirst=True)
-    except Exception as e:
-        print(f"create_all warning (non-fatal): {e}")
-        # Fallback: create each table individually
-        for table in db.metadata.sorted_tables:
-            try:
-                table.create(db.engine, checkfirst=True)
-            except Exception as te:
-                print(f"Table \'{table.name}\' create skipped: {te}")
+    # Create each table individually with checkfirst=True so Postgres
+    # duplicate-type errors on already-existing tables don't crash startup.
+    for table in db.metadata.sorted_tables:
+        try:
+            table.create(db.engine, checkfirst=True)
+        except Exception as te:
+            print(f"Table '{table.name}' create skipped: {te}")
     try:
         with db.engine.connect() as conn:
             conn.execute(db.text(
