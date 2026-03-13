@@ -7,840 +7,1152 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #0a0a0f;
-  --cream: #f5f0e8;
-  --gold: #c9a84c;
-  --muted: #6b6560;
-  --surface: #13110e;
-  --surface2: #1c1916;
-  --border: rgba(201,168,76,0.15);
+  --ink: #0a0a0f; --cream: #f5f0e8; --gold: #c9a84c; --gold-light: #e8d5a3;
+  --muted: #6b6560; --surface: #13110e; --surface2: #1c1916;
+  --green: #4caf7d; --red: #e05c5c; --blue: #5c8de0;
+  --border: rgba(201,168,76,0.12);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; overflow-x: hidden; }
 
-/* Header */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* ── Sidebar ── */
+.sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 0; position: fixed; height: 100vh; z-index: 10; }
+.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--gold); padding: 0 1.5rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1.5rem; color: var(--muted); font-size: 0.9rem; cursor: pointer; transition: all 0.2s; text-decoration: none; border-left: 2px solid transparent; }
+.nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
+.sidebar-bottom { margin-top: auto; padding: 1rem 1.5rem; border-top: 1px solid var(--border); position: relative; }
+.user-card { cursor: pointer; padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.1rem; position: relative; }
+.user-card-chevron { position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.user-name-sb { font-size: 0.88rem; color: var(--cream); font-weight: 500; }
+.user-info-sb { font-size: 0.78rem; color: var(--muted); }
+.account-menu { display: none; position: absolute; bottom: calc(100% + 0.5rem); left: 0; right: 0; background: var(--surface2); border: 1px solid rgba(201,168,76,0.2); z-index: 50; box-shadow: 0 -8px 24px rgba(0,0,0,0.4); }
+.account-menu.open { display: block; }
+.account-menu-item { padding: 0.7rem 1rem; font-size: 0.85rem; color: var(--cream); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: background 0.15s; }
+.account-menu-item:hover { background: rgba(201,168,76,0.08); }
+.account-menu-item.signout { color: #ef9a9a; border-top: 1px solid var(--border); }
+.account-menu-item.signout:hover { background: rgba(239,83,80,0.08); }
 
-.header-left { display: flex; align-items: center; gap: 1rem; }
-.back-btn {
-  background: none; border: none;
-  color: var(--muted); cursor: pointer;
-  font-size: 1rem; padding: 0.3rem;
-  transition: color 0.2s;
-}
-.back-btn:hover { color: var(--cream); }
+.main { margin-left: 240px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
 
-.header-logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 900; color: var(--gold); }
-.header-title { font-size: 0.9rem; color: var(--muted); }
+/* ── Buttons ── */
+.btn { padding: 0.6rem 1.2rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; }
+.btn-gold { background: var(--gold); color: var(--ink); }
+.btn-gold:hover { background: var(--gold-light); }
+.btn-outline { background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--cream); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-danger { background: var(--red); color: white; }
+.btn-danger:hover { opacity: 0.85; }
+.btn-lg { padding: 0.9rem 2rem; font-size: 0.95rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ai-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
+/* ── Setup Screen ── */
+#setup-screen { padding: 2rem 2.5rem; }
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; }
+.page-header p { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; max-width: 900px; }
+.setup-card { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; }
+.setup-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--gold); }
+.camera-preview-card { background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; }
+.camera-preview-card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--gold); }
+#setup-video-container { width: 100%; aspect-ratio: 16/9; background: #000; position: relative; overflow: hidden; margin-bottom: 1rem; }
+#setup-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: none; }
+.cam-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; text-align: center; gap: 0.5rem; }
+.cam-placeholder svg { width: 48px; height: 48px; opacity: 0.3; }
+.device-info { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.5rem; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.dot.active { background: var(--green); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+.instructions { background: rgba(201,168,76,0.05); border: 1px solid rgba(201,168,76,0.1); padding: 1rem; margin-top: 1.5rem; max-width: 900px; }
+.instructions ul { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+.instructions li { font-size: 0.82rem; color: var(--muted); display: flex; align-items: flex-start; gap: 0.5rem; }
+.instructions li::before { content: '→'; color: var(--gold); flex-shrink: 0; }
+.start-btn-row { margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+.past-sessions { margin-top: 2rem; max-width: 900px; }
+.past-sessions h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+.prev-session-item { background: var(--surface); border: 1px solid var(--border); padding: 0.9rem 1.2rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.prev-session-date { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+.prev-session-exchanges { font-size: 0.85rem; color: var(--cream); font-weight: 500; }
 
-.status-dot {
-  width: 7px; height: 7px;
-  background: #4caf50;
-  border-radius: 50%;
-  animation: statusPulse 2s infinite;
-}
+/* ── Session Screen ── */
+#session-screen { display: none; flex-direction: column; height: 100vh; background: #080608; overflow: hidden; }
 
-@keyframes statusPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
+.session-header { padding: 0.8rem 1.5rem; background: rgba(10,10,15,0.95); border-bottom: 1px solid rgba(201,168,76,0.1); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 5; }
+.session-header .logo { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 900; color: var(--gold); }
+.session-meta { display: flex; align-items: center; gap: 1rem; }
+.session-timer { font-size: 0.9rem; font-weight: 600; color: var(--cream); font-variant-numeric: tabular-nums; background: rgba(201,168,76,0.1); padding: 0.3rem 0.8rem; border: 1px solid rgba(201,168,76,0.2); }
+.status-pill { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--muted); padding: 0.3rem 0.8rem; border: 1px solid rgba(255,255,255,0.1); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.status-dot.listening { background: var(--green); animation: pulse 1s infinite; }
+.status-dot.speaking { background: var(--gold); animation: pulse 1s infinite; }
+.status-dot.thinking { background: var(--blue); animation: pulse 1s infinite; }
+.status-dot.ready { background: var(--green); }
 
-/* Layout */
-.chat-layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
+.session-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
-/* Chat area */
-.chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* ── Video area ── */
+.video-area { flex: 1; display: grid; grid-template-columns: 1fr 300px; background: #050405; overflow: hidden; }
 
-.messages-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  scroll-behavior: smooth;
-}
+.ai-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; background: #080608; border-right: 1px solid rgba(201,168,76,0.08); position: relative; }
+.ai-avatar-ring { width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(201,168,76,0.2); display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 1.5rem; transition: border-color 0.3s; }
+.ai-avatar-ring.speaking { border-color: var(--gold); animation: ringPulse 1s ease-in-out infinite; }
+@keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0.4)}50%{box-shadow:0 0 0 14px rgba(201,168,76,0)} }
+.ai-avatar-inner { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(135deg,#1a1410,#2a1f0e); border: 1px solid rgba(201,168,76,0.3); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display',serif; font-size: 2rem; color: var(--gold); }
+.ai-label { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.3rem; }
+.ai-name-label { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--cream); }
+.sound-wave { display: flex; align-items: center; gap: 3px; height: 20px; margin-top: 0.8rem; }
+.wave-bar { width: 3px; background: var(--gold); border-radius: 2px; height: 3px; }
+.ai-panel.speaking .sound-wave .wave-bar { animation: waveAnim 0.8s ease-in-out infinite; }
+.wave-bar:nth-child(1){animation-delay:0s}.wave-bar:nth-child(2){animation-delay:0.1s}.wave-bar:nth-child(3){animation-delay:0.2s}.wave-bar:nth-child(4){animation-delay:0.3s}.wave-bar:nth-child(5){animation-delay:0.4s}.wave-bar:nth-child(6){animation-delay:0.3s}.wave-bar:nth-child(7){animation-delay:0.2s}.wave-bar:nth-child(8){animation-delay:0.1s}
+@keyframes waveAnim{0%,100%{height:3px}50%{height:16px}}
+.message-display { position: absolute; bottom: 1.5rem; left: 1.5rem; right: 1.5rem; background: rgba(10,10,15,0.92); border: 1px solid rgba(201,168,76,0.2); padding: 1rem 1.2rem; }
+.msg-role-label { font-size: 0.7rem; color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; }
+.msg-text { font-size: 0.88rem; color: var(--cream); line-height: 1.55; max-height: 80px; overflow-y: auto; }
+.msg-text::-webkit-scrollbar{width:3px}.msg-text::-webkit-scrollbar-thumb{background:var(--border)}
 
-.messages-container::-webkit-scrollbar { width: 4px; }
-.messages-container::-webkit-scrollbar-track { background: transparent; }
-.messages-container::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+.candidate-panel { background: #050405; display: flex; flex-direction: column; padding: 1rem; }
+.candidate-video-wrap { position: relative; flex: 1; background: #0a0808; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+#session-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.candidate-label { position: absolute; bottom: 0.5rem; left: 0.5rem; background: rgba(0,0,0,0.7); padding: 0.2rem 0.6rem; font-size: 0.75rem; color: var(--cream); }
+.mic-indicator { position: absolute; bottom: 0.5rem; right: 0.5rem; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+.mic-indicator svg { width: 14px; height: 14px; }
+.mic-indicator.recording { background: rgba(224,92,92,0.8); }
 
-/* Messages */
-.message { display: flex; gap: 0.8rem; max-width: 720px; animation: msgIn 0.3s ease; }
+/* ── Right sidebar: topics + transcript + upload ── */
+.progress-sidebar { width: 280px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-tab { flex: 1; padding: 0.65rem; font-size: 0.78rem; color: var(--muted); text-align: center; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; }
+.sidebar-tab.active { color: var(--gold); border-bottom-color: var(--gold); background: rgba(201,168,76,0.05); }
+.sidebar-tab-panel { display: none; flex: 1; overflow-y: auto; padding: 1rem; }
+.sidebar-tab-panel.active { display: flex; flex-direction: column; }
+.sidebar-tab-panel::-webkit-scrollbar{width:3px}.sidebar-tab-panel::-webkit-scrollbar-thumb{background:var(--border)}
 
-@keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.message.user { flex-direction: row-reverse; align-self: flex-end; }
-
-.msg-avatar {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  margin-top: 0.2rem;
-}
-
-.msg-avatar.ai {
-  background: linear-gradient(135deg, var(--gold), #8b6914);
-  color: var(--ink);
-  font-family: 'Playfair Display', serif;
-}
-
-.msg-avatar.user-av {
-  background: rgba(245,240,232,0.1);
-  color: var(--cream);
-  border: 1px solid rgba(245,240,232,0.2);
-}
-
-.msg-bubble {
-  padding: 0.85rem 1.1rem;
-  border-radius: 2px;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  max-width: calc(100% - 50px);
-}
-
-.message.ai .msg-bubble {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--cream);
-  border-radius: 0 8px 8px 8px;
-}
-
-.message.user .msg-bubble {
-  background: rgba(201,168,76,0.12);
-  border: 1px solid rgba(201,168,76,0.25);
-  color: var(--cream);
-  border-radius: 8px 0 8px 8px;
-}
-
-.typing-bubble {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  padding: 0.85rem 1.1rem;
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  border-radius: 0 8px 8px 8px;
-}
-
-.typing-bubble span {
-  width: 7px; height: 7px;
-  background: var(--gold);
-  border-radius: 50%;
-  animation: typingDot 1.2s infinite;
-}
-.typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
-.typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes typingDot {
-  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-5px); }
-}
-
-/* Input area */
-.input-area {
-  padding: 1.2rem 2rem;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.input-wrapper {
-  display: flex;
-  gap: 0.8rem;
-  align-items: flex-end;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  padding: 0.5rem 0.5rem 0.5rem 1rem;
-  transition: border-color 0.2s;
-}
-
-.input-wrapper:focus-within { border-color: rgba(201,168,76,0.4); }
-
-.msg-input {
-  flex: 1;
-  background: none;
-  border: none;
-  color: var(--cream);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem;
-  outline: none;
-  resize: none;
-  overflow-y: hidden;
-  max-height: 120px;
-  line-height: 1.5;
-  padding: 0.3rem 0;
-}
-
-.msg-input::placeholder { color: rgba(245,240,232,0.25); }
-
-.send-btn {
-  background: var(--gold);
-  border: none;
-  color: var(--ink);
-  width: 36px; height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  border-radius: 2px;
-}
-
-.send-btn:hover { background: var(--gold-light, #e8d5a3); }
-.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.mic-btn {
-  background: transparent;
-  border: 1px solid rgba(201,168,76,0.3);
-  color: var(--muted);
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 1rem; transition: all 0.2s;
-  flex-shrink: 0; border-radius: 2px;
-}
-.mic-btn:hover { border-color: var(--gold); color: var(--gold); }
-.mic-btn.recording { background: rgba(224,85,85,0.15); border-color: #e05555; color: #e05555; animation: pulse-red 1s infinite; }
-@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-.input-hints {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.hint-chip {
-  background: rgba(201,168,76,0.06);
-  border: 1px solid rgba(201,168,76,0.2);
-  color: rgba(245,240,232,0.6);
-  padding: 0.25rem 0.7rem;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: 2px;
-}
-
-.hint-chip:hover { background: rgba(201,168,76,0.12); color: var(--cream); }
-
-/* Sidebar */
-.info-sidebar {
-  width: 280px;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.sidebar-section {
-  padding: 1.2rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-section h3 {
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 0.8rem;
-}
-
-.topic-list { display: flex; flex-direction: column; gap: 0.4rem; }
-
-.topic-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.topic-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: rgba(201,168,76,0.3);
-  flex-shrink: 0;
-}
-
-.topic-item.done .topic-dot { background: var(--gold); }
+.panel-heading { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.8rem; }
+.topic-list { display: flex; flex-direction: column; gap: 0.25rem; }
+.topic-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--muted); padding: 0.3rem 0.3rem; border-radius: 2px; }
+.topic-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(201,168,76,0.25); flex-shrink: 0; }
+.topic-item.done .topic-dot { background: var(--green); }
 .topic-item.done { color: var(--cream); }
 .topic-item.active { color: var(--gold); }
-.topic-item.active .topic-dot { background: var(--gold); animation: statusPulse 1.5s infinite; }
+.topic-item.active .topic-dot { background: var(--gold); animation: pulse 1.5s infinite; }
 
-/* Upload section */
-.upload-area {
-  border: 1px dashed rgba(201,168,76,0.3);
-  padding: 1rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.8rem;
-  color: var(--muted);
-}
+/* Transcript in sidebar */
+.transcript-live { display: flex; flex-direction: column; gap: 0.7rem; }
+.tr-entry { display: flex; flex-direction: column; gap: 0.2rem; }
+.tr-role { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.tr-role.kairo { color: var(--gold); }
+.tr-role.you { color: var(--muted); }
+.tr-bubble { font-size: 0.8rem; color: var(--cream); line-height: 1.5; padding: 0.5rem 0.7rem; border-left: 2px solid rgba(201,168,76,0.2); }
+.tr-bubble.you-bubble { border-left-color: rgba(255,255,255,0.1); color: rgba(245,240,232,0.8); }
 
+/* Upload in sidebar */
+.upload-area { border: 1px dashed rgba(201,168,76,0.3); padding: 1rem; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.8rem; color: var(--muted); border-radius: 2px; }
 .upload-area:hover { border-color: rgba(201,168,76,0.6); color: var(--gold); }
+.upload-status { margin-top: 0.6rem; font-size: 0.75rem; color: var(--muted); }
+.upload-status.ok { color: var(--green); }
 
-/* Profile complete banner */
-.complete-banner {
-  background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.05));
-  border: 1px solid rgba(201,168,76,0.4);
-  padding: 1rem 1.5rem;
-  margin: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  display: none;
-}
+/* ── Controls bar ── */
+.session-controls { padding: 0.8rem 1.5rem; background: rgba(8,6,8,0.98); border-top: 1px solid rgba(201,168,76,0.1); display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-shrink: 0; }
+.ctrl-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: var(--cream); flex-shrink: 0; }
+.ctrl-btn svg { width: 18px; height: 18px; }
+.ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+.ctrl-btn.active { background: rgba(224,92,92,0.2); border-color: var(--red); color: var(--red); }
+.mic-center { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+.mic-big-btn { width: 72px; height: 72px; border-radius: 50%; background: rgba(201,168,76,0.1); border: 2px solid rgba(201,168,76,0.3); color: var(--gold); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s; gap: 3px; position: relative; z-index: 2; }
+.mic-big-btn svg { width: 22px; height: 22px; }
+.mic-btn-label { font-size: 0.55rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-family: 'DM Sans',sans-serif; white-space: nowrap; }
+.mic-big-btn:not(:disabled):hover { background: rgba(201,168,76,0.18); border-color: var(--gold); transform: scale(1.05); }
+.mic-big-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.mic-big-btn.recording { background: rgba(224,92,92,0.2); border-color: var(--red); color: var(--red); }
+.mic-big-btn.recording .mic-btn-label { color: var(--red); }
+.mic-big-btn.transcribing { background: rgba(92,141,224,0.15); border-color: var(--blue); color: var(--blue); animation: btnPulse 1s infinite; }
+@keyframes btnPulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.mic-recording-ring { position: absolute; width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--red); opacity: 0; pointer-events: none; z-index: 1; }
+.mic-recording-ring.active { animation: micRingPulse 1.2s ease-out infinite; }
+@keyframes micRingPulse{0%{transform:scale(1);opacity:0.8}100%{transform:scale(1.9);opacity:0}}
+#answer-preview { position: absolute; bottom: calc(100% + 0.5rem); left: 50%; transform: translateX(-50%); background: rgba(10,10,15,0.95); border: 1px solid rgba(201,168,76,0.2); padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--cream); max-width: 420px; text-align: center; display: none; white-space: pre-wrap; word-break: break-word; z-index: 10; }
+.send-answer-btn { padding: 0.6rem 1.4rem; background: var(--gold); color: var(--ink); border: none; font-family: 'DM Sans',sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; height: 52px; white-space: nowrap; flex-shrink: 0; }
+.send-answer-btn:hover { background: var(--gold-light); }
+.send-answer-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.complete-banner.show { display: flex; }
-.complete-banner h4 { font-size: 0.9rem; color: var(--gold); margin-bottom: 0.2rem; }
-.complete-banner p { font-size: 0.8rem; color: var(--muted); }
+/* ── Summary Screen ── */
+#summary-screen { display: none; padding: 2rem 2.5rem; overflow-y: auto; }
+.summary-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.summary-header h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; }
+.summary-header p { color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem; max-width: 960px; }
+.summary-card { background: var(--surface); border: 1px solid var(--border); padding: 1.2rem; }
+.summary-card h3 { font-size: 0.8rem; color: var(--gold); margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.summary-card ul { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.summary-card li { font-size: 0.84rem; color: var(--cream); display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.25rem 0; border-bottom: 1px solid rgba(201,168,76,0.07); }
+.summary-card li:last-child { border-bottom: none; }
+.summary-card li::before { content: '→'; color: var(--gold); flex-shrink: 0; }
+.summary-card p { font-size: 0.84rem; color: var(--cream); line-height: 1.7; }
 
-.btn-gold {
-  background: var(--gold);
-  color: var(--ink);
-  border: none;
-  padding: 0.5rem 1.2rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity 0.2s;
-}
+/* Full transcript on summary page */
+.transcript-section { margin-bottom: 2rem; max-width: 960px; }
+.transcript-section h3 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+.transcript-toggle { color: var(--gold); font-size: 0.8rem; }
+.transcript-body { display: none; max-height: 400px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); padding: 1rem; }
+.transcript-body.open { display: block; }
+.transcript-body::-webkit-scrollbar{width:4px}.transcript-body::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.2)}
+.transcript-item { margin-bottom: 1rem; }
+.tr-q-label { font-size: 0.7rem; color: var(--gold); margin-bottom: 0.25rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.tr-q-label.user-role { color: var(--muted); }
+.tr-q-text { font-size: 0.84rem; color: var(--cream); padding: 0.55rem 0.8rem; border-left: 2px solid rgba(201,168,76,0.25); }
+.tr-q-text.user-text { border-left-color: rgba(255,255,255,0.1); color: rgba(245,240,232,0.82); }
 
-.btn-gold:hover { opacity: 0.85; }
+/* Correction chat */
+.correction-section { max-width: 960px; margin-bottom: 2rem; }
+.correction-section > h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.4rem; }
+.correction-section > p { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+.correction-chat { background: var(--surface); border: 1px solid var(--border); padding: 1rem; margin-bottom: 0.8rem; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.9rem; }
+.correction-chat::-webkit-scrollbar{width:4px}.correction-chat::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.2)}
+.correction-msg .c-role { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.correction-msg.ai .c-role { color: var(--gold); }
+.correction-msg.user .c-role { color: var(--muted); }
+.correction-msg .c-text { font-size: 0.84rem; color: var(--cream); line-height: 1.6; }
+.correction-input-row { display: flex; gap: 0.6rem; }
+.correction-input { flex: 1; background: var(--surface2); border: 1px solid rgba(201,168,76,0.2); color: var(--cream); padding: 0.6rem 0.8rem; font-family: 'DM Sans',sans-serif; font-size: 0.85rem; outline: none; resize: none; max-height: 80px; line-height: 1.5; }
+.correction-input:focus { border-color: rgba(201,168,76,0.5); }
+.correction-input::placeholder { color: rgba(107,101,96,0.6); }
+.summary-actions { display: flex; gap: 0.8rem; margin-bottom: 2rem; flex-wrap: wrap; max-width: 960px; }
 
-@media (max-width: 768px) {
-  .info-sidebar { display: none; }
-  .messages-container { padding: 1rem; }
-  .input-area { padding: 1rem; }
-}
+/* ── Overlay + Toast ── */
+#loading-overlay { display: none; position: fixed; inset: 0; background: rgba(8,6,8,0.9); z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+#loading-overlay.show { display: flex; }
+.loading-spinner { width: 40px; height: 40px; border: 2px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text { font-size: 0.9rem; color: var(--muted); }
+#toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.8rem 1.2rem; background: var(--surface); border: 1px solid rgba(201,168,76,0.3); font-size: 0.85rem; z-index: 200; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 320px; }
+#toast.show { transform: none; opacity: 1; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-left">
-    <button class="back-btn" onclick="window.location.href='/dashboard'">← Back</button>
-    <div>
-      <div class="header-logo">Kairo</div>
-      <div class="header-title">Profile Builder</div>
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">Kairo</div>
+  <a href="/dashboard" class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </a>
+  <a href="/interview" class="nav-item active">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+    Build Profile
+  </a>
+  <a href="/resume" class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    My Resumes
+  </a>
+  <a href="/interview-prep" class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Interview Prep
+  </a>
+  <div class="sidebar-bottom">
+    <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
+      <div class="user-name-sb" id="sidebarName">Loading…</div>
+      <div class="user-info-sb" id="sidebarEmail">—</div>
+      <div class="user-card-chevron">&#8943;</div>
     </div>
-  </div>
-  <div class="ai-status">
-    <div class="status-dot"></div>
-    <span id="statusText">Kairo is ready</span>
-  </div>
-</div>
-
-<div class="chat-layout">
-  <div class="chat-area">
-    <div class="messages-container" id="messages"></div>
-    
-    <div class="complete-banner" id="completeBanner">
-      <div>
-        <h4>🎉 Profile Complete!</h4>
-        <p>Your profile has been saved. Ready to generate resumes!</p>
-      </div>
-      <button class="btn-gold" onclick="window.location.href='/resume'">Create Resume →</button>
-    </div>
-
-    <div class="input-area">
-      <div class="input-wrapper">
-        <textarea class="msg-input" id="msgInput" placeholder="Tell Kairo about yourself..." rows="1"></textarea>
-        <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Voice input (Whisper)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-        </button>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
-      </div>
-      <div class="input-hints" id="hints">
-        <div class="hint-chip" onclick="useHint(this)">CSE, 3rd year</div>
-        <div class="hint-chip" onclick="useHint(this)">I built a web app</div>
-        <div class="hint-chip" onclick="useHint(this)">I did an internship</div>
-        <div class="hint-chip" onclick="useHint(this)">I know React & Python</div>
+    <div class="account-menu" id="accountMenu">
+      <div class="account-menu-item signout" onclick="doSignOut()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
       </div>
     </div>
   </div>
+</nav>
 
-  <div class="info-sidebar">
-    <div class="sidebar-section">
-      <h3>Topics to Cover</h3>
-      <div class="topic-list">
-        <div class="topic-item active" id="t-basic"><span class="topic-dot"></span> Basic Info & Branch</div>
-        <div class="topic-item" id="t-edu"><span class="topic-dot"></span> Courses & Grades</div>
-        <div class="topic-item" id="t-projects"><span class="topic-dot"></span> Projects Built</div>
-        <div class="topic-item" id="t-skills"><span class="topic-dot"></span> Technical Skills</div>
-        <div class="topic-item" id="t-intern"><span class="topic-dot"></span> Internships</div>
-        <div class="topic-item" id="t-extra"><span class="topic-dot"></span> Clubs & Hackathons</div>
-        <div class="topic-item" id="t-cert"><span class="topic-dot"></span> Certifications</div>
+<div class="main">
+
+  <!-- ═══════════════════════════════════════════════ SETUP ═══════════════════════════════════════════════ -->
+  <div id="setup-screen">
+    <div class="page-header">
+      <h1>Profile Builder</h1>
+      <p>A candid conversation with Kairo — your well-wisher who wants to understand your full story and build your career profile.</p>
+    </div>
+    <div class="setup-grid">
+      <div class="setup-card">
+        <h3>How it works</h3>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.8;margin-bottom:1rem;">Kairo starts by understanding your timeline, then digs deep into each chapter of your journey — the same way a senior who genuinely cares would.</p>
+        <div style="background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.1);padding:0.9rem;font-size:0.82rem;color:var(--muted);line-height:2;">
+          <div style="color:var(--gold);font-weight:600;margin-bottom:0.5rem;">Kairo explores, in order:</div>
+          College &amp; University → Academics → Struggles &amp; Setbacks → Wins &amp; Highlights → Projects → Internships → Technical Skills → Clubs &amp; Activities → Goals
+        </div>
+        <p style="font-size:0.82rem;color:var(--muted);line-height:1.7;margin-top:1rem;">Kairo speaks every question aloud. You can reply by voice (mic button) or type. Watch the live transcript in the sidebar during the call. At the end, review the structured summary and correct anything via chat.</p>
+      </div>
+      <div class="camera-preview-card">
+        <h3>Camera &amp; Mic Check</h3>
+        <div id="setup-video-container">
+          <video id="setup-video" autoplay muted playsinline></video>
+          <div class="cam-placeholder" id="cam-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z"/></svg>
+            <div>Camera not started</div>
+          </div>
+        </div>
+        <div class="device-info"><div class="dot" id="cam-dot"></div><span id="cam-status">Camera: Not started</span></div>
+        <div class="device-info"><div class="dot" id="mic-dot"></div><span id="mic-status">Microphone: Not started</span></div>
+        <button class="btn btn-outline" onclick="startDevices()" style="margin-top:0.3rem;">Enable Camera &amp; Mic</button>
       </div>
     </div>
-
-    <div class="sidebar-section">
-      <h3>Upload Documents</h3>
-      <div class="upload-area" onclick="document.getElementById('fileUpload').click()">
-        <div style="font-size:1.5rem; margin-bottom:0.4rem;">📂</div>
-        <div>Upload transcript or certificate</div>
-        <div style="font-size:0.7rem; margin-top:0.3rem; color:rgba(107,101,96,0.7)">PDF, PNG, JPG</div>
-      </div>
-      <input type="file" id="fileUpload" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="handleUpload(this)">
-      <div id="uploadStatus" style="margin-top:0.5rem; font-size:0.75rem; color:var(--muted);"></div>
-    </div>
-
-    <div class="sidebar-section">
-      <h3>Tips</h3>
-      <ul style="color:var(--muted); font-size:0.8rem; line-height:1.8; padding-left:1rem;">
-        <li>Be specific — numbers help!</li>
-        <li>Mention technologies used</li>
-        <li>Share outcomes and impact</li>
-        <li>Don't worry about formatting</li>
+    <div class="instructions">
+      <ul>
+        <li>Kairo speaks every question aloud — answer naturally, like talking to someone who genuinely cares about your story.</li>
+        <li>Click the mic button to record your voice answer, or type and hit <em>Send Answer</em>.</li>
+        <li>You can click the mic while Kairo is speaking to interrupt and start answering immediately.</li>
+        <li>Upload transcripts, certificates, or resumes — Kairo will extract key details automatically.</li>
+        <li>After the session you get a structured profile to review and correct before it saves to your dashboard.</li>
       </ul>
     </div>
+    <div class="start-btn-row">
+      <button class="btn btn-gold btn-lg" onclick="startSession()">Begin Session →</button>
+    </div>
+    <div class="past-sessions">
+      <h3>Previous Sessions</h3>
+      <div id="past-sessions-list"><div style="font-size:0.85rem;color:var(--muted);">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ SESSION ═══════════════════════════════════════════════ -->
+  <div id="session-screen">
+    <div class="session-header">
+      <div class="logo">Kairo</div>
+      <div class="session-meta">
+        <div style="font-size:0.82rem;color:var(--muted);">Profile Builder</div>
+        <div class="session-timer" id="timer">00:00</div>
+      </div>
+      <div style="display:flex;gap:0.6rem;align-items:center;">
+        <div class="status-pill"><div class="status-dot ready" id="status-dot"></div><span id="status-text">Ready</span></div>
+        <button class="btn btn-danger" style="padding:0.4rem 1rem;font-size:0.82rem;" onclick="confirmEndSession()">End Session</button>
+      </div>
+    </div>
+
+    <div class="session-body">
+      <!-- Video area -->
+      <div class="video-area">
+        <!-- Kairo panel -->
+        <div class="ai-panel" id="ai-panel">
+          <div class="ai-avatar-ring" id="ai-avatar-ring">
+            <div class="ai-avatar-inner">K</div>
+          </div>
+          <div class="ai-label">Your Career Co-pilot</div>
+          <div class="ai-name-label">Kairo</div>
+          <div class="sound-wave" id="sound-wave">
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          </div>
+          <div class="message-display">
+            <div class="msg-role-label" id="msg-role-label">Kairo</div>
+            <div class="msg-text" id="msg-text">Starting your session…</div>
+          </div>
+        </div>
+
+        <!-- Candidate video -->
+        <div class="candidate-panel">
+          <div class="candidate-video-wrap">
+            <video id="session-video" autoplay muted playsinline></video>
+            <div class="candidate-label" id="candidate-label">You</div>
+            <div class="mic-indicator" id="mic-indicator">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right sidebar: tabs -->
+      <div class="progress-sidebar">
+        <div class="sidebar-tabs">
+          <div class="sidebar-tab active" onclick="switchSidebarTab('topics')" id="tab-topics">Topics</div>
+          <div class="sidebar-tab" onclick="switchSidebarTab('transcript')" id="tab-transcript">Transcript</div>
+          <div class="sidebar-tab" onclick="switchSidebarTab('upload')" id="tab-upload">Upload</div>
+        </div>
+
+        <!-- Topics panel -->
+        <div class="sidebar-tab-panel active" id="panel-topics">
+          <div class="panel-heading">Conversation Progress</div>
+          <div class="topic-list">
+            <div class="topic-item active" id="t-intro"><span class="topic-dot"></span>Introduction &amp; Background</div>
+            <div class="topic-item" id="t-college"><span class="topic-dot"></span>College &amp; University</div>
+            <div class="topic-item" id="t-academic"><span class="topic-dot"></span>Academics &amp; Courses</div>
+            <div class="topic-item" id="t-struggles"><span class="topic-dot"></span>Struggles &amp; Setbacks</div>
+            <div class="topic-item" id="t-wins"><span class="topic-dot"></span>Wins &amp; Highlights</div>
+            <div class="topic-item" id="t-projects"><span class="topic-dot"></span>Projects Built</div>
+            <div class="topic-item" id="t-intern"><span class="topic-dot"></span>Internships &amp; Work Exp</div>
+            <div class="topic-item" id="t-skills"><span class="topic-dot"></span>Technical Skills</div>
+            <div class="topic-item" id="t-extra"><span class="topic-dot"></span>Clubs &amp; Activities</div>
+            <div class="topic-item" id="t-goals"><span class="topic-dot"></span>Goals &amp; Aspirations</div>
+          </div>
+        </div>
+
+        <!-- Transcript panel -->
+        <div class="sidebar-tab-panel" id="panel-transcript">
+          <div class="panel-heading">Live Conversation</div>
+          <div class="transcript-live" id="transcript-live"></div>
+        </div>
+
+        <!-- Upload panel -->
+        <div class="sidebar-tab-panel" id="panel-upload">
+          <div class="panel-heading">Documents</div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1rem;line-height:1.6;">Upload transcripts, certificates, or a resume. Kairo will read and extract details automatically.</p>
+          <div class="upload-area" onclick="document.getElementById('fileUpload').click()">
+            <div style="font-size:1.5rem;margin-bottom:0.4rem;">📁</div>
+            <div>Click to upload a document</div>
+            <div style="font-size:0.72rem;margin-top:0.3rem;color:rgba(107,101,96,0.7)">PDF · PNG · JPG</div>
+          </div>
+          <input type="file" id="fileUpload" style="display:none" accept=".pdf,.png,.jpg,.jpeg" onchange="handleUpload(this)">
+          <div id="uploadStatus" class="upload-status"></div>
+          <div id="uploadList" style="margin-top:1rem;display:flex;flex-direction:column;gap:0.4rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="session-controls">
+      <button class="ctrl-btn" id="toggle-cam-btn" title="Toggle camera" onclick="toggleCam()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z"/></svg>
+      </button>
+
+      <div class="mic-center">
+        <button class="mic-big-btn" id="record-btn" onclick="toggleRecording()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+          <span class="mic-btn-label" id="mic-btn-label">Speak</span>
+        </button>
+        <div class="mic-recording-ring" id="mic-recording-ring"></div>
+        <div id="answer-preview"></div>
+      </div>
+
+      <button class="send-answer-btn" id="send-btn" onclick="sendPendingAnswer()" disabled>Send Answer →</button>
+      <button class="btn btn-danger" onclick="confirmEndSession()" style="padding:0 1.2rem;height:52px;font-size:0.82rem;">End</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ SUMMARY ═══════════════════════════════════════════════ -->
+  <div id="summary-screen">
+    <div class="summary-header">
+      <div>
+        <h1>Session Summary</h1>
+        <p>Review what Kairo captured — correct anything that's off using the chat below.</p>
+      </div>
+      <div style="display:flex;gap:0.8rem;">
+        <button class="btn btn-outline" onclick="startNewSession()">New Session</button>
+        <button class="btn btn-gold" onclick="window.location.href='/dashboard'">Edit in Dashboard →</button>
+      </div>
+    </div>
+
+    <div class="summary-grid" id="summary-grid">
+      <div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Generating your profile analysis…</p></div>
+    </div>
+
+    <div class="transcript-section">
+      <h3 onclick="toggleTranscript()">Full Conversation Transcript <span class="transcript-toggle" id="transcript-toggle">▶ Show</span></h3>
+      <div class="transcript-body" id="transcript-body"></div>
+    </div>
+
+    <div class="correction-section">
+      <h3>Something look wrong?</h3>
+      <p>Chat with Kairo here to correct any details — your profile will be updated automatically.</p>
+      <div class="correction-chat" id="correction-chat">
+        <div class="correction-msg ai">
+          <div class="c-role">Kairo</div>
+          <div class="c-text">Take a look at your summary above. If anything looks wrong or incomplete, just tell me and I'll fix it right away.</div>
+        </div>
+      </div>
+      <div class="correction-input-row">
+        <textarea class="correction-input" id="correction-input" placeholder="e.g. My internship was at Google, not Microsoft…" rows="1"></textarea>
+        <button class="btn btn-gold" onclick="sendCorrection()" style="flex-shrink:0;height:42px;align-self:flex-end;">Send</button>
+      </div>
+    </div>
+
+    <div class="summary-actions">
+      <button class="btn btn-gold" onclick="window.location.href='/resume'">Generate Resume →</button>
+      <button class="btn btn-outline" onclick="startNewSession()">Start New Session</button>
+    </div>
   </div>
 </div>
 
+<div id="loading-overlay"><div class="loading-spinner"></div><div class="loading-text" id="loading-text">Loading…</div></div>
+<div id="toast"></div>
+
 <script>
+// ──────────────────────────────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────────────────────────────
 const user = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-let conversationId = null;
-let messages = [];
-let isTyping = false;
+let stream = null, conversationId = null, messages = [];
+let timerInterval = null, timerSeconds = 0;
+let mediaRecorder = null, audioChunks = [], isRecording = false;
+let camEnabled = true, pendingAnswer = '', currentSpeech = null;
 
-function appendMessage(role, content) {
-  const container = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = `message ${role}`;
-  
-  const initials = role === 'ai' ? 'K' : (user.name?.[0] || 'U');
-  
-  div.innerHTML = `
-    <div class="msg-avatar ${role === 'ai' ? 'ai' : 'user-av'}">${initials}</div>
-    <div class="msg-bubble">${content.replace(/\n/g, '<br>')}</div>
-  `;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+// ──────────────────────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────────────────────
+document.getElementById('sidebarName').textContent = user.name || 'Profile';
+document.getElementById('sidebarEmail').textContent = user.email || '—';
+document.getElementById('candidate-label').textContent = user.name?.split(' ')[0] || 'You';
+
+// Preload voices
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 }
 
-function showTyping() {
-  const container = document.getElementById('messages');
-  const div = document.createElement('div');
-  div.className = 'message ai';
-  div.id = 'typing-indicator';
-  div.innerHTML = `
-    <div class="msg-avatar ai">K</div>
-    <div class="typing-bubble"><span></span><span></span><span></span></div>
-  `;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
+loadPastSessions();
 
-function hideTyping() {
-  const el = document.getElementById('typing-indicator');
-  if (el) el.remove();
-}
-
-async function sendMessage() {
-  const input = document.getElementById('msgInput');
-  const text = input.value.trim();
-  if (!text || isTyping) return;
-
-  input.value = '';
-  input.style.height = 'auto';
-
-  appendMessage('user', text);
-
-  // Hide hints after first real message
-  document.getElementById('hints').style.display = 'none';
-  document.getElementById('resumeBanner')?.remove();
-
-  isTyping = true;
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('statusText').textContent = 'Kairo is thinking...';
-  showTyping();
-
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: text,
-        conversation_id: conversationId,
-        // Don't send local messages — server is the source of truth
-      })
-    });
-
-    const data = await res.json();
-    hideTyping();
-
-    if (data.response) {
-      appendMessage('ai', data.response);
-      conversationId = data.conversation_id;
-      // Always sync from server so in-memory state never drifts
-      messages = data.messages || messages;
-
-      if (data.profile_complete) {
-        document.getElementById('completeBanner').classList.add('show');
-        const userData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-        if (data.profile) userData.profile = data.profile;
-        localStorage.setItem('kairo_user', JSON.stringify(userData));
-      }
-
-      updateTopicProgress();
-    }
-  } catch(e) {
-    hideTyping();
-    appendMessage('ai', 'Sorry, I had trouble connecting. Please try again.');
-  }
-
-  isTyping = false;
-  document.getElementById('sendBtn').disabled = false;
-  document.getElementById('statusText').textContent = 'Kairo is ready';
-}
-
-function updateTopicProgress() {
-  // Split transcript by role — only user answers should mark topics DONE
-  const userText = messages
-    .filter(m => m.role === 'user' && !m._silent)
-    .map(m => m.content || '')
-    .join(' ')
-    .toLowerCase();
-
-  // Latest AI message tells us what topic is currently being ASKED about
-  const lastAiText = [...messages].reverse()
-    .find(m => m.role === 'assistant')
-    ?.content?.toLowerCase() || '';
-
-  const topicSignals = [
-    ['t-basic',   ['branch', 'cse', 'ece', 'mech', 'civil', 'btech', 'b.tech', 'year', 'batch', '1st year', '2nd year', '3rd year', '4th year', 'first year', 'second year', 'third year', 'fourth year']],
-    ['t-edu',     ['cgpa', 'gpa', 'percentage', 'marks', 'grade', 'data structures', 'dbms', 'machine learning', 'algorithms', 'operating systems', 'computer networks', 'subjects', 'semester']],
-    ['t-projects',['project', 'built', 'developed', 'created', 'made an app', 'full stack', 'fullstack', 'github', 'deployed', 'tech stack']],
-    ['t-skills',  ['react', 'python', 'javascript', 'java', 'c++', 'node', 'flask', 'django', 'sql', 'mongodb', 'docker', 'aws', 'my skills', 'i know', 'i use', 'i work with', 'proficient']],
-    ['t-intern',  ['internship', 'interned', 'i worked at', 'i was a', 'backend intern', 'frontend intern', 'software intern', 'startup', 'company']],
-    ['t-extra',   ['club', 'hackathon', 'won', 'competition', 'gdsc', 'ieee', 'acm', 'volunteer', 'gravitas', 'riviera', 'fest', 'extracurricular', 'council', 'sports', 'cultural', 'member of']],
-    ['t-cert',    ['certificate', 'certification', 'coursera', 'udemy', 'nptel', 'google certified', 'aws certified', 'microsoft', 'credential', 'completed a course']],
-  ];
-
-  // AI question keywords — what topic is Kairo currently asking about
-  const aiQuestionSignals = [
-    ['t-basic',   ['branch', 'course', 'year', 'pursuing', 'studying']],
-    ['t-edu',     ['cgpa', 'gpa', 'grades', 'subjects', 'academic', 'percentage']],
-    ['t-projects',['project', 'built', 'developed', 'showcase']],
-    ['t-skills',  ['skills', 'technologies', 'tech stack', 'programming']],
-    ['t-intern',  ['internship', 'work experience', 'company', 'industry']],
-    ['t-extra',   ['extracurricular', 'club', 'hackathon', 'activities', 'positions']],
-    ['t-cert',    ['certification', 'certificate', 'courses', 'credential']],
-  ];
-
-  // Mark topics DONE based only on what the user has said
-  topicSignals.forEach(([id, keywords]) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (keywords.some(kw => userText.includes(kw))) {
-      el.classList.remove('active');
-      el.classList.add('done');
-    }
-  });
-
-  // Mark ACTIVE: the first undone topic that the AI is currently asking about
-  let markedActive = false;
-  aiQuestionSignals.forEach(([id, keywords]) => {
-    const el = document.getElementById(id);
-    if (!el || el.classList.contains('done')) return;
-    if (!markedActive && keywords.some(kw => lastAiText.includes(kw))) {
-      el.classList.add('active');
-      markedActive = true;
-    } else {
-      el.classList.remove('active');
-    }
-  });
-
-  // Fallback: if nothing matched as active, highlight first incomplete topic
-  if (!markedActive) {
-    let found = false;
-    topicSignals.forEach(([id]) => {
-      const el = document.getElementById(id);
-      if (!el || el.classList.contains('done') || found) return;
-      el.classList.add('active');
-      found = true;
-    });
-  }
-}
-
-function useHint(el) {
-  document.getElementById('msgInput').value = el.textContent;
-  document.getElementById('msgInput').focus();
-}
-
-async function handleUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  
-  const status = document.getElementById('uploadStatus');
-  status.textContent = 'Uploading...';
-  
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  try {
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-    
-    if (data.insights) {
-      status.textContent = '✓ Document analyzed';
-      // Inject insights into chat
-      const msgInput = document.getElementById('msgInput');
-      msgInput.value = `I've uploaded a document. Here are the key details: ${data.insights.slice(0, 200)}`;
-    } else {
-      status.textContent = '✓ Uploaded';
-    }
-  } catch(e) {
-    status.textContent = '✗ Upload failed';
-  }
-}
-
-// Auto-resize textarea
-document.getElementById('msgInput').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+// ──────────────────────────────────────────────────────────────────────────────
+// SIDEBAR & AUTH
+// ──────────────────────────────────────────────────────────────────────────────
+function toggleAccountMenu() { document.getElementById('accountMenu').classList.toggle('open'); }
+document.addEventListener('click', e => {
+  const card = document.getElementById('userCard');
+  if (card && !card.contains(e.target)) document.getElementById('accountMenu').classList.remove('open');
 });
+async function doSignOut() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  localStorage.removeItem('kairo_user');
+  window.location.href = '/';
+}
 
-// Enter to send
-document.getElementById('msgInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+function switchSidebarTab(tab) {
+  ['topics','transcript','upload'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('panel-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DEVICES
+// ──────────────────────────────────────────────────────────────────────────────
+async function startDevices() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const v = document.getElementById('setup-video');
+    v.srcObject = stream; v.style.display = 'block';
+    document.getElementById('cam-placeholder').style.display = 'none';
+    document.getElementById('cam-dot').classList.add('active');
+    document.getElementById('cam-status').textContent = 'Camera: Ready';
+    document.getElementById('mic-dot').classList.add('active');
+    document.getElementById('mic-status').textContent = 'Microphone: Ready';
+  } catch(e) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+      document.getElementById('mic-dot').classList.add('active');
+      document.getElementById('mic-status').textContent = 'Microphone: Ready (no camera)';
+    } catch(e2) {
+      showToast('Camera/mic access denied. You can still type your answers.');
+    }
   }
-});
+}
 
-// Init: restore previous session or start fresh
-async function startConversation(forceNew = false) {
-  document.getElementById('statusText').textContent = 'Loading...';
-  showTyping();
+// ──────────────────────────────────────────────────────────────────────────────
+// SESSION START
+// ──────────────────────────────────────────────────────────────────────────────
+async function startSession() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('session-screen').style.display = 'flex';
+  if (stream) document.getElementById('session-video').srcObject = stream;
+  startTimer();
+  await loadConversation(false);
+}
 
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timerSeconds++;
+    document.getElementById('timer').textContent =
+      String(Math.floor(timerSeconds / 60)).padStart(2, '0') + ':' + String(timerSeconds % 60).padStart(2, '0');
+  }, 1000);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CONVERSATION LOAD
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadConversation(forceNew) {
+  setStatus('thinking', 'Connecting…');
   try {
     if (forceNew && user.id) {
-      await fetch('/api/conversations/new', { method: 'POST' });
-      conversationId = null;
-      messages = [];
+      await fetch('/api/conversations/new', { method: 'POST', credentials: 'include' });
+      conversationId = null; messages = [];
     }
-
-    // Try to restore an existing conversation
     if (!forceNew && user.id) {
-      const res = await fetch('/api/conversations/active');
+      const res = await fetch('/api/conversations/active', { credentials: 'include' });
       const data = await res.json();
-
       if (data.conversation && data.conversation.messages.length >= 2) {
-        hideTyping();
         conversationId = data.conversation.id;
         messages = data.conversation.messages;
-
-        const BOOTSTRAP_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
-        for (const m of messages) {
-          // Skip silent bootstrap message — both new (_silent flag) and legacy
-          // entries saved before _silent was persisted server-side (pattern match).
-          if (m._silent) continue;
-          if (m.role === 'user' && BOOTSTRAP_RE.test(m.content.trim())) continue;
-          if (m.role === 'user') appendMessage('user', m.content);
-          else if (m.role === 'assistant') appendMessage('ai', m.content);
-        }
-
-        showResumeBanner(data.conversation.message_count, data.conversation.updated_at);
-        document.getElementById('statusText').textContent = 'Kairo is ready';
+        rebuildLiveTranscript();
+        const lastAi = [...messages].reverse().find(m => m.role === 'assistant');
+        if (lastAi) showMessage('Kairo', lastAi.content);
         updateTopicProgress();
+        setStatus('ready', 'Ready');
         return;
       }
     }
-
-    // Fresh start — send a silent bootstrap message to get the AI's opening line.
-    // We mark it _silent so it's never shown in the UI on resume.
-    const greeting = user.name ? `Hi ${user.name.split(' ')[0]}!` : 'Hello!';
-    const bootstrapMsg = greeting + ' I want to build my career profile.';
-
+    // Fresh start — send bootstrap silently, get Kairo's opening question
+    const userName = user.name ? user.name.split(' ')[0] : null;
+    const boot = userName ? `Hi ${userName}! I want to build my career profile.` : `Hello! I want to build my career profile.`;
     const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: bootstrapMsg,
-        conversation_id: conversationId,
-        messages: [],
-        silent_bootstrap: true   // hint for future use; server stores it either way
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message: boot, conversation_id: conversationId, messages: [], silent_bootstrap: true })
     });
     const data = await res.json();
-    hideTyping();
-
     if (data.response) {
-      // Only show the AI's opening line — don't show the bootstrap user message
-      appendMessage('ai', data.response);
-      // Store both in messages but tag the user turn as silent
       messages = [
-        { role: 'user', content: bootstrapMsg, _silent: true },
+        { role: 'user', content: boot, _silent: true },
         { role: 'assistant', content: data.response }
       ];
       conversationId = data.conversation_id;
+      showMessage('Kairo', data.response);
+      speakText(data.response, null);
+      appendLiveTranscript('Kairo', data.response);
+      updateTopicProgress();
     }
   } catch(e) {
-    hideTyping();
-    appendMessage('ai', "Hey! I'm Kairo, your AI career co-pilot. 👋 Let's build your profile together. What's your name, branch, and current year at VIT?");
+    const opener = "Hey! I'm Kairo — think of me as a well-wisher who genuinely wants to understand your story. Let's start from the beginning: what's your name, what are you studying, and which college are you at?";
+    showMessage('Kairo', opener);
+    speakText(opener, null);
+    appendLiveTranscript('Kairo', opener);
   }
-
-  document.getElementById('statusText').textContent = 'Kairo is ready';
+  setStatus('ready', 'Ready');
 }
 
-function showResumeBanner(msgCount, updatedAt) {
-  const existing = document.getElementById('resumeBanner');
-  if (existing) existing.remove();
+// ──────────────────────────────────────────────────────────────────────────────
+// SEND ANSWER
+// ──────────────────────────────────────────────────────────────────────────────
+async function sendAnswer(text) {
+  if (!text.trim()) return;
+  pendingAnswer = '';
+  document.getElementById('answer-preview').style.display = 'none';
+  document.getElementById('send-btn').disabled = true;
 
-  // Count only real (non-silent) user turns
-  const turns = Math.floor(msgCount / 2);
-  const when = updatedAt
-    ? new Date(updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-    : '';
+  showMessage('You', text);
+  appendLiveTranscript('You', text);
+  setStatus('thinking', 'Kairo is thinking…');
+  messages.push({ role: 'user', content: text });
 
-  const banner = document.createElement('div');
-  banner.id = 'resumeBanner';
-  banner.style.cssText = `
-    background: rgba(201,168,76,0.07); border: 1px solid rgba(201,168,76,0.25);
-    border-left: none; border-right: none;
-    padding: 0.6rem 2rem; display: flex; align-items: center;
-    justify-content: space-between; font-size: 0.82rem; flex-shrink: 0;
-    gap: 1rem; flex-wrap: wrap;
-  `;
-  banner.innerHTML = `
-    <span style="color:var(--muted);">
-      ↩ Resumed · <strong style="color:var(--cream);">${when}</strong>
-      · ${turns} exchange${turns !== 1 ? 's' : ''} so far
-    </span>
-    <button onclick="confirmNewSession()" style="
-      background:none; border:1px solid rgba(201,168,76,0.3); color:var(--gold);
-      padding:0.25rem 0.7rem; font-size:0.75rem; cursor:pointer;
-      font-family:'DM Sans',sans-serif; white-space:nowrap;
-    ">Start fresh ↺</button>
-  `;
-
-  const inputArea = document.querySelector('.input-area');
-  inputArea.parentNode.insertBefore(banner, inputArea);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message: text, conversation_id: conversationId })
+    });
+    const data = await res.json();
+    if (data.response) {
+      messages = data.messages || messages;
+      conversationId = data.conversation_id;
+      showMessage('Kairo', data.response);
+      appendLiveTranscript('Kairo', data.response);
+      updateTopicProgress();
+      speakText(data.response, null);
+      if (data.profile_complete) {
+        const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+        if (data.profile) ud.profile = data.profile;
+        localStorage.setItem('kairo_user', JSON.stringify(ud));
+      }
+    }
+  } catch(e) {
+    showMessage('Kairo', 'Sorry, trouble connecting. Please try again.');
+    appendLiveTranscript('Kairo', 'Sorry, trouble connecting. Please try again.');
+  }
+  setStatus('ready', 'Ready');
 }
 
-function confirmNewSession() {
-  if (confirm('Start a new conversation? Your previous chat will be archived and your saved profile stays intact.')) {
-    document.getElementById('messages').innerHTML = '';
-    document.getElementById('resumeBanner')?.remove();
-    document.getElementById('hints').style.display = 'flex';
-    startConversation(true);
+function sendPendingAnswer() { if (pendingAnswer.trim()) sendAnswer(pendingAnswer); }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TTS
+// ──────────────────────────────────────────────────────────────────────────────
+function speakText(text, onEnd) {
+  if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
+  if (currentSpeech) window.speechSynthesis.cancel();
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.93; utter.pitch = 1.0; utter.volume = 1.0;
+
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = voices.find(v =>
+    v.name.includes('Google UK English Male') ||
+    v.name.includes('Google US English') ||
+    v.name.includes('Daniel') ||
+    v.name.includes('Alex') ||
+    v.name.includes('Samantha')
+  );
+  if (preferred) utter.voice = preferred;
+
+  let callbackFired = false;
+  const fireOnce = () => { if (callbackFired) return; callbackFired = true; if (onEnd) onEnd(); setAiSpeaking(false); };
+  const estimatedMs = Math.max(3000, text.length * 72 + 800);
+  const fallback = setTimeout(fireOnce, estimatedMs);
+
+  utter.onstart = () => setAiSpeaking(true);
+  utter.onend = () => { clearTimeout(fallback); fireOnce(); };
+  utter.onerror = () => { clearTimeout(fallback); fireOnce(); };
+
+  currentSpeech = utter;
+  window.speechSynthesis.speak(utter);
+}
+
+function setAiSpeaking(on) {
+  const ring = document.getElementById('ai-avatar-ring');
+  const panel = document.getElementById('ai-panel');
+  ring.classList.toggle('speaking', on);
+  panel.classList.toggle('speaking', on);
+  if (!on) document.getElementById('status-dot').classList.remove('speaking');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ──────────────────────────────────────────────────────────────────────────────
+function showMessage(role, text) {
+  document.getElementById('msg-role-label').textContent = role;
+  document.getElementById('msg-text').textContent = text;
+  if (role === 'Kairo') setStatus('speaking', 'Kairo is speaking…');
+}
+
+function setStatus(state, text) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot';
+  if (state === 'thinking') dot.classList.add('thinking');
+  else if (state === 'listening') dot.classList.add('listening');
+  else if (state === 'speaking') dot.classList.add('speaking');
+  else dot.classList.add('ready');
+  document.getElementById('status-text').textContent = text;
+}
+
+function appendLiveTranscript(role, text) {
+  const container = document.getElementById('transcript-live');
+  const div = document.createElement('div');
+  div.className = 'tr-entry';
+  const isKairo = role === 'Kairo';
+  div.innerHTML = `<div class="tr-role ${isKairo ? 'kairo' : 'you'}">${role}</div><div class="tr-bubble ${isKairo ? '' : 'you-bubble'}">${text.replace(/\n/g,'<br>')}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function rebuildLiveTranscript() {
+  const container = document.getElementById('transcript-live');
+  container.innerHTML = '';
+  const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
+  messages.filter(m => !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim()))).forEach(m => {
+    appendLiveTranscript(m.role === 'assistant' ? 'Kairo' : (user.name?.split(' ')[0] || 'You'), m.content);
+  });
+}
+
+function updateTopicProgress() {
+  const userText = messages.filter(m => m.role === 'user' && !m._silent).map(m => m.content || '').join(' ').toLowerCase();
+  const lastAiText = [...messages].reverse().find(m => m.role === 'assistant')?.content?.toLowerCase() || '';
+
+  const userKws = [
+    ['t-intro',    ['name','year','branch','studying','hello','introduce','hi']],
+    ['t-college',  ['college','university','campus','vit','btech','b.tech','nit','iit']],
+    ['t-academic', ['cgpa','gpa','grade','marks','semester','course','subject','backlogs']],
+    ['t-struggles',['struggle','difficult','hard time','fail','setback','challenge','bad semester','low cgpa']],
+    ['t-wins',     ['proud','win','achieve','award','top','rank','best','selected','hackathon','medal','scholarship']],
+    ['t-projects', ['project','built','developed','created','app','website','github','deployed','system']],
+    ['t-intern',   ['intern','internship','worked at','company','startup','placement','role at','joined']],
+    ['t-skills',   ['react','python','javascript','java','c++','sql','node','skill','technology','framework','stack']],
+    ['t-extra',    ['club','volunteer','activity','sport','fest','member','society','event','organise']],
+    ['t-goals',    ['goal','aspire','plan','future','want to','career','dream','five years','path']]
+  ];
+  const aiKws = [
+    ['t-intro',    ['name','introduce','background','studying']],
+    ['t-college',  ['college','university','campus']],
+    ['t-academic', ['cgpa','grades','academic','courses','gpa']],
+    ['t-struggles',['struggle','challenge','difficult','hard time','setback']],
+    ['t-wins',     ['proud','highlight','win','achievement']],
+    ['t-projects', ['project','built','developed','worked on']],
+    ['t-intern',   ['intern','work experience','company','internship']],
+    ['t-skills',   ['skill','technologies','tech stack','tools']],
+    ['t-extra',    ['club','extracurricular','activity','outside']],
+    ['t-goals',    ['goal','aspire','future','career plan','next steps']]
+  ];
+
+  userKws.forEach(([id, kws]) => {
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains('done')) return;
+    if (kws.some(kw => userText.includes(kw))) { el.classList.remove('active'); el.classList.add('done'); }
+  });
+  let marked = false;
+  aiKws.forEach(([id, kws]) => {
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains('done')) return;
+    if (!marked && kws.some(kw => lastAiText.includes(kw))) { el.classList.add('active'); marked = true; }
+    else el.classList.remove('active');
+  });
+  if (!marked) {
+    let found = false;
+    userKws.forEach(([id]) => {
+      const el = document.getElementById(id);
+      if (!el || el.classList.contains('done') || found) return;
+      el.classList.add('active'); found = true;
+    });
   }
 }
 
-startConversation();
-
-// ── Voice / Whisper ───────────────────────────────────────────────────────────
-let mediaRecorder = null;
-let audioChunks = [];
-let isRecording = false;
-
-async function toggleVoice() {
-  if (isRecording) {
-    stopRecording();
-  } else {
-    await startRecording();
+// ──────────────────────────────────────────────────────────────────────────────
+// RECORDING
+// ──────────────────────────────────────────────────────────────────────────────
+async function toggleRecording() {
+  if (isRecording) { stopRecording(); return; }
+  // Interrupt Kairo if still speaking
+  if (currentSpeech && window.speechSynthesis?.speaking) {
+    window.speechSynthesis.cancel();
+    setAiSpeaking(false);
   }
+  await startRecording();
 }
 
 async function startRecording() {
+  audioChunks = [];
+  let audioStream;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // Pick best supported format
-    const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-    audioChunks = [];
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
-      await transcribeAudio();
-    };
-    mediaRecorder.start();
-    isRecording = true;
-    const btn = document.getElementById('micBtn');
-    btn.classList.add('recording');
-    btn.title = 'Stop recording';
-    document.getElementById('msgInput').placeholder = '🔴 Recording... click mic to stop';
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch(e) {
-    alert('Microphone access denied. Please allow microphone access in your browser.');
+    showToast('Microphone access denied. Please allow microphone access.');
+    return;
   }
+  const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+  try {
+    mediaRecorder = mimeType ? new MediaRecorder(audioStream, { mimeType }) : new MediaRecorder(audioStream);
+  } catch(e) {
+    showToast('Could not start recording: ' + e.message);
+    return;
+  }
+  mediaRecorder.ondataavailable = e => { if (e.data?.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.onstop = () => { audioStream.getTracks().forEach(t => t.stop()); transcribeAudio(); };
+  mediaRecorder.onerror = () => { showToast('Recording error — please try again'); setMicState('ready'); };
+  mediaRecorder.start();
+  isRecording = true;
+  setMicState('recording');
+  setStatus('listening', 'Listening…');
 }
 
 function stopRecording() {
   if (mediaRecorder && isRecording) {
     mediaRecorder.stop();
     isRecording = false;
-    const btn = document.getElementById('micBtn');
-    btn.classList.remove('recording');
-    btn.title = 'Voice input (Whisper)';
-    document.getElementById('msgInput').placeholder = 'Transcribing...';
+    setMicState('transcribing');
+    setStatus('thinking', 'Transcribing…');
   }
 }
 
 async function transcribeAudio() {
-  const mimeType = (audioChunks[0] && audioChunks[0].type) || 'audio/webm';
-  const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+  if (!audioChunks.length || audioChunks.reduce((s,c) => s+c.size,0) < 800) {
+    showToast('Recording too short — please try again');
+    setMicState('ready');
+    setStatus('ready', 'Ready');
+    return;
+  }
+  const mimeType = audioChunks[0].type || 'audio/webm';
+  const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
   const blob = new Blob(audioChunks, { type: mimeType });
   const formData = new FormData();
-  formData.append('audio', blob, `recording.${ext}`);
-  const input = document.getElementById('msgInput');
+  formData.append('audio', blob, `answer.${ext}`);
   try {
-    const res = await fetch('/api/transcribe', { method: 'POST', body: formData });
+    const res = await fetch('/api/transcribe', { method: 'POST', credentials: 'include', body: formData });
     const data = await res.json();
-    if (data.text) {
-      input.placeholder = 'Tell Kairo about yourself...';
-      input.value = data.text;
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-      // Auto-send after short delay so user can review
-      setTimeout(() => sendMessage(), 600);
+    setMicState('ready');
+    if (data.text?.trim()) {
+      pendingAnswer = pendingAnswer ? pendingAnswer.trim() + ' ' + data.text.trim() : data.text.trim();
+      const preview = document.getElementById('answer-preview');
+      preview.textContent = '"' + pendingAnswer + '"';
+      preview.style.display = 'block';
+      document.getElementById('send-btn').disabled = false;
+      document.getElementById('mic-btn-label').textContent = 'Re-record';
+      setStatus('ready', 'Review & send');
+      // Auto-send after short delay
+      setTimeout(() => { if (pendingAnswer) sendAnswer(pendingAnswer); }, 1800);
     } else {
-      input.placeholder = 'Transcription failed — try again';
-      setTimeout(() => { input.placeholder = 'Tell Kairo about yourself...'; }, 3000);
+      showToast('Could not detect speech — please try again');
+      setStatus('ready', 'Ready');
     }
   } catch(e) {
-    input.placeholder = 'Transcription error — type instead';
-    setTimeout(() => { input.placeholder = 'Tell Kairo about yourself...'; }, 3000);
+    setMicState('ready');
+    showToast('Transcription failed — type your answer instead');
+    setStatus('ready', 'Ready');
   }
+}
+
+function setMicState(state) {
+  const btn = document.getElementById('record-btn');
+  const ring = document.getElementById('mic-recording-ring');
+  const label = document.getElementById('mic-btn-label');
+  const micInd = document.getElementById('mic-indicator');
+  btn.classList.remove('recording', 'transcribing');
+  ring.classList.remove('active');
+  btn.disabled = false;
+  if (state === 'recording') {
+    btn.classList.add('recording'); ring.classList.add('active');
+    label.textContent = 'Stop'; micInd.classList.add('recording');
+  } else if (state === 'transcribing') {
+    btn.classList.add('transcribing'); btn.disabled = true;
+    label.textContent = '…'; micInd.classList.remove('recording');
+  } else {
+    label.textContent = 'Speak'; micInd.classList.remove('recording');
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CAMERA TOGGLE
+// ──────────────────────────────────────────────────────────────────────────────
+function toggleCam() {
+  if (!stream) return;
+  const vt = stream.getVideoTracks();
+  if (!vt.length) return;
+  camEnabled = !camEnabled;
+  vt.forEach(t => t.enabled = camEnabled);
+  document.getElementById('toggle-cam-btn').classList.toggle('active', !camEnabled);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// FILE UPLOAD
+// ──────────────────────────────────────────────────────────────────────────────
+async function handleUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  const status = document.getElementById('uploadStatus');
+  status.textContent = 'Uploading…'; status.className = 'upload-status';
+  const formData = new FormData(); formData.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', credentials: 'include', body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      status.textContent = '✓ ' + file.name + ' analysed'; status.className = 'upload-status ok';
+      const list = document.getElementById('uploadList');
+      const item = document.createElement('div');
+      item.style.cssText = 'font-size:0.75rem;color:var(--muted);padding:0.25rem 0;border-top:1px solid var(--border);';
+      item.textContent = '📎 ' + file.name;
+      list.appendChild(item);
+      if (data.insights) await sendAnswer('I\'ve uploaded a document (' + file.name + '). Key details extracted: ' + data.insights.slice(0, 400));
+    } else { status.textContent = '✗ Upload failed'; }
+  } catch(e) { status.textContent = '✗ Upload failed'; }
+  input.value = '';
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// END SESSION → SUMMARY
+// ──────────────────────────────────────────────────────────────────────────────
+function confirmEndSession() {
+  if (confirm('End this session? Kairo will generate your profile summary to review.')) endSession();
+}
+
+function endSession() {
+  clearInterval(timerInterval);
+  if (currentSpeech) window.speechSynthesis.cancel();
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('session-screen').style.display = 'none';
+  document.getElementById('summary-screen').style.display = 'block';
+  buildTranscriptView();
+  generateSummary();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SUMMARY
+// ──────────────────────────────────────────────────────────────────────────────
+function buildTranscriptView() {
+  const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
+  const items = messages.filter(m => !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim())));
+  document.getElementById('transcript-body').innerHTML = items.map(m => {
+    const isAi = m.role === 'assistant';
+    return `<div class="transcript-item">
+      <div class="tr-q-label ${isAi ? '' : 'user-role'}">${isAi ? 'Kairo' : (user.name?.split(' ')[0] || 'You')}</div>
+      <div class="tr-q-text ${isAi ? '' : 'user-text'}">${(m.content || '').replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTranscript() {
+  const body = document.getElementById('transcript-body');
+  const toggle = document.getElementById('transcript-toggle');
+  body.classList.toggle('open');
+  toggle.textContent = body.classList.contains('open') ? '▼ Hide' : '▶ Show';
+}
+
+async function generateSummary() {
+  const grid = document.getElementById('summary-grid');
+  grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Kairo is reading through your conversation and building your profile…</p></div>';
+
+  const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
+  const transcript = messages
+    .filter(m => !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim())))
+    .map(m => (m.role === 'user' ? 'You' : 'Kairo') + ': ' + m.content)
+    .join('\n');
+
+  const extractPrompt = `You are an AI assistant that extracts structured career profile data from a conversation transcript.
+Return ONLY valid JSON — no markdown, no backticks, no explanation. Use this exact schema:
+{
+  "personal": { "name": "", "college": "", "branch": "", "year": "", "location": "" },
+  "academics": { "cgpa": "", "notable_courses": [], "achievements": [] },
+  "projects": [{ "name": "", "tech": "", "description": "", "impact": "" }],
+  "internships": [{ "company": "", "role": "", "duration": "", "description": "" }],
+  "skills": [],
+  "extracurriculars": [],
+  "struggles": [],
+  "highlights": [],
+  "goals": ""
+}
+
+Conversation:
+${transcript.slice(0, 4000)}
+
+Rules: Use empty string or empty array for fields not mentioned. Do not invent data. Extract faithfully.`;
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message: extractPrompt, conversation_id: conversationId })
+    });
+    const data = await res.json();
+    if (data.response) {
+      let profile = null;
+      try { profile = JSON.parse(data.response.replace(/```json|```/g, '').trim()); } catch(e) {
+        grid.innerHTML = `<div class="summary-card" style="grid-column:1/-1;"><h3>Profile Summary</h3><p>${data.response.replace(/\n/g,'<br>')}</p></div>`;
+        return;
+      }
+      renderSummaryCards(profile);
+      const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+      if (!ud.profile) ud.profile = {};
+      Object.assign(ud.profile, profile);
+      localStorage.setItem('kairo_user', JSON.stringify(ud));
+    }
+  } catch(e) {
+    grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Could not generate summary. Your conversation is saved — visit the Dashboard to review.</p></div>';
+  }
+}
+
+function renderSummaryCards(p) {
+  const grid = document.getElementById('summary-grid'); let html = '';
+  if (p.personal && Object.values(p.personal).some(v=>v))
+    html += `<div class="summary-card"><h3>Personal Info</h3><ul>
+      ${p.personal.name ? `<li>${p.personal.name}</li>` : ''}
+      ${p.personal.college ? `<li>${p.personal.college}</li>` : ''}
+      ${p.personal.branch ? `<li>${p.personal.branch}</li>` : ''}
+      ${p.personal.year ? `<li>Year ${p.personal.year}</li>` : ''}
+      ${p.personal.location ? `<li>${p.personal.location}</li>` : ''}
+    </ul></div>`;
+  if (p.academics && (p.academics.cgpa || p.academics.notable_courses?.length || p.academics.achievements?.length))
+    html += `<div class="summary-card"><h3>Academics</h3><ul>
+      ${p.academics.cgpa ? `<li>CGPA: ${p.academics.cgpa}</li>` : ''}
+      ${(p.academics.notable_courses||[]).map(c=>`<li>${c}</li>`).join('')}
+      ${(p.academics.achievements||[]).map(a=>`<li>${a}</li>`).join('')}
+    </ul></div>`;
+  if (p.skills?.length)
+    html += `<div class="summary-card"><h3>Technical Skills</h3><ul>${p.skills.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+  if (p.projects?.length)
+    html += `<div class="summary-card"><h3>Projects</h3><ul>${p.projects.map(pr=>`
+      <li><strong>${pr.name||'Project'}</strong>${pr.tech?' — '+pr.tech:''}
+      ${pr.description?`<br><span style="color:var(--muted);font-size:0.78rem;">${pr.description}</span>`:''}
+      ${pr.impact?`<br><span style="color:var(--green);font-size:0.75rem;">${pr.impact}</span>`:''}
+      </li>`).join('')}</ul></div>`;
+  if (p.internships?.length)
+    html += `<div class="summary-card"><h3>Internships</h3><ul>${p.internships.map(i=>`
+      <li><strong>${i.company||'Company'}</strong>${i.role?' — '+i.role:''}${i.duration?' ('+i.duration+')':''}
+      ${i.description?`<br><span style="color:var(--muted);font-size:0.78rem;">${i.description}</span>`:''}
+      </li>`).join('')}</ul></div>`;
+  if (p.highlights?.length)
+    html += `<div class="summary-card"><h3>Highlights &amp; Wins</h3><ul>${p.highlights.map(h=>`<li>${h}</li>`).join('')}</ul></div>`;
+  if (p.struggles?.length)
+    html += `<div class="summary-card"><h3>Challenges Overcome</h3><ul>${p.struggles.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+  if (p.extracurriculars?.length)
+    html += `<div class="summary-card"><h3>Extracurriculars</h3><ul>${p.extracurriculars.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+  if (p.goals)
+    html += `<div class="summary-card" style="grid-column:1/-1;"><h3>Goals &amp; Aspirations</h3><p>${p.goals}</p></div>`;
+  grid.innerHTML = html || '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Not enough captured. Try a new session and share more details.</p></div>';
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CORRECTION CHAT
+// ──────────────────────────────────────────────────────────────────────────────
+async function sendCorrection() {
+  const input = document.getElementById('correction-input');
+  const text = input.value.trim(); if (!text) return;
+  input.value = ''; input.style.height = 'auto';
+  appendCorrectionMsg('user', text);
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ message: text, conversation_id: conversationId })
+    });
+    const data = await res.json();
+    if (data.response) {
+      appendCorrectionMsg('ai', data.response);
+      conversationId = data.conversation_id;
+      messages = data.messages || messages;
+      if (data.profile) {
+        const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+        ud.profile = data.profile;
+        localStorage.setItem('kairo_user', JSON.stringify(ud));
+      }
+    }
+  } catch(e) { appendCorrectionMsg('ai', 'Sorry, could not process that. Please try again.'); }
+}
+
+function appendCorrectionMsg(role, text) {
+  const chat = document.getElementById('correction-chat');
+  const div = document.createElement('div');
+  div.className = 'correction-msg ' + (role === 'assistant' ? 'ai' : role);
+  div.innerHTML = `<div class="c-role">${(role === 'ai' || role === 'assistant') ? 'Kairo' : (user.name?.split(' ')[0] || 'You')}</div><div class="c-text">${text.replace(/\n/g,'<br>')}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+document.getElementById('correction-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCorrection(); }
+});
+document.getElementById('correction-input').addEventListener('input', function() {
+  this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PAST SESSIONS
+// ──────────────────────────────────────────────────────────────────────────────
+async function loadPastSessions() {
+  const el = document.getElementById('past-sessions-list');
+  try {
+    const res = await fetch('/api/conversations/active', { credentials: 'include' });
+    const data = await res.json();
+    if (data.conversation && data.conversation.messages?.length >= 2) {
+      const conv = data.conversation;
+      const when = conv.updated_at ? new Date(conv.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+      const turns = Math.floor((conv.message_count || 0) / 2);
+      el.innerHTML = `<div class="prev-session-item">
+        <div>
+          <div class="prev-session-exchanges">${turns} exchange${turns !== 1 ? 's' : ''} recorded</div>
+          <div class="prev-session-date">Last updated: ${when}</div>
+        </div>
+        <button class="btn btn-outline" style="font-size:0.78rem;padding:0.4rem 0.8rem;" onclick="resumeSession()">Resume →</button>
+      </div>`;
+    } else {
+      el.innerHTML = '<div style="font-size:0.85rem;color:var(--muted);">No previous sessions found.</div>';
+    }
+  } catch(e) { el.innerHTML = '<div style="font-size:0.85rem;color:var(--muted);">Could not load past sessions.</div>'; }
+}
+
+function resumeSession() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('session-screen').style.display = 'flex';
+  startTimer();
+  loadConversation(false);
+}
+
+function startNewSession() {
+  document.getElementById('summary-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'block';
+  timerSeconds = 0; messages = []; conversationId = null;
+  loadPastSessions();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 </script>
 </body>
