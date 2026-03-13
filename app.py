@@ -889,11 +889,26 @@ def fetch_jd():
 
     parsed_host = url.split('/')[2].lower().replace('www.', '')
 
-    # ── 0. JS-rendered sites — return helpful manual-paste error immediately ──
+    # ── 0a. Naukri — use dedicated scraper first, fallback to manual paste ──────
+    if 'naukri.com' in parsed_host:
+        naukri_jd = _fetch_naukri_jd(url)
+        if naukri_jd and len(naukri_jd.strip()) > 100:
+            return jsonify({'jd': naukri_jd, 'source': 'Naukri'})
+        # Scraper failed (likely blocked or page structure changed) — ask user to paste
+        return jsonify({
+            'error': (
+                'Could not auto-import this Naukri job post (the page may be '
+                'behind a login or the layout has changed). Please: open the job '
+                'post → select all the description text → paste it in the box below.'
+            ),
+            'manual_paste': True,
+            'source': 'Naukri',
+        }), 422
+
+    # ── 0b. JS-rendered sites — return helpful manual-paste error immediately ──
     # These sites load job content via JavaScript after page load.
     # Server-side requests only get an empty HTML shell — scraping cannot work.
     JS_RENDERED_SITES = {
-        'naukri.com':       'Naukri',
         'linkedin.com':     'LinkedIn',
         'instahyre.com':    'Instahyre',
         'wellfound.com':    'Wellfound',
