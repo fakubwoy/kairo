@@ -30,19 +30,29 @@ kairo/
 
 ## Features
 
-**Profile & Auth** — email login, AI chat interview, profile extraction, manual editing, document upload (PDF/image drag & drop), profile completion tracker
+**Profile Builder** — video-call style AI interview with TTS; live transcript sidebar; 10-step structured flow covering academics, projects, internships, skills, goals, and faculty references; PiP self-view overlay; deep-merge logic so returning users never lose data; early exit saves profile to the server immediately
 
-**Profile Builder (interview.html)** — video-call style interface with Kairo as a well-wisher AI; speaks every response via TTS (Web Speech API); live transcript sidebar; conversation follows a structured 9-step flow: intro → college/university → academics → struggles & setbacks → wins & highlights → projects → internships → skills → goals; profile extracted at session end without polluting the conversation history (`extract_only` flag); returning users resume from where they left off with deep-merge profile logic (no data loss)
+**Dashboard** — profile completeness tracker across 8 sections; profile editor always re-fetches fresh data from the server on open; manual editing for all sections including projects, extracurriculars, and faculty references
 
-**Resumes** — JD-based generation, ATS-friendly format, inline editing, PDF download, saved resumes viewer, version history with inline side-by-side diff
+**Resumes** — JD-tailored generation, ATS-friendly format, inline editing, PDF download, version history with side-by-side diff; self-intro video script generator (target role, duration, tone)
 
-**Voice Input** — microphone recording in both the profile builder and mock interview; transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser; fresh audio-only stream per recording for broad browser compatibility including Brave; auto-sends transcription after 1.8s delay
+**Mock Interview** — 8 tailored questions (behavioural, technical, profile-based) delivered via TTS; voice or text answers; detailed report with score, readiness level, per-question feedback, and actionable tips
 
-**Mock Interview** — AI interviewer asks 8 tailored questions (behavioural, technical, profile-based) via TTS; candidate answers by voice or text; detailed post-interview report with overall score, readiness level, per-question scores, strengths, improvement areas, and actionable tips; full transcript saved to account
+**Voice Input** — Groq Whisper transcription in both profile builder and mock interview; broad browser compatibility including Brave; auto-sends after 1.8s
 
-**Imports & Tools** — GitHub profile import, LinkedIn text import, self-intro video script generator
+**Imports** — GitHub profile import, LinkedIn text paste, document upload (PDF/image)
 
-**Infrastructure** — SQLite/Postgres, Groq (primary) + OpenRouter + Ollama LLM fallbacks, Railway deployment, optional Redis caching (conversations cached by key; cache cleared on restart, falls back to Postgres automatically)
+---
+
+## Data Flow — Profile Persistence
+
+Profile data is always written to the server DB (`PUT /api/profile`) and never relied on from localStorage alone. The three paths that update the profile all persist server-side:
+
+1. **Normal interview completion** — LLM signals `PROFILE_COMPLETE`; backend extracts structured profile from full conversation and merges into `profile_data`
+2. **Early session end** — frontend extracts profile locally, flattens the nested schema, and calls `PUT /api/profile` before showing the summary screen
+3. **Correction chat** — each message triggers a mini extraction on the exchange and calls `PUT /api/profile` with any new fields found; localStorage is then refreshed from the server response
+
+The `extract_profile_from_conversation` schema in `app.py` includes `faculty_references` and structured `extracurriculars` so all three paths capture these fields correctly.
 
 ---
 
@@ -194,7 +204,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | POST | `/api/transcribe` | Transcribe audio via Groq Whisper |
 | POST | `/api/github-profile` | Import profile data from GitHub username |
 | POST | `/api/linkedin-hints` | Extract hints from pasted LinkedIn text |
-| POST | `/api/generate-intro-script` | Generate a self-intro video script |
+| POST | `/api/generate-intro-script` | Generate a self-intro video script (also accessible from resume page) |
 | GET | `/api/llm-status` | Check LLM backend status |
 | GET | `/api/health` | Health check |
 
@@ -202,16 +212,9 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ## Roadmap
 
-- [x] Video-call style profile builder with TTS
-- [x] Live transcript sidebar during session
-- [x] Deep-merge profile logic for returning users
-- [x] PiP (picture-in-picture) self-view overlay
-- [x] Clean summary cards for projects & internships
-- [x] Profile completeness tracker with icons on dashboard
 - [ ] Chrome extension for job application
 - [ ] VIT email validation enforcement
 - [ ] Credit system for usage limits
-- [ ] Faculty reference suggestions
 - [ ] Campus ambassador referral system
 
 ---
