@@ -1210,7 +1210,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   <!-- Referral banner -->
   <div class="referral-dashboard-card" id="referralBanner" style="display:none;">
     <div class="rdc-left">
-      <h3>🎁 Earn Free Credits — Refer a Classmate</h3>
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0.35rem"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Earn Free Credits — Refer a Classmate</h3>
       <p>Share your unique code with VIT friends. You earn <strong style="color:var(--gold)">20 credits</strong> every time someone signs up with it, and they get <strong style="color:var(--green)">10 bonus credits</strong> too.</p>
       <div style="margin-top:0.8rem; display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
         <span id="rdc-stats" style="font-size:0.82rem; color:var(--muted);">Loading…</span>
@@ -1271,7 +1271,12 @@ function updateProfileDisplay(profile) {
     document.getElementById('ps-projects').querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.projects.length} project${profile.projects.length !== 1 ? 's' : ''}`;
     filled++;
   }
-  if (profile.skills?.technical?.length) {
+  const skillsObj = profile.skills;
+  const hasSkills = skillsObj && (
+    (typeof skillsObj === 'object' && !Array.isArray(skillsObj) && (skillsObj.technical?.length || skillsObj.tools?.length))
+    || (Array.isArray(skillsObj) && skillsObj.length)
+  );
+  if (hasSkills) {
     document.getElementById('ps-skills').classList.add('filled');
     document.getElementById('ps-skills').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
@@ -1359,7 +1364,7 @@ async function loadInterviews() {
   } catch(e) {}
 }
 
-// Init
+// Init — immediate render from localStorage cache, server sync deferred below
 if (user.profile) updateProfileDisplay(user.profile);
 loadResumes();
 loadInterviews();
@@ -1955,7 +1960,7 @@ async function saveProfileEdits() {
   statusEl.style.color = 'var(--gold)';
 
   const skillsRaw = document.getElementById('pe-skills').value.trim();
-  const skillsList = skillsRaw ? skillsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const skillsList = skillsRaw ? skillsRaw.split(',').map(s => s.trim()).filter(Boolean) : null;
 
   const updates = {
     name: document.getElementById('pe-name').value.trim(),
@@ -1967,11 +1972,14 @@ async function saveProfileEdits() {
     year: document.getElementById('pe-year').value.trim(),
     college: document.getElementById('pe-college').value.trim(),
     summary: document.getElementById('pe-summary').value.trim(),
-    skills: { technical: skillsList, tools: [], soft: [] },
     projects: peProjects,
     extracurriculars: peExtras,
     faculty_references: peFaculty
   };
+  // Only include skills if the field had content — avoids wiping skills when editor wasn't fully opened
+  if (skillsList !== null) {
+    updates.skills = { technical: skillsList, tools: [], soft: [] };
+  }
 
   // Update name separately if changed
   const nameVal = updates.name;
@@ -2532,7 +2540,7 @@ function openFacultyPanel() {
 
     <!-- Referral block -->
     <div class="referral-block">
-      <h4>🎁 Earn credits by referring classmates</h4>
+      <h4><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Earn credits by referring classmates</h4>
       <p>Share your code with VIT friends. You get <strong style="color:var(--gold)">+20 credits</strong> per successful signup — they get <strong style="color:var(--green)">+10 bonus credits</strong> too.</p>
       <div class="referral-code-row">
         <div class="referral-code-display" id="cp-refcode">—</div>
@@ -2718,6 +2726,9 @@ function copyInviteLink() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeCreditsPanel();
 });
+
+// ── Sync profile from server on every page load ───────────────────────
+loadProfile();
 </script>
 </body>
 </html>

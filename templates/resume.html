@@ -957,8 +957,25 @@ async function generateIntroScript() {
       })
     });
     const data = await res.json();
-    if (data.error) { pane.innerHTML = `<div class="panel" style="color:#ffb3b3">${data.error}</div>`; return; }
+    if (res.status === 402 || data.error === 'insufficient_credits') {
+      pane.innerHTML = `<div class="panel"><div class="empty-preview">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="margin:0.5rem 0;">${data.message || 'Not enough credits to generate a script.'}</div>
+        <div style="font-size:0.82rem;color:var(--muted);">Generating an intro script costs <strong style="color:var(--gold)">3 credits</strong>.</div>
+        <div style="margin-top:1rem;display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/dashboard" style="color:var(--gold);font-size:0.85rem;">View your credits →</a>
+        </div>
+      </div></div>`;
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="15" height="15"><use href="#i-video"/></svg> Generate Script';
+      return;
+    }
+    if (data.error) { pane.innerHTML = `<div class="panel"><div class="empty-preview"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div>${data.error}</div></div></div>`; btn.disabled = false; btn.innerHTML = '<svg width="15" height="15"><use href="#i-video"/></svg> Generate Script'; return; }
     renderIntroScript(data, pane);
+    // Refresh credit display after successful generation
+    fetch('/api/credits').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) { const el = document.getElementById('sidebarCredits'); if (el) el.textContent = d.balance; }
+    }).catch(() => {});
   } catch(e) {
     pane.innerHTML = `<div class="panel" style="color:var(--muted)">Error: ${e.message}</div>`;
   }
