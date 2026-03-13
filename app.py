@@ -1382,14 +1382,21 @@ def _fetch_hirist_jd(url):
     """
     Extract job description from a Hirist.tech listing.
 
-    Hirist exposes job data via their internal REST API at:
-      GET https://www.hirist.tech/api/job/<job_id>
-    Job ID is embedded in the URL slug as the trailing integer, e.g.:
-      /j/python-developer-xyztech-123456  →  job_id = 123456
+    Hirist is a Next.js app but uses SSG — job content is baked into the
+    initial HTML for SEO. Confirmed from DevTools:
 
-    Falls back to HTML scraping if the API call fails.
+      <div data-testid="job-description-container">   ← primary target
+        <div class="details-container ...">
+          <span class="MuiTypography-body1 ...">
+            <p><b>Description :</b></p>
+            <p>actual jd text...</p>
+          </span>
+        </div>
+      </div>
+
+    The data-testid attribute is stable by design (devs add these for testing).
+    We also check JSON-LD as a bonus since Next.js sites often embed it for SEO.
     """
-    import re as _re
     import json as _json
     try:
         from bs4 import BeautifulSoup as _BS
@@ -1402,32 +1409,11 @@ def _fetch_hirist_jd(url):
             'AppleWebKit/537.36 (KHTML, like Gecko) '
             'Chrome/124.0.0.0 Safari/537.36'
         ),
-        'Accept': 'application/json, text/html, */*',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://www.hirist.tech/',
     }
 
-    # ── Strategy 1: Internal API via job ID extracted from URL ────────────────
-    job_id_match = _re.search(r'-(\d+)(?:/|$|\?)', url)
-    if job_id_match:
-        job_id = job_id_match.group(1)
-        api_urls = [
-            f'https://www.hirist.tech/api/job/{job_id}',
-            f'https://www.hirist.tech/api/v1/job/{job_id}',
-            f'https://www.hirist.tech/api/jobs/{job_id}',
-        ]
-        for api_url in api_urls:
-            try:
-                resp = requests.get(api_url, headers={**headers, 'Accept': 'application/json'}, timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    jd = _deep_find_jd(data)
-                    if jd and len(jd) > 100:
-                        print(f"Hirist: extracted JD via API ({len(jd)} chars)")
-                        return jd
-            except Exception:
-                pass
-
-    # ── Strategy 2: HTML scraping ─────────────────────────────────────────────
     try:
         resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
         if resp.status_code != 200:
@@ -1440,24 +1426,24 @@ def _fetch_hirist_jd(url):
     resp.encoding = 'utf-8'
     soup = _BS(resp.text, 'html.parser')
 
-    # Try known Hirist selectors (HTML-scraped structure)
+    # ── Strategy 1: data-testid — stable, intentional, confirmed in DevTools ──
     selectors = [
-        'div.job-description',
-        'div.jd-section',
-        'div[class*="job-desc"]',
-        'div[class*="jd-content"]',
-        'section.job-detail',
-        'div#job-description',
+        'div[data-testid="job-description-container"]',
+        'div[data-testid="jobDescriptionContainer"]',
+        'div.details-container',                        # inner wrapper seen in DevTools
     ]
     for sel in selectors:
         el = soup.select_one(sel)
         if el:
+            # Remove any nested nav/button noise
+            for noise in el.select('button, nav, [aria-hidden="true"]'):
+                noise.decompose()
             text = el.get_text(separator='\n', strip=True)
-            if len(text) > 200:
-                print(f"Hirist: extracted JD via selector '{sel}' ({len(text)} chars)")
+            if len(text) > 100:
+                print(f"Hirist: extracted JD via '{sel}' ({len(text)} chars)")
                 return text
 
-    # Strategy 3: JSON-LD structured data (many job boards embed this for SEO)
+    # ── Strategy 2: JSON-LD structured data (Next.js sites embed for SEO) ─────
     for script in soup.find_all('script', type='application/ld+json'):
         try:
             data = _json.loads(script.string or '')
@@ -1467,6 +1453,19 @@ def _fetch_hirist_jd(url):
                     text = _BS(desc, 'html.parser').get_text(separator='\n', strip=True)
                     print(f"Hirist: extracted JD via JSON-LD ({len(text)} chars)")
                     return text
+        except Exception:
+            pass
+
+    # ── Strategy 3: __NEXT_DATA__ JSON blob ───────────────────────────────────
+    # Next.js SSG pages embed full page props in a <script id="__NEXT_DATA__"> tag
+    next_data_tag = soup.find('script', id='__NEXT_DATA__')
+    if next_data_tag:
+        try:
+            data = _json.loads(next_data_tag.string or '')
+            jd = _deep_find_jd(data)
+            if jd and len(jd) > 100:
+                print(f"Hirist: extracted JD via __NEXT_DATA__ ({len(jd)} chars)")
+                return jd
         except Exception:
             pass
 
