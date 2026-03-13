@@ -889,18 +889,14 @@ def fetch_jd():
 
     parsed_host = url.split('/')[2].lower().replace('www.', '')
 
-    # ── 0a. Naukri — use dedicated scraper first, fallback to manual paste ──────
+    # ── 0a. Naukri — use dedicated scraper first, fallback with URL hints ───────
     if 'naukri.com' in parsed_host:
         naukri_jd = _fetch_naukri_jd(url)
         if naukri_jd and len(naukri_jd.strip()) > 100:
             return jsonify({'jd': naukri_jd, 'source': 'Naukri'})
-        # Scraper failed (likely blocked or page structure changed) — ask user to paste
         return jsonify({
-            'error': (
-                'Could not auto-import this Naukri job post (the page may be '
-                'behind a login or the layout has changed). Please: open the job '
-                'post → select all the description text → paste it in the box below.'
-            ),
+            'error': 'Scraping failed. Paste the job description below.',
+            'url_hints': _extract_url_hints(url, 'naukri'),
             'manual_paste': True,
             'source': 'Naukri',
         }), 422
@@ -911,24 +907,20 @@ def fetch_jd():
         if result and len(result.get('jd', '').strip()) > 100:
             return jsonify({**result, 'source': 'Internshala'})
         return jsonify({
-            'error': (
-                'Could not auto-import this Internshala listing. Please: open the '
-                'job/internship post → select all the description text → paste it below.'
-            ),
+            'error': 'Scraping failed. Paste the job description below.',
+            'url_hints': _extract_url_hints(url, 'internshala'),
             'manual_paste': True,
             'source': 'Internshala',
         }), 422
 
-    # ── 0c. Hirist — dedicated API scraper ───────────────────────────────────────
+    # ── 0c. Hirist — SSG scraper ──────────────────────────────────────────────────
     if 'hirist.tech' in parsed_host or 'hirist.com' in parsed_host:
         hirist_jd = _fetch_hirist_jd(url)
         if hirist_jd and len(hirist_jd.strip()) > 100:
             return jsonify({'jd': hirist_jd, 'source': 'Hirist'})
         return jsonify({
-            'error': (
-                'Could not auto-import this Hirist listing. Please: open the job '
-                'post → select all the description text → paste it below.'
-            ),
+            'error': 'Scraping failed. Paste the job description below.',
+            'url_hints': _extract_url_hints(url, 'hirist'),
             'manual_paste': True,
             'source': 'Hirist',
         }), 422
@@ -948,11 +940,8 @@ def fetch_jd():
     for js_host, js_name in JS_RENDERED_SITES.items():
         if js_host in parsed_host:
             return jsonify({
-                'error': (
-                    f'{js_name} loads job content via JavaScript, so it cannot be '
-                    f'auto-imported. Please: open the job post → select all the '
-                    f'description text → paste it in the box below.'
-                ),
+                'error': f'{js_name} uses client-side rendering so auto-import is not possible. Paste the job description below.',
+                'url_hints': _extract_url_hints(url, js_host.split('.')[0]),
                 'manual_paste': True,
                 'source': js_name,
             }), 422
@@ -1090,6 +1079,142 @@ def fetch_jd():
     jd_text = jd_text[:5000]
 
     return jsonify({'jd': jd_text, 'source': source_name, 'url': url})
+
+
+def _extract_url_hints(url, source):
+    """
+    Parse whatever structured info is visible in the URL slug and return it
+    as a dict so the frontend can pre-fill fields and show the user what was
+    found before asking them to paste the full JD.
+
+    Examples:
+      Naukri:      /job-listings-fresher-full-stack-developer-parsh-technologies-llp-rajkot-0-to-1-years-110326928982
+      Internshala: /job/detail/remote-artificial-intelligence-ai-specialist-job-at-bryckel-ai1773309672
+      Hirist:      /j/senior-backend-developer-healthify-123456
+    """
+    import re as _re
+    from urllib.parse import urlparse, unquote
+
+    hints = {}
+    try:
+        parsed = urlparse(url)
+        # Take the last meaningful path segment, strip query params
+        slug = parsed.path.rstrip('/').split('/')[-1]
+        slug = unquote(slug)
+
+        # ── Naukri ────────────────────────────────────────────────────────────
+        # Pattern: job-listings-<role tokens>-<company tokens>-<location>-<exp>-<job_id>
+        # Strip leading "job-listings-" prefix if present
+        if source == 'naukri':
+            slug = _re.sub(r'^job-listings-', '', slug)
+            # Strip trailing numeric job ID
+            slug = _re.sub(r'-\d{8,}$', '', slug)
+            # Experience pattern e.g. "0-to-1-years" or "3-to-5-years"
+            exp_match = _re.search(r'(\d+)-to-(\d+)-year', slug)
+            if exp_match:
+                hints['experience'] = f"{exp_match.group(1)}-{exp_match.group(2)} years"
+                slug = slug[:exp_match.start()].rstrip('-')
+            _parse_role_company_location(slug, hints)
+
+        # ── Internshala ───────────────────────────────────────────────────────
+        # Pattern: <role>-job-at-<company><numeric_id>  OR  <role>-internship-at-<company>
+        elif source == 'internshala':
+            slug = _re.sub(r'\d{8,}$', '', slug).rstrip('-')
+            # Split on "-job-at-" or "-internship-at-"
+            for sep in ('-job-at-', '-internship-at-', '-at-'):
+                if sep in slug:
+                    role_part, company_part = slug.split(sep, 1)
+                    hints['role'] = _slug_to_title(role_part)
+                    hints['company'] = _slug_to_title(company_part)
+                    if 'internship' in sep or 'internship' in slug:
+                        hints['job_type'] = 'Internship'
+                    break
+            else:
+                _parse_role_company_location(slug, hints)
+
+        # ── Hirist ────────────────────────────────────────────────────────────
+        # Pattern: <role-words>-<company>-<job_id>
+        # After stripping the job ID, split at the last role-keyword boundary.
+        elif source == 'hirist':
+            slug = _re.sub(r'-\d{4,}$', '', slug)
+            ROLE_WORDS = {'developer','engineer','analyst','designer','manager',
+                          'lead','senior','junior','fresher','intern','specialist',
+                          'architect','consultant','associate','executive','backend',
+                          'frontend','fullstack','devops','data','mobile','cloud'}
+            tokens = slug.split('-')
+            last_role_idx = 0
+            for i, t in enumerate(tokens):
+                if t.lower() in ROLE_WORDS:
+                    last_role_idx = i
+            hints['role'] = _slug_to_title('-'.join(tokens[:last_role_idx + 1]))
+            company_tokens = tokens[last_role_idx + 1:]
+            if company_tokens:
+                hints['company'] = _slug_to_title('-'.join(company_tokens))
+
+        # ── Generic fallback for LinkedIn, etc. ───────────────────────────────
+        else:
+            slug = _re.sub(r'[-_]?\d{6,}$', '', slug)
+            _parse_role_company_location(slug, hints)
+
+    except Exception as e:
+        print(f"_extract_url_hints error: {e}")
+
+    return hints  # may be empty dict — callers handle that gracefully
+
+
+def _slug_to_title(slug):
+    """Convert a hyphen-separated slug to Title Case, preserving common acronyms."""
+    ACRONYMS = {'ai', 'ml', 'api', 'ui', 'ux', 'ios', 'sql', 'aws', 'gcp',
+                'llp', 'llc', 'pvt', 'ltd', 'sde', 'swe', 'hr', 'it', 'bi'}
+    words = slug.replace('-', ' ').replace('_', ' ').split()
+    result = []
+    for w in words:
+        if w.lower() in ACRONYMS:
+            result.append(w.upper())
+        else:
+            result.append(w.capitalize())
+    return ' '.join(result)
+
+
+def _parse_role_company_location(slug, hints):
+    """
+    Heuristically split a slug into role / company / location tokens.
+    Works by finding location and company keywords as anchors.
+    """
+    import re as _re
+
+    LOCATION_KEYWORDS = {
+        'mumbai', 'delhi', 'bangalore', 'bengaluru', 'hyderabad', 'chennai',
+        'pune', 'kolkata', 'ahmedabad', 'jaipur', 'surat', 'lucknow', 'noida',
+        'gurugram', 'gurgaon', 'rajkot', 'indore', 'bhopal', 'chandigarh',
+        'remote', 'wfh', 'work-from-home', 'hybrid',
+    }
+
+    tokens = slug.lower().split('-')
+
+    # Find first location token
+    loc_idx = None
+    for i, t in enumerate(tokens):
+        if t in LOCATION_KEYWORDS:
+            loc_idx = i
+            break
+
+    if loc_idx is not None:
+        hints['location'] = _slug_to_title(tokens[loc_idx])
+        # Everything before location is role + company — split roughly in half
+        pre = tokens[:loc_idx]
+        mid = len(pre) // 2
+        if mid > 0:
+            hints['role'] = _slug_to_title('-'.join(pre[:mid]))
+            hints['company'] = _slug_to_title('-'.join(pre[mid:]))
+        else:
+            hints['role'] = _slug_to_title('-'.join(pre))
+    else:
+        # No location found — treat first 3 tokens as role, rest as company
+        mid = min(3, len(tokens) // 2)
+        hints['role'] = _slug_to_title('-'.join(tokens[:mid]))
+        if tokens[mid:]:
+            hints['company'] = _slug_to_title('-'.join(tokens[mid:]))
 
 
 def _fetch_naukri_jd(url):
