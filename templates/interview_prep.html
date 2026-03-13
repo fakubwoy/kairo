@@ -17,16 +17,17 @@
   --green: #4caf7d;
   --red: #e05c5c;
   --blue: #5c8de0;
+  --border: rgba(201,168,76,0.12);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; overflow-x: hidden; }
 
 /* Sidebar */
 .sidebar {
-  width: 240px; background: var(--surface); border-right: 1px solid rgba(201,168,76,0.12);
+  width: 240px; background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 1.5rem 0; position: fixed; height: 100vh; z-index: 10;
 }
-.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--gold); padding: 0 1.5rem 1.5rem; border-bottom: 1px solid rgba(201,168,76,0.12); margin-bottom: 1rem; }
+.sidebar-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900; color: var(--gold); padding: 0 1.5rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
 .nav-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1.5rem; color: var(--muted); font-size: 0.9rem; cursor: pointer; transition: all 0.2s; text-decoration: none; border-left: 2px solid transparent; }
 .nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
 .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
@@ -34,7 +35,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .sidebar-bottom {
   margin-top: auto;
   padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(201,168,76,0.12);
+  border-top: 1px solid var(--border);
   position: relative;
 }
 .user-card {
@@ -434,7 +435,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 <!-- Sidebar -->
 <nav class="sidebar">
-  <div class="sidebar-logo">Kairo</div>
+  <div class="sidebar-logo">Kai<span style="color:var(--cream)">ro</span></div>
   <a href="/dashboard" class="nav-item">
     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     Dashboard
@@ -542,7 +543,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   <!-- ── Interview Screen ── -->
   <div id="interview-screen">
     <div class="interview-header">
-      <div class="logo">Kairo</div>
+      <div class="logo">Kai<span style="color:var(--cream)">ro</span></div>
       <div class="interview-meta">
         <div class="interview-role">Role: <strong id="header-role">—</strong></div>
         <div class="progress-info" id="progress-info">Question 1 of 8</div>

@@ -15,6 +15,7 @@
   --surface: #13110e;
   --surface2: #1c1916;
   --green: #4caf7d;
+  --border: rgba(201,168,76,0.12);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
@@ -754,7 +755,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 </svg>
 
 <nav class="sidebar">
-  <div class="sidebar-logo">Kairo</div>
+  <div class="sidebar-logo">Kai<span style="color:var(--cream)">ro</span></div>
   <a href="/dashboard" class="nav-item active"><svg class="nav-icon"><use href="#i-grid"/></svg> Dashboard</a>
   <a href="/interview" class="nav-item"><svg class="nav-icon"><use href="#i-mic"/></svg> Build Profile</a>
   <a href="/resume" class="nav-item"><svg class="nav-icon"><use href="#i-file"/></svg> My Resumes</a>
