@@ -179,9 +179,10 @@ CREDIT_COSTS = {
 }
 
 # Starting credits and bonus amounts
-CREDITS_ON_SIGNUP      = 50   # free credits for every new account
-CREDITS_REFERRAL_BONUS = 20   # credits awarded to referrer when referral signs up
-CREDITS_REFEREE_BONUS  = 10   # extra credits awarded to the new user who used a referral code
+CREDITS_ON_SIGNUP           = 50   # free credits for every new account
+CREDITS_REFERRAL_BONUS      = 20   # credits awarded to a regular referrer when referral signs up
+CREDITS_AMBASSADOR_BONUS    = 35   # higher reward for official campus ambassadors
+CREDITS_REFEREE_BONUS       = 10   # extra credits awarded to the new user who used a referral code
 
 class CreditLedger(db.Model):
     """Append-only ledger of every credit transaction for a student."""
@@ -613,7 +614,9 @@ def login():
             if referrer_amb and referrer_amb.student_id != student.id:
                 _add_credits(student.id, CREDITS_REFEREE_BONUS, 'referral_bonus',
                              f'Joined via referral code {referral_code}')
-                _add_credits(referrer_amb.student_id, CREDITS_REFERRAL_BONUS, 'referral_reward',
+                # Ambassadors earn more per referral
+                reward = CREDITS_AMBASSADOR_BONUS if referrer_amb.is_ambassador else CREDITS_REFERRAL_BONUS
+                _add_credits(referrer_amb.student_id, reward, 'referral_reward',
                              f'Referred a new student ({email})')
                 referrer_amb.total_referrals += 1
                 db.session.commit()
@@ -2673,13 +2676,70 @@ def get_referral():
     if not amb:
         amb = Ambassador.query.filter_by(student_id=sid).first()
     balance = _get_balance(sid)
+    per_referral = CREDITS_AMBASSADOR_BONUS if amb and amb.is_ambassador else CREDITS_REFERRAL_BONUS
     return jsonify({
         'referral_code': amb.referral_code,
         'is_ambassador': amb.is_ambassador,
         'total_referrals': amb.total_referrals,
-        'credits_per_referral': CREDITS_REFERRAL_BONUS,
+        'credits_per_referral': per_referral,
         'credits_referee_bonus': CREDITS_REFEREE_BONUS,
         'balance': balance,
+    })
+
+
+@app.route('/api/ambassador/stats', methods=['GET'])
+def ambassador_stats():
+    """Return detailed ambassador stats — only accessible by ambassadors."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    amb = Ambassador.query.filter_by(student_id=sid).first()
+    if not amb or not amb.is_ambassador:
+        return jsonify({'error': 'Not an ambassador'}), 403
+
+    # All referral reward ledger entries for this ambassador
+    rewards = CreditLedger.query.filter_by(
+        student_id=sid, action='referral_reward'
+    ).order_by(CreditLedger.created_at.desc()).all()
+
+    total_credits_earned = sum(r.delta for r in rewards)
+
+    # Extract referred emails from description field (stored as "Referred a new student (email)")
+    referred = []
+    for r in rewards:
+        desc = r.description or ''
+        import re as _re
+        match = _re.search(r'\((.+?)\)', desc)
+        email_shown = match.group(1) if match else '—'
+        # Mask email for privacy: show only first 3 chars + domain
+        if '@' in email_shown:
+            local, domain = email_shown.split('@', 1)
+            masked = local[:3] + '***@' + domain
+        else:
+            masked = email_shown
+        referred.append({
+            'masked_email': masked,
+            'credits_earned': r.delta,
+            'date': r.created_at.isoformat(),
+        })
+
+    # Weekly breakdown: referrals in last 7 days vs prior 7 days
+    from datetime import timedelta
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    two_weeks_ago = now - timedelta(days=14)
+    this_week = sum(1 for r in rewards if r.created_at >= week_ago)
+    last_week = sum(1 for r in rewards if two_weeks_ago <= r.created_at < week_ago)
+
+    return jsonify({
+        'referral_code': amb.referral_code,
+        'total_referrals': amb.total_referrals,
+        'total_credits_earned': total_credits_earned,
+        'credits_per_referral': CREDITS_AMBASSADOR_BONUS,
+        'this_week': this_week,
+        'last_week': last_week,
+        'referred': referred,          # newest first, emails masked
+        'is_ambassador': True,
     })
 
 
