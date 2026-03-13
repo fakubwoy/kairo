@@ -2745,12 +2745,13 @@ def health():
 
 # Startup — create tables and apply any missing column migrations
 with app.app_context():
-    # Use raw SQL for all DDL so every statement is idempotent on Postgres.
-    # SQLAlchemy table.create(checkfirst=True) can still raise UniqueViolation
-    # on pg_type when composite types already exist, so we bypass it entirely.
-    with db.engine.connect() as conn:
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS student (
+    # Each DDL statement runs inside its own savepoint so that a concurrent
+    # worker racing on CREATE TABLE / ALTER TABLE only rolls back that one
+    # statement and never poisons the outer transaction.  This eliminates the
+    # pg_type UniqueViolation crash seen when gunicorn boots multiple workers
+    # at the same time.
+    DDL_STATEMENTS = [
+        """CREATE TABLE IF NOT EXISTS student (
                 id VARCHAR(36) PRIMARY KEY,
                 email VARCHAR(120) UNIQUE NOT NULL,
                 name VARCHAR(100),
@@ -2758,20 +2759,16 @@ with app.app_context():
                 college VARCHAR(100) DEFAULT 'VIT Vellore',
                 profile_data TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS conversation (
+            )""",
+        """CREATE TABLE IF NOT EXISTS conversation (
                 id SERIAL PRIMARY KEY,
                 student_id VARCHAR(36) NOT NULL REFERENCES student(id),
                 messages TEXT DEFAULT '[]',
                 topic VARCHAR(100) DEFAULT 'general',
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS resume (
+            )""",
+        """CREATE TABLE IF NOT EXISTS resume (
                 id SERIAL PRIMARY KEY,
                 student_id VARCHAR(36) NOT NULL REFERENCES student(id),
                 job_description TEXT,
@@ -2779,10 +2776,8 @@ with app.app_context():
                 edited_html TEXT,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS resume_version (
+            )""",
+        """CREATE TABLE IF NOT EXISTS resume_version (
                 id SERIAL PRIMARY KEY,
                 resume_id INTEGER NOT NULL REFERENCES resume(id),
                 version_number INTEGER NOT NULL DEFAULT 1,
@@ -2790,10 +2785,8 @@ with app.app_context():
                 edited_html TEXT,
                 label VARCHAR(100),
                 created_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS mock_interview (
+            )""",
+        """CREATE TABLE IF NOT EXISTS mock_interview (
                 id SERIAL PRIMARY KEY,
                 student_id VARCHAR(36) NOT NULL REFERENCES student(id),
                 job_title VARCHAR(200),
@@ -2805,39 +2798,45 @@ with app.app_context():
                 overall_score INTEGER,
                 created_at TIMESTAMP DEFAULT NOW(),
                 completed_at TIMESTAMP
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS credit_ledger (
+            )""",
+        """CREATE TABLE IF NOT EXISTS credit_ledger (
                 id SERIAL PRIMARY KEY,
                 student_id VARCHAR(36) NOT NULL REFERENCES student(id),
                 delta INTEGER NOT NULL,
                 action VARCHAR(80) NOT NULL,
                 description VARCHAR(255),
                 created_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        conn.execute(db.text("""
-            CREATE TABLE IF NOT EXISTS ambassador (
+            )""",
+        """CREATE TABLE IF NOT EXISTS ambassador (
                 id SERIAL PRIMARY KEY,
                 student_id VARCHAR(36) NOT NULL REFERENCES student(id) UNIQUE,
                 referral_code VARCHAR(20) NOT NULL UNIQUE,
                 is_ambassador BOOLEAN DEFAULT FALSE,
                 total_referrals INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
-            )
-        """))
-        # Column back-fills (safe on repeated runs)
-        for stmt in [
-            "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)",
-            "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
-            "ALTER TABLE resume ADD COLUMN IF NOT EXISTS edited_html TEXT",
-            "ALTER TABLE resume ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
-        ]:
+            )""",
+        # Column back-fills
+        "ALTER TABLE student ADD COLUMN IF NOT EXISTS password_hash VARCHAR(256)",
+        "ALTER TABLE conversation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+        "ALTER TABLE resume ADD COLUMN IF NOT EXISTS edited_html TEXT",
+        "ALTER TABLE resume ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP",
+    ]
+
+    with db.engine.connect() as conn:
+        for stmt in DDL_STATEMENTS:
+            # Each statement gets its own savepoint — if it fails (e.g. a
+            # concurrent worker already created the table) we roll back only
+            # that savepoint and continue, leaving the transaction healthy.
             try:
+                conn.execute(db.text("SAVEPOINT _kairo_ddl"))
                 conn.execute(db.text(stmt))
-            except Exception:
-                pass
+                conn.execute(db.text("RELEASE SAVEPOINT _kairo_ddl"))
+            except Exception as e:
+                conn.execute(db.text("ROLLBACK TO SAVEPOINT _kairo_ddl"))
+                # Log unexpected errors (not just "already exists" races)
+                err = str(e).lower()
+                if "already exists" not in err and "duplicate" not in err:
+                    print(f"DDL warning: {e}")
         conn.commit()
         print("Database schema ready.")
 
