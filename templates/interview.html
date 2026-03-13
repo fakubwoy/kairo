@@ -1053,6 +1053,15 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
       if (!ud.profile) ud.profile = {};
       Object.assign(ud.profile, profile);
       localStorage.setItem('kairo_user', JSON.stringify(ud));
+      // ── FIX: persist extracted profile to server DB so dashboard reflects it ──
+      try {
+        await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(profile)
+        });
+      } catch(e) { console.warn('Profile server save failed:', e); }
     }
   } catch(e) {
     grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Could not generate summary. Your conversation is saved — visit the Dashboard to review.</p></div>';
@@ -1156,6 +1165,42 @@ async function sendCorrection() {
         ud.profile = data.profile;
         localStorage.setItem('kairo_user', JSON.stringify(ud));
       }
+      // ── FIX: extract any new profile data from the correction and save to server ──
+      try {
+        // Build a mini-transcript of just this correction exchange
+        const correctionTranscript = `User: ${text}\nKairo: ${data.response}`;
+        const extractRes = await fetch('/api/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            message: `Extract any new career profile information from this exchange and return ONLY valid JSON (same schema as profile_data). If nothing new, return {}.\n\n${correctionTranscript}`,
+            conversation_id: null,
+            extract_only: true
+          })
+        });
+        const extractData = await extractRes.json();
+        if (extractData.response) {
+          let extracted = null;
+          try { extracted = JSON.parse(extractData.response.replace(/```json|```/g, '').trim()); } catch(e) {}
+          if (extracted && Object.keys(extracted).length > 0) {
+            // Save to server
+            await fetch('/api/profile', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(extracted)
+            });
+            // Refresh localStorage from server
+            const freshRes = await fetch('/api/profile', { credentials: 'include' });
+            if (freshRes.ok) {
+              const freshData = await freshRes.json();
+              const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+              ud.profile = freshData.profile;
+              localStorage.setItem('kairo_user', JSON.stringify(ud));
+            }
+          }
+        }
+      } catch(e) { console.warn('Correction profile save failed:', e); }
     }
   } catch(e) { appendCorrectionMsg('ai', 'Sorry, could not process that. Please try again.'); }
 }
