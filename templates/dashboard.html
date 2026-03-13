@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Kairo</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
   --ink: #0a0a0f;
@@ -345,6 +346,49 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 }
 .amb-code-big:hover { background: rgba(201,168,76,0.2); }
 .amb-share-actions { display: flex; gap: 0.6rem; margin-top: 0.7rem; flex-wrap: wrap; }
+
+/* ── Ambassador Poster Modal ─────────────────────────────────────────── */
+.poster-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.88); z-index: 500;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(6px); padding: 1.5rem;
+}
+.poster-modal-overlay.open { display: flex; }
+.poster-modal-box {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 1.8rem; width: 100%; max-width: 560px;
+  animation: slideUp 0.25s ease; max-height: 92vh; overflow-y: auto;
+}
+.poster-modal-box h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.2rem; margin-bottom: 0.3rem;
+}
+.poster-modal-box .poster-subtitle {
+  font-size: 0.82rem; color: var(--muted); margin-bottom: 1.4rem;
+}
+.poster-preview-wrap {
+  display: flex; justify-content: center; margin-bottom: 1.2rem;
+  background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.1); padding: 1rem;
+}
+#posterCanvas { max-width: 100%; height: auto; display: block; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+.poster-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+.poster-actions .poster-btn-gold {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  background: var(--gold); border: none; color: var(--ink);
+  padding: 0.65rem 1.2rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+}
+.poster-actions .poster-btn-gold:hover { opacity: 0.85; }
+.poster-actions .poster-btn-ghost {
+  background: none; border: 1px solid rgba(245,240,232,0.15);
+  color: var(--muted); padding: 0.65rem 1rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.poster-actions .poster-btn-ghost:hover { color: var(--cream); border-color: rgba(245,240,232,0.3); }
 
 /* Ambassador perk badge inside credits panel */
 .amb-perk-badge {
@@ -1384,6 +1428,10 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
           <button class="btn-copy" onclick="ambCopyCode()" style="font-size:0.82rem;">Copy code</button>
           <button class="btn-copy" onclick="ambCopyLink()" style="font-size:0.82rem;background:rgba(76,175,125,0.15);border-color:rgba(76,175,125,0.3);color:var(--green);">Copy invite link</button>
           <button class="btn-copy" onclick="ambShareWhatsApp()" style="font-size:0.82rem;background:rgba(37,211,102,0.1);border-color:rgba(37,211,102,0.3);color:#25d166;">Share on WhatsApp</button>
+          <button class="btn-copy" onclick="openPosterModal()" style="font-size:0.82rem;background:rgba(201,168,76,0.12);border-color:rgba(201,168,76,0.35);color:var(--gold);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Download Poster
+          </button>
         </div>
       </div>
       <div id="ambCodeBig" class="amb-code-big" onclick="ambCopyCode()" title="Click to copy">—</div>
@@ -2695,6 +2743,38 @@ function openFacultyPanel() {
 #uploadDropZone.dragover { border-color: var(--gold); background: rgba(201,168,76,0.06); }
 </style>
 
+<!-- ── Ambassador Poster Modal ────────────────────────────────────────── -->
+<div class="poster-modal-overlay" id="posterModal">
+  <div class="poster-modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.3rem;">
+      <div>
+        <h3>Your Recruitment Poster</h3>
+        <div class="poster-subtitle">Download and share in WhatsApp groups, class chats, or print and put up on notice boards.</div>
+      </div>
+      <button onclick="closePosterModal()" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 0.2rem;">×</button>
+    </div>
+
+    <div class="poster-preview-wrap">
+      <canvas id="posterCanvas" width="900" height="1200"></canvas>
+    </div>
+
+    <!-- Hidden QR div used by QRCode.js to generate QR, then we draw it on canvas -->
+    <div id="qrHidden" style="display:none;position:absolute;left:-9999px;top:-9999px;"></div>
+
+    <div class="poster-actions">
+      <button class="poster-btn-gold" onclick="downloadPoster()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download PNG
+      </button>
+      <button class="poster-btn-ghost" onclick="ambShareWhatsApp()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:0.3rem"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        Share on WhatsApp
+      </button>
+      <button class="poster-btn-ghost" onclick="closePosterModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Credits & Referral Panel ─────────────────────────────────────── -->
 <div class="credits-panel" id="creditsPanel" onclick="e => { if(e.target===this) closeCreditsPanel(); }">
   <div class="credits-box">
@@ -2870,6 +2950,236 @@ function ambShareWhatsApp() {
     `Hey! I'm using Kairo to build my resume and prep for placements — it's really good for VIT students.\n\nSign up free with my code *${code}* and you get 10 bonus credits:\n${link}`
   );
   window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+/* ── Ambassador Poster JS ────────────────────────────────────────────── */
+let _posterQRDataURL = null;
+
+async function openPosterModal() {
+  const code = (document.getElementById('ambCodeBig')?.textContent || '').trim();
+  if (!code || code === '—') { alert('Referral code not loaded yet — please wait a moment.'); return; }
+  document.getElementById('posterModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  await buildPoster(code);
+}
+
+function closePosterModal() {
+  document.getElementById('posterModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePosterModal(); });
+
+async function generateQRDataURL(text) {
+  return new Promise((resolve) => {
+    const container = document.getElementById('qrHidden');
+    container.innerHTML = '';
+    try {
+      new QRCode(container, {
+        text, width: 300, height: 300,
+        colorDark: '#0a0a0f', colorLight: '#f5f0e8',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      // QRCode.js renders async via image, wait for it
+      setTimeout(() => {
+        const img = container.querySelector('img');
+        const canvas = container.querySelector('canvas');
+        if (canvas) { resolve(canvas.toDataURL('image/png')); }
+        else if (img) { resolve(img.src); }
+        else { resolve(null); }
+      }, 200);
+    } catch(e) { resolve(null); }
+  });
+}
+
+async function buildPoster(code) {
+  const canvas = document.getElementById('posterCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = 900, H = 1200;
+  canvas.width = W; canvas.height = H;
+
+  // ── Background ────────────────────────────────────────────────────────
+  // Deep dark base
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle radial glow top-center
+  const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 700);
+  glow.addColorStop(0, 'rgba(201,168,76,0.12)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Bottom green glow
+  const glow2 = ctx.createRadialGradient(W/2, H, 0, W/2, H, 500);
+  glow2.addColorStop(0, 'rgba(76,175,125,0.08)');
+  glow2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow2;
+  ctx.fillRect(0, 0, W, H);
+
+  // Border
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(24, 24, W - 48, H - 48);
+
+  // Inner border accent
+  ctx.strokeStyle = 'rgba(201,168,76,0.1)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(32, 32, W - 64, H - 64);
+
+  // ── Corner accents ────────────────────────────────────────────────────
+  const cornerSize = 28;
+  ctx.strokeStyle = 'rgba(201,168,76,0.7)';
+  ctx.lineWidth = 2.5;
+  [[24,24],[W-24,24],[24,H-24],[W-24,H-24]].forEach(([cx,cy]) => {
+    const dx = cx < W/2 ? 1 : -1;
+    const dy = cy < H/2 ? 1 : -1;
+    ctx.beginPath();
+    ctx.moveTo(cx + dx*cornerSize, cy);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx, cy + dy*cornerSize);
+    ctx.stroke();
+  });
+
+  // ── Logo ──────────────────────────────────────────────────────────────
+  ctx.textAlign = 'center';
+  ctx.font = '900 68px Georgia, serif';
+  ctx.fillStyle = '#c9a84c';
+  ctx.fillText('Kairo', W/2, 130);
+
+  // Tagline under logo
+  ctx.font = '300 22px "Arial", sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.5)';
+  ctx.fillText('AI Career Co-pilot for VIT Students', W/2, 168);
+
+  // Divider line
+  ctx.strokeStyle = 'rgba(201,168,76,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(120, 195); ctx.lineTo(W-120, 195); ctx.stroke();
+
+  // ── Main headline ──────────────────────────────────────────────────────
+  ctx.font = 'bold 42px Georgia, serif';
+  ctx.fillStyle = '#f5f0e8';
+  ctx.fillText('Get your placement-ready', W/2, 270);
+  ctx.fillText('resume in 30 minutes', W/2, 322);
+
+  // Subtext
+  ctx.font = '300 24px "Arial", sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.55)';
+  ctx.fillText('Tell Kairo about your projects, skills & experiences.', W/2, 378);
+  ctx.fillText('It builds a tailored resume for every job you apply to.', W/2, 410);
+
+  // ── Feature pills ─────────────────────────────────────────────────────
+  const features = ['AI Resume Builder', 'Mock Interviews', 'Intro Video Script'];
+  const pillW = 210, pillH = 42, pillY = 450, totalW = features.length * pillW + (features.length-1) * 18;
+  let pillX = (W - totalW) / 2;
+  features.forEach(f => {
+    ctx.fillStyle = 'rgba(201,168,76,0.1)';
+    ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+    ctx.lineWidth = 1;
+    ctx.fillRect(pillX, pillY, pillW, pillH);
+    ctx.strokeRect(pillX, pillY, pillW, pillH);
+    ctx.font = '500 17px "Arial", sans-serif';
+    ctx.fillStyle = '#c9a84c';
+    ctx.textAlign = 'center';
+    ctx.fillText(f, pillX + pillW/2, pillY + 27);
+    pillX += pillW + 18;
+  });
+
+  // ── QR Code ───────────────────────────────────────────────────────────
+  const link = `${location.origin}/?ref=${code}`;
+  const qrDataURL = await generateQRDataURL(link);
+  const qrSize = 260;
+  const qrX = (W - qrSize) / 2;
+  const qrY = 530;
+
+  // QR background card
+  ctx.fillStyle = '#f5f0e8';
+  const pad = 18;
+  roundRect(ctx, qrX - pad, qrY - pad, qrSize + pad*2, qrSize + pad*2, 8);
+  ctx.fill();
+
+  if (qrDataURL) {
+    await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, qrX, qrY, qrSize, qrSize); resolve(); };
+      img.onerror = resolve;
+      img.src = qrDataURL;
+    });
+  }
+
+  ctx.textAlign = 'center';
+  ctx.font = '400 18px "Arial", sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.5)';
+  ctx.fillText('Scan to sign up', W/2, qrY + qrSize + pad*2 + 24);
+
+  // ── Referral code box ──────────────────────────────────────────────────
+  const boxY = qrY + qrSize + pad*2 + 60;
+  const boxW = 460, boxH = 110;
+  const boxX = (W - boxW) / 2;
+
+  ctx.fillStyle = 'rgba(201,168,76,0.08)';
+  ctx.strokeStyle = 'rgba(201,168,76,0.45)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, boxX, boxY, boxW, boxH, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '400 17px "Arial", sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.5)';
+  ctx.textAlign = 'center';
+  ctx.fillText('OR USE REFERRAL CODE AT SIGNUP', W/2, boxY + 32);
+
+  ctx.font = 'bold 48px "Courier New", monospace';
+  ctx.fillStyle = '#c9a84c';
+  ctx.letterSpacing = '0.15em';
+  ctx.fillText(code, W/2, boxY + 83);
+
+  // ── Ambassador name ────────────────────────────────────────────────────
+  const ambName = (document.getElementById('sidebarName')?.textContent || '').trim();
+  if (ambName && ambName !== 'Loading...') {
+    const nameY = boxY + boxH + 52;
+    ctx.font = '300 20px "Arial", sans-serif';
+    ctx.fillStyle = 'rgba(245,240,232,0.38)';
+    ctx.fillText(`Shared by ${ambName} · VIT Vellore`, W/2, nameY);
+  }
+
+  // ── Bottom tagline ─────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(201,168,76,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(120, H-90); ctx.lineTo(W-120, H-90); ctx.stroke();
+
+  ctx.font = '400 18px "Arial", sans-serif';
+  ctx.fillStyle = 'rgba(245,240,232,0.3)';
+  ctx.fillText('kairo.up.railway.app  ·  Free for VIT students', W/2, H - 58);
+
+  // ── Star accent ────────────────────────────────────────────────────────
+  ctx.font = '14px "Arial"';
+  ctx.fillStyle = 'rgba(201,168,76,0.4)';
+  ctx.fillText('✦', W/2 - 230, H - 58);
+  ctx.fillText('✦', W/2 + 230, H - 58);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function downloadPoster() {
+  const canvas = document.getElementById('posterCanvas');
+  const code = (document.getElementById('ambCodeBig')?.textContent || 'ambassador').trim();
+  const link = document.createElement('a');
+  link.download = `kairo-poster-${code}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 /* ── Credits & Referral JS ─────────────────────────────────────────── */
