@@ -263,7 +263,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
 .profile-sections {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.7rem;
 }
 
@@ -732,6 +732,16 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .model-tag { background: rgba(201,168,76,0.08); border: 1px solid rgba(201,168,76,0.2); color: var(--cream); font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 2px; }
 .size-tag { font-size: 0.72rem; color: var(--muted); }
 
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(201,168,76,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main { margin-left: 0; }
@@ -847,6 +857,18 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
         <div class="ps-body"><div class="profile-section-label">Goals</div><div class="profile-section-status">—</div></div>
       </div>
+      <div class="profile-section" id="ps-extras">
+        <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="ps-body"><div class="profile-section-label">Extracurriculars</div><div class="profile-section-status">—</div></div>
+      </div>
+      <div class="profile-section" id="ps-faculty">
+        <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+        <div class="ps-body"><div class="profile-section-label">Faculty References</div><div class="profile-section-status">—</div></div>
+      </div>
+      <div class="profile-section" id="ps-intro">
+        <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+        <div class="ps-body"><div class="profile-section-label">Self-Intro Video</div><div class="profile-section-status">—</div></div>
+      </div>
     </div>
   </div>
 
@@ -882,6 +904,18 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <button class="pe-tab" onclick="switchPeTab('documents')" id="petab-documents">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Documents
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('extras')" id="petab-extras">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+          Extracurriculars
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('faculty')" id="petab-faculty">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          Faculty Refs
+        </button>
+        <button class="pe-tab" onclick="switchPeTab('introvideo')" id="petab-introvideo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Self-Intro Video
         </button>
       </div>
 
@@ -978,6 +1012,53 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <div id="peDocumentData"></div>
       </div>
 
+      <!-- Extracurriculars tab -->
+      <div class="pe-pane" id="pepane-extras">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Add clubs, hackathons, sports, events you've organised, industrial visits, and other activities that show who you are beyond academics.</p>
+        <div id="peExtrasList" class="projects-list"></div>
+        <button class="btn-add-project" onclick="addExtrasEntry()">+ Add Activity</button>
+      </div>
+
+      <!-- Faculty References tab -->
+      <div class="pe-pane" id="pepane-faculty">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1rem;line-height:1.6">Add professors or mentors who can vouch for you. These will appear in your resume as reference contacts — a strong differentiator for freshers.</p>
+        <div id="peFacultyList" class="projects-list"></div>
+        <button class="btn-add-project" onclick="addFacultyEntry()">+ Add Faculty Reference</button>
+      </div>
+
+      <!-- Self-Intro Video tab -->
+      <div class="pe-pane" id="pepane-introvideo">
+        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1.2rem;line-height:1.6">Generate a personalized self-introduction script you can record. Kairo tailors it to your profile and the kind of roles you're targeting.</p>
+        <div class="profile-fields" style="margin-bottom:1.2rem">
+          <div class="profile-field">
+            <label>Target Role / Company (optional)</label>
+            <input type="text" id="intro-role" placeholder="e.g. SDE Intern at a fintech startup">
+          </div>
+          <div class="profile-field">
+            <label>Video Duration</label>
+            <select id="intro-duration">
+              <option value="30">30 seconds — Elevator pitch</option>
+              <option value="60" selected>60 seconds — Standard intro</option>
+              <option value="90">90 seconds — Detailed intro</option>
+              <option value="120">2 minutes — In-depth intro</option>
+            </select>
+          </div>
+          <div class="profile-field">
+            <label>Tone</label>
+            <select id="intro-tone">
+              <option value="professional">Professional</option>
+              <option value="casual">Conversational &amp; Casual</option>
+              <option value="energetic">Energetic &amp; Enthusiastic</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-gold" id="introGenerateBtn" style="width:auto;padding:0.6rem 1.5rem;margin-bottom:1.5rem" onclick="generateIntroScript()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          Generate My Script
+        </button>
+        <div id="introScriptResult" style="display:none"></div>
+      </div>
+
       <div class="profile-save-row">
         <span class="profile-save-status" id="profileSaveStatus"></span>
         <button class="btn-ghost" onclick="toggleProfileEditor()">Cancel</button>
@@ -986,7 +1067,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
   </div>
 
-  <div class="cards-grid">
+  <div class="cards-grid" style="grid-template-columns: repeat(3, 1fr);">
     <a href="/interview" class="card">
       <div class="card-icon"><svg width="22" height="22"><use href="#i-mic"/></svg></div>
       <h3>Talk to Kairo</h3>
@@ -1012,6 +1093,22 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <h3>Upload Documents</h3>
       <p>Upload your transcripts, certificates, or marksheets. Kairo will extract details automatically.</p>
       <div class="card-action">Upload Files →</div>
+    </div>
+    <div class="card" onclick="openIntroVideoPanel()">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
+      <h3>Self-Intro Video</h3>
+      <p>Get a personalised, AI-crafted video script you can record and use on job portals and LinkedIn.</p>
+      <div class="card-action">Generate Script →</div>
+    </div>
+    <div class="card" onclick="openFacultyPanel()">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      </div>
+      <h3>Faculty References</h3>
+      <p>Add professors and mentors who can vouch for you. Kairo includes them in your tailored resumes.</p>
+      <div class="card-action">Add References →</div>
     </div>
   </div>
 
@@ -1045,7 +1142,7 @@ document.getElementById('sidebarEmail').textContent = user.email || '—';
 
 function updateProfileDisplay(profile) {
   let filled = 0;
-  const total = 6;
+  const total = 10;
 
   if (profile.name || profile.email) {
     document.getElementById('ps-basic').classList.add('filled');
@@ -1080,6 +1177,31 @@ function updateProfileDisplay(profile) {
     if (el) {
       el.classList.add('filled');
       el.querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
+    }
+    filled++;
+  }
+  const extrasCount = (profile.clubs||[]).length + (profile.hackathons||[]).length + (profile.extracurriculars||[]).length;
+  if (extrasCount > 0) {
+    const el = document.getElementById('ps-extras');
+    if (el) {
+      el.classList.add('filled');
+      el.querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${extrasCount} activit${extrasCount!==1?'ies':'y'}`;
+    }
+    filled++;
+  }
+  if ((profile.faculty_references||[]).length > 0) {
+    const el = document.getElementById('ps-faculty');
+    if (el) {
+      el.classList.add('filled');
+      el.querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.faculty_references.length} referee${profile.faculty_references.length!==1?'s':''}`;
+    }
+    filled++;
+  }
+  if (profile.intro_script_generated) {
+    const el = document.getElementById('ps-intro');
+    if (el) {
+      el.classList.add('filled');
+      el.querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Script ready';
     }
     filled++;
   }
@@ -1284,9 +1406,11 @@ function toggleProfileEditor() {
 }
 
 function switchPeTab(tab) {
-  ['basics','projects','github','linkedin','documents'].forEach(t => {
-    document.getElementById(`pepane-${t}`).classList.toggle('active', t === tab);
-    document.getElementById(`petab-${t}`).classList.toggle('active', t === tab);
+  ['basics','projects','github','linkedin','documents','extras','faculty','introvideo'].forEach(t => {
+    const pane = document.getElementById(`pepane-${t}`);
+    const btn = document.getElementById(`petab-${t}`);
+    if (pane) pane.classList.toggle('active', t === tab);
+    if (btn) btn.classList.toggle('active', t === tab);
   });
 }
 
@@ -1644,6 +1768,14 @@ function populateProfileEditor(data) {
   } else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) {
     document.getElementById('pe-githubUsername').value = ghUrl;
   }
+  // Extras & Faculty
+  peExtras = JSON.parse(JSON.stringify(
+    [...(p.extracurriculars||[]), ...(p.clubs||[]).map(c=>({activity:c,type:'Club/Society',role:'',year:''})),
+     ...(p.hackathons||[]).map(h=>({activity:h,type:'Hackathon',role:'',year:''}))]
+  ));
+  renderExtrasList();
+  peFaculty = JSON.parse(JSON.stringify(p.faculty_references || []));
+  renderFacultyList();
 }
 
 async function saveProfileEdits() {
@@ -1665,7 +1797,9 @@ async function saveProfileEdits() {
     college: document.getElementById('pe-college').value.trim(),
     summary: document.getElementById('pe-summary').value.trim(),
     skills: { technical: skillsList, tools: [], soft: [] },
-    projects: peProjects
+    projects: peProjects,
+    extracurriculars: peExtras,
+    faculty_references: peFaculty
   };
 
   // Update name separately if changed
@@ -1701,6 +1835,216 @@ async function saveProfileEdits() {
     statusEl.textContent = 'Could not save. Please try again.';
     statusEl.style.color = '#ef9a9a';
   }
+}
+
+// ── Extracurriculars editor ──────────────────────────────────────────────────
+let peExtras = [];
+
+function renderExtrasList() {
+  const list = document.getElementById('peExtrasList');
+  if (!list) return;
+  if (!peExtras.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:1rem;border:1px dashed rgba(201,168,76,0.12)">No activities yet. Add clubs, hackathons, sports, events, visits…</div>';
+    return;
+  }
+  list.innerHTML = peExtras.map((e, i) => `
+    <div class="project-entry">
+      <button class="project-remove-btn" onclick="removeExtra(${i})" title="Remove">✕</button>
+      <div class="project-entry-grid">
+        <div>
+          <span class="project-field-label">Activity / Club / Hackathon</span>
+          <input type="text" value="${esc(e.activity||'')}" oninput="peExtras[${i}].activity=this.value" placeholder="e.g. Google Developer Student Club">
+        </div>
+        <div>
+          <span class="project-field-label">Type</span>
+          <select style="width:100%;background:rgba(245,240,232,0.05);border:1px solid rgba(201,168,76,0.2);color:var(--cream);padding:0.45rem 0.7rem;font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;" onchange="peExtras[${i}].type=this.value">
+            <option value="Club/Society" ${e.type==='Club/Society'?'selected':''}>Club / Society</option>
+            <option value="Hackathon" ${e.type==='Hackathon'?'selected':''}>Hackathon</option>
+            <option value="Sports" ${e.type==='Sports'?'selected':''}>Sports</option>
+            <option value="Cultural" ${e.type==='Cultural'?'selected':''}>Cultural Event</option>
+            <option value="Industrial Visit" ${e.type==='Industrial Visit'?'selected':''}>Industrial Visit</option>
+            <option value="NSS/NCC" ${e.type==='NSS/NCC'?'selected':''}>NSS / NCC</option>
+            <option value="Other" ${e.type==='Other'?'selected':''}>Other</option>
+          </select>
+        </div>
+        <div>
+          <span class="project-field-label">Your Role (optional)</span>
+          <input type="text" value="${esc(e.role||'')}" oninput="peExtras[${i}].role=this.value" placeholder="e.g. Vice President, Participant, Winner">
+        </div>
+        <div>
+          <span class="project-field-label">Year</span>
+          <input type="text" value="${esc(e.year||'')}" oninput="peExtras[${i}].year=this.value" placeholder="e.g. 2023–24">
+        </div>
+        <div class="full">
+          <span class="project-field-label">Brief Description (optional)</span>
+          <input type="text" value="${esc(e.description||'')}" oninput="peExtras[${i}].description=this.value" placeholder="What did you do or achieve here?">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addExtrasEntry() {
+  peExtras.push({ activity: '', type: 'Club/Society', role: '', year: '', description: '' });
+  renderExtrasList();
+  const list = document.getElementById('peExtrasList');
+  list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeExtra(idx) {
+  peExtras.splice(idx, 1);
+  renderExtrasList();
+}
+
+// ── Faculty References editor ────────────────────────────────────────────────
+let peFaculty = [];
+
+function renderFacultyList() {
+  const list = document.getElementById('peFacultyList');
+  if (!list) return;
+  if (!peFaculty.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.83rem;text-align:center;padding:1rem;border:1px dashed rgba(201,168,76,0.12)">No references yet. Add 1–3 professors or mentors who know your work well.</div>';
+    return;
+  }
+  list.innerHTML = peFaculty.map((f, i) => `
+    <div class="project-entry">
+      <button class="project-remove-btn" onclick="removeFaculty(${i})" title="Remove">✕</button>
+      <div class="project-entry-grid">
+        <div>
+          <span class="project-field-label">Full Name</span>
+          <input type="text" value="${esc(f.name||'')}" oninput="peFaculty[${i}].name=this.value" placeholder="e.g. Dr. Anita Sharma">
+        </div>
+        <div>
+          <span class="project-field-label">Designation</span>
+          <input type="text" value="${esc(f.designation||'')}" oninput="peFaculty[${i}].designation=this.value" placeholder="e.g. Associate Professor, HOD">
+        </div>
+        <div>
+          <span class="project-field-label">Department</span>
+          <input type="text" value="${esc(f.department||'')}" oninput="peFaculty[${i}].department=this.value" placeholder="e.g. School of Computer Science">
+        </div>
+        <div>
+          <span class="project-field-label">Institution</span>
+          <input type="text" value="${esc(f.institution||'')}" oninput="peFaculty[${i}].institution=this.value" placeholder="e.g. VIT Vellore" style="background:rgba(245,240,232,0.05)">
+        </div>
+        <div>
+          <span class="project-field-label">Email (optional)</span>
+          <input type="email" value="${esc(f.email||'')}" oninput="peFaculty[${i}].email=this.value" placeholder="e.g. anita.sharma@vit.ac.in">
+        </div>
+        <div>
+          <span class="project-field-label">Phone (optional)</span>
+          <input type="text" value="${esc(f.phone||'')}" oninput="peFaculty[${i}].phone=this.value" placeholder="e.g. +91 9876543210">
+        </div>
+        <div class="full">
+          <span class="project-field-label">How do they know you?</span>
+          <input type="text" value="${esc(f.context||'')}" oninput="peFaculty[${i}].context=this.value" placeholder="e.g. Project supervisor for final year capstone, taught Advanced Algorithms">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function addFacultyEntry() {
+  peFaculty.push({ name: '', designation: '', department: '', institution: 'VIT Vellore', email: '', phone: '', context: '' });
+  renderFacultyList();
+  const list = document.getElementById('peFacultyList');
+  list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeFaculty(idx) {
+  peFaculty.splice(idx, 1);
+  renderFacultyList();
+}
+
+// ── Self-Intro Video Script Generator ────────────────────────────────────────
+async function generateIntroScript() {
+  const btn = document.getElementById('introGenerateBtn');
+  const result = document.getElementById('introScriptResult');
+  const role = document.getElementById('intro-role').value.trim();
+  const duration = parseInt(document.getElementById('intro-duration').value);
+  const tone = document.getElementById('intro-tone').value;
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0 auto"></div> Generating…';
+  result.style.display = 'block';
+  result.innerHTML = '<div style="color:var(--muted);font-size:0.85rem;padding:1rem;text-align:center">Kairo is crafting your personalised script…</div>';
+
+  try {
+    const res = await fetch('/api/generate-intro-script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job_role: role, duration_seconds: duration, tone })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    const sections = data.sections || [];
+    const tips = data.delivery_tips || [];
+    const phrases = data.key_phrases || [];
+    const avoid = data.avoid || [];
+
+    result.innerHTML = `
+      <div style="background:rgba(201,168,76,0.04);border:1px solid rgba(201,168,76,0.2);padding:1.4rem;margin-bottom:1rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold)">Your Script</div>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <span style="font-size:0.75rem;color:var(--muted)">~${data.estimated_duration_sec||duration}s · ${data.word_count||'?'} words</span>
+            <button onclick="copyIntroScript()" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);color:var(--gold);padding:0.25rem 0.7rem;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif">Copy</button>
+          </div>
+        </div>
+        <div id="introScriptText" style="font-size:0.9rem;line-height:1.9;color:var(--cream);white-space:pre-wrap">${esc(data.script||'')}</div>
+      </div>
+
+      ${sections.length ? `
+      <div style="margin-bottom:1rem">
+        <div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem">Section Breakdown</div>
+        <div style="display:flex;flex-direction:column;gap:0.4rem">
+          ${sections.map(s => `
+            <div style="display:flex;align-items:baseline;gap:0.8rem;padding:0.5rem 0.8rem;background:rgba(245,240,232,0.03);border:1px solid rgba(201,168,76,0.08)">
+              <span style="font-size:0.75rem;color:var(--gold);white-space:nowrap;min-width:80px">${esc(s.title||'')}</span>
+              <span style="font-size:0.82rem;color:var(--muted);flex:1">${esc(s.text||'').substring(0,100)}${(s.text||'').length>100?'…':''}</span>
+              <span style="font-size:0.72rem;color:rgba(107,101,96,0.6);white-space:nowrap">${s.duration_estimate_sec||0}s</span>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        ${tips.length ? `
+        <div style="background:rgba(76,175,125,0.05);border:1px solid rgba(76,175,125,0.15);padding:1rem">
+          <div style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:#4caf7d;margin-bottom:0.6rem">Delivery Tips</div>
+          ${tips.map(t => `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.4rem;padding-left:0.6rem;border-left:2px solid rgba(76,175,125,0.3)">• ${esc(t)}</div>`).join('')}
+        </div>` : ''}
+        ${avoid.length ? `
+        <div style="background:rgba(239,154,154,0.05);border:1px solid rgba(239,154,154,0.15);padding:1rem">
+          <div style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:#ef9a9a;margin-bottom:0.6rem">Avoid These</div>
+          ${avoid.map(a => `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.4rem;padding-left:0.6rem;border-left:2px solid rgba(239,154,154,0.3)">✕ ${esc(a)}</div>`).join('')}
+        </div>` : ''}
+      </div>
+
+      ${phrases.length ? `
+      <div style="margin-bottom:0.5rem">
+        <div style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem">Emphasise These Phrases</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem">
+          ${phrases.map(p => `<span style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);color:var(--gold);font-size:0.78rem;padding:0.2rem 0.6rem">${esc(p)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+    `;
+
+    // Mark intro script as generated in local profile
+    const stored = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+    if (!stored.profile) stored.profile = {};
+    stored.profile.intro_script_generated = true;
+    localStorage.setItem('kairo_user', JSON.stringify(stored));
+    updateProfileDisplay(stored.profile);
+
+    showToast('✓ Script generated! Copy and start practising.', true);
+  } catch(e) {
+    result.innerHTML = `<div style="color:#ffb3b3;font-size:0.85rem;padding:1rem">${e.message || 'Could not generate script. Make sure your profile is built first.'}</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> Regenerate Script';
+}
+
+function copyIntroScript() {
+  const text = document.getElementById('introScriptText')?.textContent || '';
+  navigator.clipboard.writeText(text).then(() => showToast('Script copied to clipboard!', true));
 }
 </script>
 <!-- Document detail modal -->
@@ -1949,14 +2293,26 @@ async function handleUpload(file) {
 
 function openProfileEditorToDocuments() {
   closeUploadModal();
+  openEditorToTab('documents');
+}
+
+function openEditorToTab(tabName) {
   const body = document.getElementById('profileEditorBody');
   const btn = document.getElementById('profileEditorToggle');
   if (!body.classList.contains('open')) {
     body.classList.add('open');
     btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Close';
   }
-  switchPeTab('documents');
+  switchPeTab(tabName);
   document.querySelector('.profile-editor-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function openIntroVideoPanel() {
+  openEditorToTab('introvideo');
+}
+
+function openFacultyPanel() {
+  openEditorToTab('faculty');
 }
 </script>
 

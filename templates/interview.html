@@ -392,6 +392,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
             <div class="topic-item" id="t-skills"><span class="topic-dot"></span>Technical Skills</div>
             <div class="topic-item" id="t-extra"><span class="topic-dot"></span>Clubs &amp; Activities</div>
             <div class="topic-item" id="t-goals"><span class="topic-dot"></span>Goals &amp; Aspirations</div>
+            <div class="topic-item" id="t-faculty"><span class="topic-dot"></span>Faculty References</div>
           </div>
         </div>
 
@@ -780,7 +781,8 @@ function updateTopicProgress() {
     ['t-intern',   ['intern','internship','worked at','company','startup','placement','role at','joined']],
     ['t-skills',   ['react','python','javascript','java','c++','sql','node','skill','technology','framework','stack']],
     ['t-extra',    ['club','volunteer','activity','sport','fest','member','society','event','organise']],
-    ['t-goals',    ['goal','aspire','plan','future','want to','career','dream','five years','path']]
+    ['t-goals',    ['goal','aspire','plan','future','want to','career','dream','five years','path']],
+    ['t-faculty',  ['professor','faculty','reference','mentor','supervisor','teacher','lecturer','hod','guide','recommended by','can vouch']]
   ];
   const aiKws = [
     ['t-intro',    ['name','introduce','background','studying']],
@@ -792,7 +794,8 @@ function updateTopicProgress() {
     ['t-intern',   ['intern','work experience','company','internship']],
     ['t-skills',   ['skill','technologies','tech stack','tools']],
     ['t-extra',    ['club','extracurricular','activity','outside']],
-    ['t-goals',    ['goal','aspire','future','career plan','next steps']]
+    ['t-goals',    ['goal','aspire','future','career plan','next steps']],
+    ['t-faculty',  ['professor','faculty reference','mentor','who can vouch','reference','supervised your']]
   ];
 
   userKws.forEach(([id, kws]) => {
