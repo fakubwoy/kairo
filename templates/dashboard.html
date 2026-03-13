@@ -865,10 +865,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
         <div class="ps-body"><div class="profile-section-label">Faculty References</div><div class="profile-section-status">—</div></div>
       </div>
-      <div class="profile-section" id="ps-intro">
-        <div class="ps-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
-        <div class="ps-body"><div class="profile-section-label">Self-Intro Video</div><div class="profile-section-status">—</div></div>
-      </div>
+
     </div>
   </div>
 
@@ -1142,7 +1139,7 @@ document.getElementById('sidebarEmail').textContent = user.email || '—';
 
 function updateProfileDisplay(profile) {
   let filled = 0;
-  const total = 10;
+  const total = 9;
 
   if (profile.name || profile.email) {
     document.getElementById('ps-basic').classList.add('filled');
@@ -1197,15 +1194,6 @@ function updateProfileDisplay(profile) {
     }
     filled++;
   }
-  if (profile.intro_script_generated) {
-    const el = document.getElementById('ps-intro');
-    if (el) {
-      el.classList.add('filled');
-      el.querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Script ready';
-    }
-    filled++;
-  }
-
   const pct = Math.round((filled / total) * 100);
   document.getElementById('completePercent').textContent = pct + '%';
   document.getElementById('progressFill').style.width = pct + '%';
@@ -2026,13 +2014,6 @@ async function generateIntroScript() {
         </div>
       </div>` : ''}
     `;
-
-    // Mark intro script as generated in local profile
-    const stored = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-    if (!stored.profile) stored.profile = {};
-    stored.profile.intro_script_generated = true;
-    localStorage.setItem('kairo_user', JSON.stringify(stored));
-    updateProfileDisplay(stored.profile);
 
     showToast('✓ Script generated! Copy and start practising.', true);
   } catch(e) {
