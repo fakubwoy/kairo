@@ -416,7 +416,9 @@ Return ONLY valid JSON with these exact keys (use empty arrays/strings for field
   "skills": {"technical": [], "tools": [], "languages": []},
   "clubs": [], "hackathons": [], "certifications": [],
   "achievements": [], "highlights": [], "struggles": [],
-  "goals": "", "industrial_visits": []
+  "goals": "", "industrial_visits": [],
+  "extracurriculars": [{"activity": "", "type": "", "role": "", "year": "", "description": ""}],
+  "faculty_references": [{"name": "", "designation": "", "department": "", "institution": "", "email": "", "phone": "", "context": ""}]
 }"""
 
     # Strip UI-only metadata before sending to LLM

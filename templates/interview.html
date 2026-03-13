@@ -1019,10 +1019,11 @@ Return ONLY valid JSON — no markdown, no backticks, no explanation. Use this e
   "projects": [{ "name": "", "tech": "", "description": "", "impact": "" }],
   "internships": [{ "company": "", "role": "", "duration": "", "description": "" }],
   "skills": [],
-  "extracurriculars": [],
+  "extracurriculars": [{ "activity": "", "type": "", "role": "", "year": "", "description": "" }],
   "struggles": [],
   "highlights": [],
-  "goals": ""
+  "goals": "",
+  "faculty_references": [{ "name": "", "designation": "", "department": "", "institution": "", "email": "", "context": "" }]
 }
 
 Conversation:
@@ -1053,13 +1054,36 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
       if (!ud.profile) ud.profile = {};
       Object.assign(ud.profile, profile);
       localStorage.setItem('kairo_user', JSON.stringify(ud));
-      // ── FIX: persist extracted profile to server DB so dashboard reflects it ──
+      // ── FIX: flatten nested schema and persist to server DB so dashboard reflects it ──
       try {
+        const flat = {
+          name: profile.personal?.name || '',
+          college: profile.personal?.college || '',
+          branch: profile.personal?.branch || '',
+          year: profile.personal?.year || '',
+          location: profile.personal?.location || '',
+          cgpa: profile.academics?.cgpa || '',
+          projects: (profile.projects || []).map(pr => ({
+            name: pr.name || '', description: pr.description || '',
+            tech: typeof pr.tech === 'string' ? pr.tech.split(',').map(s=>s.trim()).filter(Boolean) : (pr.tech || []),
+            impact: pr.impact || '', role: pr.role || ''
+          })),
+          internships: profile.internships || [],
+          skills: { technical: Array.isArray(profile.skills) ? profile.skills : [], tools: [], soft: [] },
+          goals: profile.goals || '',
+          highlights: profile.highlights || [],
+          extracurriculars: (profile.extracurriculars || []).map(e =>
+            typeof e === 'string' ? { activity: e, type: 'Club/Society', role: '', year: '', description: '' } : e
+          ),
+          faculty_references: (profile.faculty_references || []).filter(f => f.name)
+        };
+        // Strip empty values to avoid overwriting existing good data
+        Object.keys(flat).forEach(k => { if (flat[k] === '' || (Array.isArray(flat[k]) && !flat[k].length)) delete flat[k]; });
         await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(profile)
+          body: JSON.stringify(flat)
         });
       } catch(e) { console.warn('Profile server save failed:', e); }
     }
@@ -1132,7 +1156,13 @@ function renderSummaryCards(p) {
 
   // Extracurriculars
   if (p.extracurriculars?.length)
-    html += `<div class="summary-card"><h3>Extracurriculars</h3><ul>${p.extracurriculars.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card"><h3>Extracurriculars</h3><ul>${p.extracurriculars.map(e => `<li>${typeof e === 'string' ? e : (e.activity || e.name || '')}</li>`).filter(li => li.includes('<li>')).join('')}</ul></div>`;
+
+  // Faculty References
+  if (p.faculty_references?.length)
+    html += `<div class="summary-card"><h3>Faculty References</h3><ul>${p.faculty_references.map(f =>
+      `<li><strong>${f.name || ''}</strong>${f.department ? ` — ${f.department}` : ''}${f.email ? ` · ${f.email}` : ''}</li>`
+    ).join('')}</ul></div>`;
 
   // Goals
   if (p.goals)

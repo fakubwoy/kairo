@@ -910,10 +910,6 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
           Faculty Refs
         </button>
-        <button class="pe-tab" onclick="switchPeTab('introvideo')" id="petab-introvideo">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-          Self-Intro Video
-        </button>
       </div>
 
       <!-- Basics tab -->
@@ -1023,39 +1019,6 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <button class="btn-add-project" onclick="addFacultyEntry()">+ Add Faculty Reference</button>
       </div>
 
-      <!-- Self-Intro Video tab -->
-      <div class="pe-pane" id="pepane-introvideo">
-        <p style="color:var(--muted);font-size:0.84rem;margin-bottom:1.2rem;line-height:1.6">Generate a personalized self-introduction script you can record. Kairo tailors it to your profile and the kind of roles you're targeting.</p>
-        <div class="profile-fields" style="margin-bottom:1.2rem">
-          <div class="profile-field">
-            <label>Target Role / Company (optional)</label>
-            <input type="text" id="intro-role" placeholder="e.g. SDE Intern at a fintech startup">
-          </div>
-          <div class="profile-field">
-            <label>Video Duration</label>
-            <select id="intro-duration">
-              <option value="30">30 seconds — Elevator pitch</option>
-              <option value="60" selected>60 seconds — Standard intro</option>
-              <option value="90">90 seconds — Detailed intro</option>
-              <option value="120">2 minutes — In-depth intro</option>
-            </select>
-          </div>
-          <div class="profile-field">
-            <label>Tone</label>
-            <select id="intro-tone">
-              <option value="professional">Professional</option>
-              <option value="casual">Conversational &amp; Casual</option>
-              <option value="energetic">Energetic &amp; Enthusiastic</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn-gold" id="introGenerateBtn" style="width:auto;padding:0.6rem 1.5rem;margin-bottom:1.5rem" onclick="generateIntroScript()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-          Generate My Script
-        </button>
-        <div id="introScriptResult" style="display:none"></div>
-      </div>
-
       <div class="profile-save-row">
         <span class="profile-save-status" id="profileSaveStatus"></span>
         <button class="btn-ghost" onclick="toggleProfileEditor()">Cancel</button>
@@ -1139,7 +1102,7 @@ document.getElementById('sidebarEmail').textContent = user.email || '—';
 
 function updateProfileDisplay(profile) {
   let filled = 0;
-  const total = 9;
+  const total = 8;
 
   if (profile.name || profile.email) {
     document.getElementById('ps-basic').classList.add('filled');
@@ -1394,12 +1357,22 @@ function toggleProfileEditor() {
 }
 
 function switchPeTab(tab) {
-  ['basics','projects','github','linkedin','documents','extras','faculty','introvideo'].forEach(t => {
+  ['basics','projects','github','linkedin','documents','extras','faculty'].forEach(t => {
     const pane = document.getElementById(`pepane-${t}`);
     const btn = document.getElementById(`petab-${t}`);
     if (pane) pane.classList.toggle('active', t === tab);
     if (btn) btn.classList.toggle('active', t === tab);
   });
+  // Auto-sync GitHub username from the basics github field when opening GitHub tab
+  if (tab === 'github') {
+    const ghUrl = (document.getElementById('pe-github')?.value || '').trim();
+    const ghField = document.getElementById('pe-githubUsername');
+    if (ghField && !ghField.value) {
+      const m = ghUrl.match(/github\.com\/([^/?#\s]+)/);
+      if (m) ghField.value = m[1].replace(/\/$/, '');
+      else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) ghField.value = ghUrl;
+    }
+  }
 }
 
 // ── Projects editor ──────────────────────────────────────────────────────────
@@ -1756,13 +1729,32 @@ function populateProfileEditor(data) {
   } else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) {
     document.getElementById('pe-githubUsername').value = ghUrl;
   }
-  // Extras & Faculty
-  peExtras = JSON.parse(JSON.stringify(
-    [...(p.extracurriculars||[]), ...(p.clubs||[]).map(c=>({activity:c,type:'Club/Society',role:'',year:''})),
-     ...(p.hackathons||[]).map(h=>({activity:h,type:'Hackathon',role:'',year:''}))]
-  ));
+  // Extras — handle items as strings (from AI extraction) or objects (from editor)
+  const rawExtras = [
+    ...(p.extracurriculars || []),
+    ...(p.clubs || []).map(c => typeof c === 'string' ? c : (c.name || c.activity || '')),
+    ...(p.hackathons || []).map(h => typeof h === 'string' ? h : (h.name || h.activity || ''))
+  ];
+  peExtras = JSON.parse(JSON.stringify(rawExtras.map(e => {
+    if (typeof e === 'string') return { activity: e, type: 'Club/Society', role: '', year: '', description: '' };
+    return { activity: e.activity || e.name || '', type: e.type || 'Club/Society', role: e.role || '', year: e.year || '', description: e.description || '' };
+  }).filter(e => e.activity)));
   renderExtrasList();
-  peFaculty = JSON.parse(JSON.stringify(p.faculty_references || []));
+
+  // Faculty — handle from faculty_references field, or from conversation extraction which may store as structured objects
+  const rawFaculty = p.faculty_references || [];
+  peFaculty = JSON.parse(JSON.stringify(rawFaculty.map(f => {
+    if (typeof f === 'string') return { name: f, designation: '', department: '', institution: 'VIT Vellore', email: '', phone: '', context: '' };
+    return {
+      name: f.name || f.professor || '',
+      designation: f.designation || f.title || '',
+      department: f.department || f.school || '',
+      institution: f.institution || 'VIT Vellore',
+      email: f.email || '',
+      phone: f.phone || '',
+      context: f.context || f.relationship || f.description || ''
+    };
+  }).filter(f => f.name)));
   renderFacultyList();
 }
 
