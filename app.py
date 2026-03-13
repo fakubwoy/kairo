@@ -867,6 +867,7 @@ def fetch_jd():
     """
     Scrape a job posting URL and return clean JD text.
     Strategy:
+      0. Naukri-specific: extract job ID and call their internal API
       1. Site-specific CSS selectors for known job boards
       2. Heuristic fallback — score all block elements by length & keyword density
       3. LLM cleanup pass to extract only the actual JD content
@@ -895,9 +896,17 @@ def fetch_jd():
                      'copy the description text, and paste it directly below.'
         }), 422
 
+    # ── 0. Naukri-specific handler ─────────────────────────────────────────────
+    if 'naukri.com' in parsed_host:
+        jd_text = _fetch_naukri_jd(url)
+        if jd_text and len(jd_text) > 200:
+            jd_text = jd_text[:5000]
+            return jsonify({'jd': jd_text, 'source': 'Naukri', 'url': url})
+        # fall through to generic scraping if API failed
+
     # Site-specific selectors: (host_substring, css_selector)
     SITE_SELECTORS = [
-        ('naukri.com',       'div.styles_job-desc-container__txpYf, div#job_description, div.job-desc'),
+        ('naukri.com',       'div.styles_job-desc-container__txpYf, div#job_description, div.job-desc, div[class*="jd-desc"], div[class*="job-desc"]'),
         ('internshala.com',  'div.internship_details, div#about_internship, div.detail_view'),
         ('foundit.in',       'div.jobDescription, div.job-description'),
         ('instahire.in',     'div.job-description, div.jd-content'),
@@ -920,10 +929,11 @@ def fetch_jd():
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.naukri.com/',
     }
 
     try:
-        resp = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+        resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
         resp.raise_for_status()
     except requests.exceptions.Timeout:
         return jsonify({'error': 'The page took too long to respond. Try again or paste the JD manually.'}), 504
@@ -935,7 +945,14 @@ def fetch_jd():
     except Exception as e:
         return jsonify({'error': f'Could not reach that URL: {str(e)}'}), 500
 
-    soup = BeautifulSoup(resp.text, 'html.parser')
+    # Check if response is actually readable HTML (not binary/garbled)
+    try:
+        resp.encoding = resp.apparent_encoding or 'utf-8'
+        page_text = resp.text
+    except Exception:
+        page_text = resp.content.decode('utf-8', errors='replace')
+
+    soup = BeautifulSoup(page_text, 'html.parser')
 
     # Remove boilerplate tags
     for tag in soup(['script', 'style', 'noscript', 'nav', 'footer', 'header',
@@ -1023,6 +1040,101 @@ def fetch_jd():
     jd_text = jd_text[:5000]
 
     return jsonify({'jd': jd_text, 'source': source_name, 'url': url})
+
+
+def _fetch_naukri_jd(url):
+    """
+    Fetch JD from Naukri using their internal API.
+    Naukri job URLs contain a numeric job ID at the end (e.g. ...110326928982)
+    which maps to their REST API at https://www.naukri.com/jobapi/v4/job/{jobId}
+    """
+    import re as _re
+
+    # Extract job ID — last long numeric sequence in the URL path
+    job_id_match = _re.search(r'(\d{10,})', url)
+    if not job_id_match:
+        print("Naukri: could not extract job ID from URL")
+        return None
+
+    job_id = job_id_match.group(1)
+    api_url = f"https://www.naukri.com/jobapi/v4/job/{job_id}"
+
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.naukri.com/',
+        'appid': '109',
+        'systemid': '109',
+    }
+
+    try:
+        resp = requests.get(api_url, headers=headers, timeout=12)
+        if resp.status_code != 200:
+            print(f"Naukri API returned {resp.status_code}")
+            return None
+
+        data = resp.json()
+        job_data = data.get('jobDetails') or data.get('job') or data
+
+        # Try to assemble JD from API fields
+        parts = []
+
+        title = job_data.get('title') or job_data.get('jobTitle', '')
+        if title:
+            parts.append(f"Job Title: {title}")
+
+        company = job_data.get('companyName') or ''
+        if company:
+            parts.append(f"Company: {company}")
+
+        job_desc = (
+            job_data.get('jobDescription')
+            or job_data.get('description')
+            or job_data.get('jobDesc')
+            or ''
+        )
+        if job_desc:
+            # Strip HTML tags if present
+            try:
+                from bs4 import BeautifulSoup as _BS
+                job_desc = _BS(job_desc, 'html.parser').get_text(separator='\n', strip=True)
+            except Exception:
+                pass
+            parts.append(job_desc)
+
+        # Skills / key requirements
+        skills = job_data.get('keySkills') or job_data.get('skills') or []
+        if isinstance(skills, list) and skills:
+            skill_names = [s.get('label') or s.get('name') or str(s) for s in skills if s]
+            parts.append("Key Skills: " + ', '.join(filter(None, skill_names)))
+        elif isinstance(skills, str) and skills:
+            parts.append("Key Skills: " + skills)
+
+        # Role / category info
+        for field in ['role', 'roleCategory', 'industry', 'functionalArea']:
+            val = job_data.get(field)
+            if val:
+                parts.append(f"{field.capitalize()}: {val}")
+
+        # Experience
+        exp = job_data.get('experience') or job_data.get('minimumExperience') or ''
+        if exp:
+            parts.append(f"Experience: {exp}")
+
+        result = '\n'.join(parts).strip()
+        if len(result) > 100:
+            print(f"Naukri API success: extracted {len(result)} chars")
+            return result
+
+    except Exception as e:
+        print(f"Naukri API error: {e}")
+
+    return None
 
 
 @app.route('/api/generate-resume', methods=['POST'])
