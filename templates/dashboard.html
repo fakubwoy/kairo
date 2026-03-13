@@ -2862,6 +2862,10 @@ function renderAmbassadorHub(data) {
   document.getElementById('ambHub').classList.add('visible');
   document.getElementById('sidebarAmbBadge').classList.add('visible');
 
+  // Ambassadors already see referral info in the hub — hide the generic referral banner
+  const referralBanner = document.getElementById('referralBanner');
+  if (referralBanner) referralBanner.style.display = 'none';
+
   // Stats
   document.getElementById('ambTotalRefs').textContent    = data.total_referrals || 0;
   document.getElementById('ambTotalEarned').textContent  = data.total_credits_earned || 0;
@@ -3155,8 +3159,8 @@ async function buildPoster(code) {
   // ── Star accent ────────────────────────────────────────────────────────
   ctx.font = '14px "Arial"';
   ctx.fillStyle = 'rgba(201,168,76,0.4)';
-  ctx.fillText('✦', W/2 - 230, H - 58);
-  ctx.fillText('✦', W/2 + 230, H - 58);
+  ctx.fillText('✦', W/2 - 290, H - 58);
+  ctx.fillText('✦', W/2 + 290, H - 58);
 }
 
 function roundRect(ctx, x, y, w, h, r) {
