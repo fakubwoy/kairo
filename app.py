@@ -2407,7 +2407,7 @@ Rules:
 - All advice must be specific to the target role and company type
 - Do not invent facts about the student's actual profile; base scores on what they've shared"""
  
-    raw = call_llm([{'role': 'user', 'content': prompt}], system_prompt)
+    raw = call_llm([{'role': 'user', 'content': prompt}], system_prompt, max_tokens=3000)
  
     # Parse JSON — robust extraction: find the outermost {...} block
     try:
