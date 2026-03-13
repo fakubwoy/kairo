@@ -889,20 +889,30 @@ def fetch_jd():
 
     parsed_host = url.split('/')[2].lower().replace('www.', '')
 
-    # LinkedIn blocks scraping — tell the user clearly
-    if 'linkedin.com' in parsed_host:
-        return jsonify({
-            'error': 'LinkedIn blocks automated access. Please open the job post, '
-                     'copy the description text, and paste it directly below.'
-        }), 422
-
-    # ── 0. Naukri-specific handler ─────────────────────────────────────────────
-    if 'naukri.com' in parsed_host:
-        jd_text = _fetch_naukri_jd(url)
-        if jd_text and len(jd_text) > 200:
-            jd_text = jd_text[:5000]
-            return jsonify({'jd': jd_text, 'source': 'Naukri', 'url': url})
-        # fall through to generic scraping if API failed
+    # ── 0. JS-rendered sites — return helpful manual-paste error immediately ──
+    # These sites load job content via JavaScript after page load.
+    # Server-side requests only get an empty HTML shell — scraping cannot work.
+    JS_RENDERED_SITES = {
+        'naukri.com':       'Naukri',
+        'linkedin.com':     'LinkedIn',
+        'instahyre.com':    'Instahyre',
+        'wellfound.com':    'Wellfound',
+        'cutshort.io':      'Cutshort',
+        'greenhouse.io':    'Greenhouse',
+        'lever.co':         'Lever',
+        'workday.com':      'Workday',
+    }
+    for js_host, js_name in JS_RENDERED_SITES.items():
+        if js_host in parsed_host:
+            return jsonify({
+                'error': (
+                    f'{js_name} loads job content via JavaScript, so it cannot be '
+                    f'auto-imported. Please: open the job post → select all the '
+                    f'description text → paste it in the box below.'
+                ),
+                'manual_paste': True,
+                'source': js_name,
+            }), 422
 
     # Site-specific selectors: (host_substring, css_selector)
     SITE_SELECTORS = [

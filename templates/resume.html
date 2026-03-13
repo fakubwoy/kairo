@@ -570,8 +570,20 @@ async function fetchJdFromUrl() {
       statusText.style.color = 'var(--green)';
       statusText.textContent = `✓ Imported ${wordCount} words from ${data.source || 'job posting'} — review below before generating`;
       showToast('JD imported successfully');
-      // Auto-hide status after 6s
       setTimeout(() => { statusBar.style.display = 'none'; }, 6000);
+    } else if (data.manual_paste) {
+      // JS-rendered site (Naukri, LinkedIn, etc.) — show friendly step-by-step guide
+      statusBar.style.borderLeftColor = 'var(--gold)';
+      statusBar.style.background = 'rgba(212,175,55,0.07)';
+      statusText.style.color = 'var(--text)';
+      statusText.innerHTML = `
+        <strong style="color:var(--gold)">⚡ ${data.source || 'This site'} requires manual copy-paste</strong><br>
+        <span style="font-size:0.85rem;opacity:0.85">
+          1. <a href="${url}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline">Open the job post ↗</a>
+          &nbsp;2. Select &amp; copy the full job description &nbsp;3. Paste it in the box below
+        </span>`;
+      // Focus the textarea so user can paste immediately
+      setTimeout(() => document.getElementById('jdInput').focus(), 300);
     } else {
       statusBar.style.borderLeftColor = 'var(--red)';
       statusText.style.color = 'var(--red)';
