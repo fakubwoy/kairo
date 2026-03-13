@@ -771,6 +771,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <div class="profile-section" id="ps-edu"><div class="profile-section-label">Education</div><div class="profile-section-status">—</div></div>
       <div class="profile-section" id="ps-projects"><div class="profile-section-label">Projects</div><div class="profile-section-status">—</div></div>
       <div class="profile-section" id="ps-skills"><div class="profile-section-label">Skills</div><div class="profile-section-status">—</div></div>
+      <div class="profile-section" id="ps-experience"><div class="profile-section-label">Experience</div><div class="profile-section-status">—</div></div>
+      <div class="profile-section" id="ps-goals"><div class="profile-section-label">Goals</div><div class="profile-section-status">—</div></div>
     </div>
   </div>
 
@@ -969,21 +971,21 @@ document.getElementById('sidebarEmail').textContent = user.email || '—';
 
 function updateProfileDisplay(profile) {
   let filled = 0;
-  const total = 4;
-  
+  const total = 6;
+
   if (profile.name || profile.email) {
     document.getElementById('ps-basic').classList.add('filled');
     document.getElementById('ps-basic').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
-  if (profile.branch || profile.subjects?.length) {
+  if (profile.branch || profile.college || profile.subjects?.length) {
     document.getElementById('ps-edu').classList.add('filled');
     document.getElementById('ps-edu').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
   if (profile.projects?.length) {
     document.getElementById('ps-projects').classList.add('filled');
-    document.getElementById('ps-projects').querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.projects.length} projects`;
+    document.getElementById('ps-projects').querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.projects.length} project${profile.projects.length !== 1 ? 's' : ''}`;
     filled++;
   }
   if (profile.skills?.technical?.length) {
@@ -991,14 +993,30 @@ function updateProfileDisplay(profile) {
     document.getElementById('ps-skills').querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
     filled++;
   }
-  
+  if (profile.internships?.length) {
+    const el = document.getElementById('ps-experience');
+    if (el) {
+      el.classList.add('filled');
+      el.querySelector('.profile-section-status').innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${profile.internships.length} role${profile.internships.length !== 1 ? 's' : ''}`;
+    }
+    filled++;
+  }
+  if (profile.goals) {
+    const el = document.getElementById('ps-goals');
+    if (el) {
+      el.classList.add('filled');
+      el.querySelector('.profile-section-status').innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Complete';
+    }
+    filled++;
+  }
+
   const pct = Math.round((filled / total) * 100);
   document.getElementById('completePercent').textContent = pct + '%';
   document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('completeLabel').textContent = 
-    pct === 0 ? 'Start by talking to Kairo' :
-    pct < 50 ? 'Good start! Keep going' :
-    pct < 100 ? 'Almost there!' : 'Profile complete!';
+  document.getElementById('completeLabel').textContent =
+    pct === 0   ? 'Start by talking to Kairo' :
+    pct < 50    ? 'Good start! Keep going' :
+    pct < 100   ? 'Almost there!' : 'Profile complete!';
 }
 
 async function loadResumes() {

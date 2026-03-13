@@ -93,9 +93,9 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .session-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 
 /* ── Video area ── */
-.video-area { flex: 1; display: grid; grid-template-columns: 1fr 300px; background: #050405; overflow: hidden; }
+.video-area { flex: 1; background: #050405; overflow: hidden; position: relative; }
 
-.ai-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; background: #080608; border-right: 1px solid rgba(201,168,76,0.08); position: relative; }
+.ai-panel { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; background: #080608; position: relative; }
 .ai-avatar-ring { width: 140px; height: 140px; border-radius: 50%; border: 2px solid rgba(201,168,76,0.2); display: flex; align-items: center; justify-content: center; position: relative; margin-bottom: 1.5rem; transition: border-color 0.3s; }
 .ai-avatar-ring.speaking { border-color: var(--gold); animation: ringPulse 1s ease-in-out infinite; }
 @keyframes ringPulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0.4)}50%{box-shadow:0 0 0 14px rgba(201,168,76,0)} }
@@ -112,13 +112,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .msg-text { font-size: 0.88rem; color: var(--cream); line-height: 1.55; max-height: 80px; overflow-y: auto; }
 .msg-text::-webkit-scrollbar{width:3px}.msg-text::-webkit-scrollbar-thumb{background:var(--border)}
 
-.candidate-panel { background: #050405; display: flex; flex-direction: column; padding: 1rem; }
-.candidate-video-wrap { position: relative; flex: 1; background: #0a0808; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
-#session-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-.candidate-label { position: absolute; bottom: 0.5rem; left: 0.5rem; background: rgba(0,0,0,0.7); padding: 0.2rem 0.6rem; font-size: 0.75rem; color: var(--cream); }
-.mic-indicator { position: absolute; bottom: 0.5rem; right: 0.5rem; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
-.mic-indicator svg { width: 14px; height: 14px; }
-.mic-indicator.recording { background: rgba(224,92,92,0.8); }
+/* PiP self-view */
+.pip-wrap { position: absolute; top: 1rem; right: 1rem; width: 168px; height: 116px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 4px 20px rgba(0,0,0,0.7); z-index: 20; background: #0a0808; cursor: move; }
+.pip-wrap.cam-off { background: #0a0808; }
+#session-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+.candidate-label { position: absolute; bottom: 0.3rem; left: 0.4rem; background: rgba(0,0,0,0.65); padding: 0.12rem 0.4rem; font-size: 0.65rem; color: var(--cream); border-radius: 2px; letter-spacing: 0.02em; }
+.mic-indicator { position: absolute; bottom: 0.3rem; right: 0.4rem; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; }
+.mic-indicator svg { width: 10px; height: 10px; }
+.mic-indicator.recording { background: rgba(224,92,92,0.85); }
 
 /* ── Right sidebar: topics + transcript + upload ── */
 .progress-sidebar { width: 280px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
@@ -333,7 +334,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     <div class="session-body">
       <!-- Video area -->
       <div class="video-area">
-        <!-- Kairo panel -->
+        <!-- Kairo panel (full area) -->
         <div class="ai-panel" id="ai-panel">
           <div class="ai-avatar-ring" id="ai-avatar-ring">
             <div class="ai-avatar-inner">K</div>
@@ -348,11 +349,9 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
             <div class="msg-role-label" id="msg-role-label">Kairo</div>
             <div class="msg-text" id="msg-text">Starting your session…</div>
           </div>
-        </div>
 
-        <!-- Candidate video -->
-        <div class="candidate-panel">
-          <div class="candidate-video-wrap">
+          <!-- PiP self-view overlay -->
+          <div class="pip-wrap" id="pip-wrap">
             <video id="session-video" autoplay muted playsinline></video>
             <div class="candidate-label" id="candidate-label">You</div>
             <div class="mic-indicator" id="mic-indicator">
@@ -500,6 +499,24 @@ if (window.speechSynthesis) {
 }
 
 loadPastSessions();
+
+// ── Draggable PiP ──────────────────────────────────────────────────────────────
+(function() {
+  let pip, dragging = false, ox, oy;
+  document.addEventListener('DOMContentLoaded', () => { pip = document.getElementById('pip-wrap'); });
+  function initPip() { pip = document.getElementById('pip-wrap'); if (!pip) return;
+    pip.addEventListener('mousedown', e => { dragging = true; ox = e.clientX - pip.offsetLeft; oy = e.clientY - pip.offsetTop; pip.style.transition = 'none'; });
+  }
+  document.addEventListener('mousemove', e => { if (!dragging || !pip) return;
+    const parent = pip.parentElement.getBoundingClientRect();
+    let x = e.clientX - ox, y = e.clientY - oy;
+    x = Math.max(0, Math.min(x, parent.width - pip.offsetWidth));
+    y = Math.max(0, Math.min(y, parent.height - pip.offsetHeight));
+    pip.style.left = x + 'px'; pip.style.top = y + 'px'; pip.style.right = 'auto';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; if (pip) pip.style.transition = ''; });
+  setTimeout(initPip, 100);
+})();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // SIDEBAR & AUTH
@@ -975,8 +992,10 @@ async function generateSummary() {
   grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Kairo is reading through your conversation and building your profile…</p></div>';
 
   const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$/;
-  const transcript = messages
-    .filter(m => !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim())))
+  const cleanMessages = messages.filter(m =>
+    !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim()))
+  );
+  const transcript = cleanMessages
     .map(m => (m.role === 'user' ? 'You' : 'Kairo') + ': ' + m.content)
     .join('\n');
 
@@ -1000,10 +1019,15 @@ ${transcript.slice(0, 4000)}
 Rules: Use empty string or empty array for fields not mentioned. Do not invent data. Extract faithfully.`;
 
   try {
+    // Use extract_only=true so the backend does NOT save this to the conversation history
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ message: extractPrompt, conversation_id: conversationId })
+      body: JSON.stringify({
+        message: extractPrompt,
+        conversation_id: null,   // no conversation — this is a one-off extraction call
+        extract_only: true        // backend should skip saving when this flag is set
+      })
     });
     const data = await res.json();
     if (data.response) {

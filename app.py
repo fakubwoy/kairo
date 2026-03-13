@@ -342,30 +342,35 @@ def get_llm_status():
 
 
 def get_interview_system_prompt(profile_data):
-    return f"""You are Kairo, an empathetic AI career coach helping a student at VIT Vellore build their professional profile.
+    return f"""You are Kairo, a warm and empathetic AI career co-pilot helping a student build their professional profile.
 
-Your job is to conduct a friendly, conversational interview to extract rich details about the student's:
-- Courses and subjects studied (with marks/grades if available)
-- Projects built (tech stack, problem solved, impact)
-- Internships and work experience
-- Extracurriculars, clubs, hackathons, competitions
-- Skills (technical and soft)
-- Certifications and achievements
-- Industrial visits and workshops
+Think of yourself as a well-wisher — a senior who genuinely cares about the student's journey and wants to understand their full story, not just their resume bullet points.
 
-Current profile data collected so far:
+Your approach:
+1. Start by understanding their TIMELINE — college, year, branch, location
+2. Dig into ACADEMICS — CGPA, favourite subjects, what clicked and what didn't
+3. Explore STRUGGLES honestly — bad semesters, setbacks, hard moments (these show resilience)
+4. Celebrate WINS — hackathons, awards, proud moments, things they're genuinely excited about
+5. Go deep on PROJECTS — what problem, what tech, what impact, what they personally built
+6. Explore INTERNSHIPS — what they worked on, what they learned, real outcomes
+7. Map out SKILLS — not just a list, understand what they're truly strong in vs. dabbled in
+8. Understand EXTRACURRICULARS — clubs, events organised, communities led
+9. Understand GOALS — where they want to be, what excites them about the future
+
+Current profile data already collected:
 {json.dumps(profile_data, indent=2)}
 
-Guidelines:
-- Ask ONE focused question at a time
-- Be encouraging and dig deeper with follow-up questions
-- Extract specifics: numbers, technologies, outcomes, timelines
-- If they mention something vague, ask for more details
-- After gathering enough on a topic, naturally move to the next
-- Keep responses concise and conversational (2-3 sentences max)
-- When you have a comprehensive profile, say "PROFILE_COMPLETE" at the start of your response
+If a field already has data, skip or briefly confirm it — don't re-ask things you already know.
 
-Start by warmly greeting them and asking about their course/branch."""
+Guidelines:
+- Ask ONE focused question at a time — never multi-part questions
+- Sound like a human who cares, not a form being filled out
+- When they mention something vague, ask ONE good follow-up: "What was the actual impact?" / "What did you build specifically?" / "How long did that take?"
+- Extract specifics: numbers, tech stack, outcomes, timelines, team size, role
+- Keep each response to 2-3 sentences max — this is a conversation, not a lecture
+- When you have covered all major areas comprehensively, say "PROFILE_COMPLETE" at the very start of your response
+
+Start warmly — greet them by name if you know it, and ask where they're studying and what they're doing."""
 
 
 def get_resume_system_prompt(profile_data, job_description):
@@ -400,24 +405,26 @@ Return ONLY valid JSON, no markdown."""
 
 def extract_profile_from_conversation(messages):
     """Use LLM to extract structured profile from conversation"""
-    system = """Extract a structured student profile from this conversation. 
-Return ONLY valid JSON with these keys (use empty arrays/strings if not found):
+    system = """Extract a structured student career profile from this conversation.
+Return ONLY valid JSON with these exact keys (use empty arrays/strings for fields not mentioned — never invent data):
 {
   "name": "", "email": "", "phone": "",
-  "branch": "", "year": "", "cgpa": "",
+  "college": "", "branch": "", "year": "", "cgpa": "", "location": "",
   "subjects": [{"name": "", "grade": "", "interest": "high/medium/low"}],
-  "projects": [{"name": "", "description": "", "tech": [], "role": ""}],
-  "internships": [{"company": "", "role": "", "duration": "", "work": ""}],
+  "projects": [{"name": "", "description": "", "tech": [], "role": "", "impact": ""}],
+  "internships": [{"company": "", "role": "", "duration": "", "work": "", "description": ""}],
   "skills": {"technical": [], "tools": [], "languages": []},
   "clubs": [], "hackathons": [], "certifications": [],
-  "achievements": [], "industrial_visits": []
+  "achievements": [], "highlights": [], "struggles": [],
+  "goals": "", "industrial_visits": []
 }"""
-    
-    conv_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in messages])
+
+    # Strip UI-only metadata before sending to LLM
+    clean_messages = [{"role": m["role"], "content": m["content"]} for m in messages if not m.get("_silent")]
+    conv_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in clean_messages])
     result = call_llm([{"role": "user", "content": f"Conversation:\n{conv_text}\n\nExtract the profile:"}], system)
-    
+
     try:
-        # Clean potential markdown
         clean = result.strip()
         if "```" in clean:
             clean = clean.split("```")[1]
@@ -426,6 +433,28 @@ Return ONLY valid JSON with these keys (use empty arrays/strings if not found):
         return json.loads(clean)
     except:
         return {}
+
+
+def deep_merge_profile(existing, new_data):
+    """Deep merge new profile data into existing — lists are unioned, strings overwrite only if new value is non-empty."""
+    for key, new_val in new_data.items():
+        if not new_val and new_val != 0:
+            continue  # skip empty strings / empty lists from new extraction
+        if key not in existing or not existing[key]:
+            existing[key] = new_val
+        elif isinstance(new_val, list) and isinstance(existing[key], list):
+            # Merge lists by name field to avoid duplicates
+            existing_names = {str(item.get('name', item) if isinstance(item, dict) else item).lower() for item in existing[key]}
+            for item in new_val:
+                item_name = str(item.get('name', item) if isinstance(item, dict) else item).lower()
+                if item_name not in existing_names:
+                    existing[key].append(item)
+                    existing_names.add(item_name)
+        elif isinstance(new_val, dict) and isinstance(existing[key], dict):
+            deep_merge_profile(existing[key], new_val)
+        elif isinstance(new_val, str) and new_val.strip():
+            existing[key] = new_val  # strings: overwrite only if new value is non-empty
+    return existing
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -570,6 +599,13 @@ def chat():
     if not sid:
         sid = 'demo'
 
+    # extract_only: one-shot LLM call, never saved to conversation history
+    # Used by the frontend summary generator to avoid polluting the transcript
+    if data.get('extract_only'):
+        extract_system = "You are a JSON extractor. Return only valid JSON, no markdown, no explanation."
+        result = call_llm([{"role": "user", "content": user_message}], extract_system)
+        return jsonify({'response': result, 'conversation_id': None, 'profile_complete': False, 'messages': []})
+
     # Get or create conversation
     conv = None
     if conversation_id:
@@ -627,8 +663,8 @@ def chat():
             student = Student.query.get(sid)
             if student and extracted:
                 existing = json.loads(student.profile_data or '{}')
-                existing.update(extracted)
-                student.profile_data = json.dumps(existing)
+                merged = deep_merge_profile(existing, extracted)
+                student.profile_data = json.dumps(merged)
                 db.session.commit()
 
     # Persist — keep last 100 messages in both stores
