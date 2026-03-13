@@ -566,6 +566,10 @@ def interview_prep_page():
 def resume_page():
     return render_template('resume.html')
 
+@app.route('/presence')
+def presence_page():
+    return render_template('presence.html')
+
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.json
@@ -2280,7 +2284,158 @@ Return as JSON:
 
     return jsonify(script_data)
 
-
+@app.route('/api/presence-audit', methods=['POST'])
+def presence_audit():
+    """
+    AI-powered LinkedIn & GitHub presence audit.
+    Uses the same Groq (Llama 3.3 70B) backend as everything else.
+    No credits charged — this is guidance, not a generation product.
+    """
+    data = request.json or {}
+ 
+    github_username = data.get('github_username', '').strip()
+    linkedin_url    = data.get('linkedin_url', '').strip()
+    target_role     = data.get('target_role', '').strip()
+    company_type    = data.get('company_type', 'any').strip()
+    context         = data.get('context', '').strip()
+ 
+    if not github_username and not linkedin_url:
+        return jsonify({'error': 'Provide at least a GitHub username or LinkedIn URL.'}), 400
+ 
+    # Pull the student's Kairo profile for extra context if logged in
+    sid = session.get('student_id')
+    profile_summary = ''
+    if sid and sid != 'demo':
+        student = Student.query.get(sid)
+        if student:
+            p = json.loads(student.profile_data or '{}')
+            parts = []
+            if p.get('name'):    parts.append(f"Name: {p['name']}")
+            if p.get('branch'):  parts.append(f"Branch: {p['branch']}")
+            if p.get('college'): parts.append(f"College: {p['college']}")
+            if p.get('skills'):
+                skills = p['skills']
+                if isinstance(skills, list): parts.append(f"Skills: {', '.join(skills[:12])}")
+                elif isinstance(skills, dict):
+                    flat = []
+                    for v in skills.values():
+                        if isinstance(v, list): flat.extend(v)
+                    parts.append(f"Skills: {', '.join(flat[:12])}")
+            if p.get('projects'):
+                proj_names = [pr.get('name','') for pr in (p['projects'] if isinstance(p['projects'], list) else []) if pr.get('name')]
+                if proj_names: parts.append(f"Projects: {', '.join(proj_names[:5])}")
+            if p.get('experience'):
+                exp = p['experience']
+                if isinstance(exp, list) and exp:
+                    parts.append(f"Experience: {exp[0].get('company', '')} — {exp[0].get('role', '')}")
+            profile_summary = '\n'.join(parts)
+ 
+    system_prompt = (
+        "You are a senior tech recruiter and career coach with deep knowledge of how "
+        "Indian tech students are evaluated for internships and jobs at startups, "
+        "product companies, and FAANG. You give honest, specific, actionable advice. "
+        "Return ONLY valid JSON — no markdown, no explanation, no code fences."
+    )
+ 
+    prompt = f"""Analyse the online presence of a student applying for tech roles and produce a structured audit report.
+ 
+STUDENT INPUT:
+- GitHub username: {github_username or '(not provided)'}
+- LinkedIn URL: {linkedin_url or '(not provided)'}
+- Target role: {target_role or 'Software engineering / tech (unspecified)'}
+- Target company type: {company_type}
+- Student's additional context: {context or '(none provided)'}
+ 
+KAIRO PROFILE SNAPSHOT:
+{profile_summary or '(not available)'}
+ 
+IMPORTANT: Since you cannot access live URLs, base your audit on:
+1. What a recruiter would typically look for given the role and company type
+2. The most common mistakes students make in that context
+3. Any specific details the student has shared in their context above
+4. Their Kairo profile data to personalise advice about showcasing their actual skills/projects
+ 
+Be specific — reference the target role ({target_role or 'tech'}) and company type ({company_type}) in your tips.
+Scores should be honest; most students score 3–6 unless they have strong evidence of a great profile.
+ 
+Return this exact JSON schema (no extra keys):
+{{
+  "scores": {{
+    "github": <integer 1-10>,
+    "github_verdict": "<one short phrase, e.g. 'Needs work' / 'Solid foundation' / 'Recruiter-ready'>",
+    "linkedin": <integer 1-10>,
+    "linkedin_verdict": "<one short phrase>",
+    "overall": <integer 1-10>,
+    "overall_verdict": "<one short phrase>"
+  }},
+  "github_tips": [
+    {{
+      "title": "<short title>",
+      "priority": "High | Medium | Low",
+      "description": "<2-3 sentences of specific advice>",
+      "action": "<one concrete next step the student can do today>"
+    }}
+  ],
+  "linkedin_tips": [
+    {{
+      "title": "<short title>",
+      "priority": "High | Medium | Low",
+      "description": "<2-3 sentences of specific advice>",
+      "action": "<one concrete next step>"
+    }}
+  ],
+  "consistency_checks": [
+    {{
+      "label": "<what is being checked, e.g. 'Profile photo present'>",
+      "status": "good | warn | bad",
+      "detail": "<short explanation or recommendation>"
+    }}
+  ],
+  "weekly_plan": [
+    {{
+      "week": <1-4>,
+      "tasks": ["<task 1>", "<task 2>", "<task 3>"]
+    }}
+  ]
+}}
+ 
+Rules:
+- github_tips: 4-6 items
+- linkedin_tips: 4-6 items
+- consistency_checks: 6-8 items covering both platforms (photo, headline, pinned repos, README, about section, skills section, contact info, posting cadence)
+- weekly_plan: exactly 4 weeks, ordered from highest-impact to maintenance
+- All advice must be specific to the target role and company type
+- Do not invent facts about the student's actual profile; base scores on what they've shared"""
+ 
+    raw = call_llm([{'role': 'user', 'content': prompt}], system_prompt)
+ 
+    # Parse JSON — same robust approach used elsewhere in app.py
+    try:
+        clean = raw.strip()
+        if '```' in clean:
+            for part in clean.split('```'):
+                if '{' in part:
+                    clean = part.lstrip('json').strip()
+                    break
+        result = json.loads(clean)
+    except Exception:
+        # Graceful fallback so the frontend always gets a valid response shape
+        result = {
+            'scores': {
+                'github': 5, 'github_verdict': 'Unable to score',
+                'linkedin': 5, 'linkedin_verdict': 'Unable to score',
+                'overall': 5, 'overall_verdict': 'Partial analysis'
+            },
+            'github_tips': [{'title': 'Analysis incomplete', 'priority': 'Medium',
+                             'description': 'The AI could not parse a full response. Try again.',
+                             'action': 'Click Run Audit again.'}],
+            'linkedin_tips': [],
+            'consistency_checks': [],
+            'weekly_plan': [],
+            '_raw': raw[:500]  # include truncated raw for debugging
+        }
+ 
+    return jsonify(result)
 
 @app.route('/api/conversations/active')
 def active_conversation():

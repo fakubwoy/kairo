@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presence Audit — Kairo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --cream: #f5f0e8;
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --muted: #6b6560;
+  --surface: #13110e;
+  --surface2: #1c1916;
+  --green: #4caf7d;
+  --red: #ef9a9a;
+  --blue: #7eb8e8;
+  --border: rgba(201,168,76,0.12);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; min-height: 100vh; display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 1.5rem 0;
+  position: fixed; height: 100vh; z-index: 10;
+}
+.sidebar-logo {
+  font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 900;
+  color: var(--gold); padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.7rem 1.5rem; color: var(--muted); font-size: 0.9rem;
+  cursor: pointer; transition: all 0.2s; text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: var(--cream); background: rgba(201,168,76,0.05); }
+.nav-item.active { color: var(--gold); border-left-color: var(--gold); background: rgba(201,168,76,0.08); }
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
+.credit-pill {
+  display: flex; align-items: center; gap: 0.45rem;
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25);
+  padding: 0.35rem 0.75rem; margin: 0.6rem 1.5rem 0;
+  font-size: 0.78rem; color: var(--gold-light);
+}
+.credit-pill-count { font-weight: 600; font-size: 0.85rem; color: var(--gold); }
+.sidebar-bottom { margin-top: auto; padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
+.user-name { font-size: 0.88rem; color: var(--cream); margin-bottom: 0.15rem; font-weight: 500; }
+.user-info { font-size: 0.78rem; color: var(--muted); }
+
+/* Main */
+.main { margin-left: 240px; flex: 1; padding: 2rem 2.5rem; }
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 0.3rem; }
+.page-header p { color: var(--muted); font-size: 0.95rem; }
+
+/* Input panel */
+.input-panel { background: var(--surface); border: 1px solid rgba(201,168,76,0.15); padding: 1.8rem; margin-bottom: 2rem; }
+.panel-heading {
+  font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.prefill-notice {
+  display: none; align-items: center; gap: 0.5rem;
+  background: rgba(76,175,125,0.06); border: 1px solid rgba(76,175,125,0.2);
+  padding: 0.65rem 1rem; margin-bottom: 1.2rem; font-size: 0.82rem; color: var(--green);
+}
+.prefill-notice.show { display: flex; }
+.hint-box {
+  font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+  background: rgba(201,168,76,0.04); border: 1px solid rgba(201,168,76,0.1);
+  padding: 0.65rem 0.9rem; margin-bottom: 1.3rem;
+}
+.hint-box strong { color: var(--gold-light); }
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.3rem; }
+.input-group label {
+  display: block; font-size: 0.72rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+}
+.input-group input, .input-group select, .input-group textarea {
+  width: 100%; background: rgba(245,240,232,0.04);
+  border: 1px solid rgba(201,168,76,0.18); color: var(--cream);
+  padding: 0.6rem 0.85rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+}
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--gold); }
+.input-group select {
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6560'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 0.8rem center; padding-right: 2rem;
+}
+.input-group select option { background: #1c1916; }
+.input-group textarea { resize: vertical; min-height: 75px; }
+.span2 { grid-column: 1 / -1; }
+.btn-run {
+  background: var(--gold); color: var(--ink); border: none;
+  padding: 0.75rem 2rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: background 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+}
+.btn-run:hover:not(:disabled) { background: var(--gold-light); }
+.btn-run:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Loading */
+#loadingState { display: none; flex-direction: column; align-items: center; padding: 4rem 2rem; gap: 1rem; text-align: center; }
+#loadingState.active { display: flex; }
+.spinner {
+  width: 34px; height: 34px; border: 2px solid rgba(201,168,76,0.12);
+  border-top-color: var(--gold); border-radius: 50%; animation: spin 0.85s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-size: 0.9rem; color: var(--muted); }
+.loading-sub { font-size: 0.78rem; color: rgba(107,101,96,0.7); transition: opacity 0.4s; }
+
+/* Error */
+#errorState {
+  display: none; align-items: flex-start; gap: 0.6rem;
+  background: rgba(239,154,154,0.05); border: 1px solid rgba(239,154,154,0.2);
+  padding: 1.2rem 1.4rem; color: var(--red); font-size: 0.88rem; margin-bottom: 1.5rem;
+}
+#errorState.active { display: flex; }
+
+/* Results */
+#resultsArea { display: none; }
+#resultsArea.active { display: block; }
+
+/* Re-run bar */
+.rerun-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 1rem 1.4rem; margin-bottom: 1.8rem;
+}
+.rerun-label { font-size: 0.85rem; color: var(--muted); }
+.rerun-label strong { color: var(--cream); }
+.btn-ghost {
+  background: transparent; border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold); padding: 0.5rem 1.2rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.84rem; cursor: pointer; transition: all 0.2s;
+}
+.btn-ghost:hover { background: rgba(201,168,76,0.08); }
+
+/* Score strip */
+.score-strip { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+.score-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 1.2rem 1.4rem; position: relative; overflow: hidden;
+}
+.score-accent { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.score-platform { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+.score-num { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; line-height: 1; margin-bottom: 0.2rem; }
+.score-verdict { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.8rem; }
+.score-track { height: 3px; background: rgba(245,240,232,0.06); }
+.score-fill { height: 100%; transition: width 1s cubic-bezier(.22,1,.36,1); width: 0%; }
+
+/* Audit section */
+.audit-section { margin-bottom: 1.6rem; }
+.section-hd {
+  display: flex; align-items: center; gap: 0.6rem;
+  border-bottom: 1px solid rgba(201,168,76,0.1); padding-bottom: 0.65rem; margin-bottom: 1rem;
+}
+.section-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.section-title { font-size: 0.93rem; font-weight: 500; }
+.section-tag {
+  margin-left: auto; font-size: 0.7rem; padding: 0.15rem 0.55rem;
+  background: rgba(201,168,76,0.1); color: var(--gold); letter-spacing: 0.05em; text-transform: uppercase;
+}
+
+/* Tips */
+.tips-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.tip-card {
+  background: var(--surface); border: 1px solid rgba(201,168,76,0.1);
+  padding: 1rem 1.1rem; position: relative;
+}
+.tip-priority {
+  position: absolute; top: 0.8rem; right: 0.9rem;
+  font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
+}
+.tip-priority.high { color: var(--red); }
+.tip-priority.medium { color: var(--gold); }
+.tip-priority.low { color: var(--green); }
+.tip-title { font-size: 0.87rem; font-weight: 500; margin-bottom: 0.35rem; padding-right: 4rem; }
+.tip-body { font-size: 0.81rem; color: var(--muted); line-height: 1.65; }
+.tip-cta { margin-top: 0.6rem; font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(201,168,76,0.08); padding-top: 0.5rem; }
+.tip-cta::before { content: '→  '; }
+
+/* Checklist */
+.checklist { display: flex; flex-direction: column; gap: 0.5rem; }
+.check-item {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  background: var(--surface); border: 1px solid rgba(201,168,76,0.08);
+  padding: 0.75rem 1rem; font-size: 0.84rem;
+}
+.check-dot {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 0.05rem; font-size: 0.72rem; font-weight: 700;
+}
+.check-dot.good { background: rgba(76,175,125,0.15); color: var(--green); }
+.check-dot.warn { background: rgba(201,168,76,0.12); color: var(--gold); }
+.check-dot.bad  { background: rgba(239,154,154,0.12); color: var(--red); }
+.check-body { flex: 1; line-height: 1.55; }
+.check-body strong { color: var(--cream); display: block; margin-bottom: 0.1rem; }
+.check-body span { color: var(--muted); font-size: 0.79rem; }
+
+/* Weekly plan */
+.weekly-plan { background: var(--surface); border: 1px solid var(--border); }
+.week-hd {
+  padding: 0.75rem 1.2rem; border-bottom: 1px solid rgba(201,168,76,0.08);
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  display: grid; grid-template-columns: 100px 1fr;
+}
+.week-row { display: grid; grid-template-columns: 100px 1fr; border-bottom: 1px solid rgba(201,168,76,0.06); }
+.week-row:last-child { border-bottom: none; }
+.week-day { padding: 0.8rem 1.2rem; font-size: 0.78rem; color: var(--gold); font-weight: 600; border-right: 1px solid rgba(201,168,76,0.08); display: flex; align-items: flex-start; }
+.week-tasks { padding: 0.8rem 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.week-task { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+.week-task strong { color: var(--cream); }
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 1.5rem; }
+  .input-grid, .tips-grid, .score-strip { grid-template-columns: 1fr; }
+  .span2 { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+</svg>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">Kai<span style="color:var(--cream)">ro</span></div>
+  <a href="/dashboard" class="nav-item"><svg class="nav-icon"><use href="#i-grid"/></svg> Dashboard</a>
+  <a href="/interview" class="nav-item"><svg class="nav-icon"><use href="#i-mic"/></svg> Build Profile</a>
+  <a href="/resume" class="nav-item"><svg class="nav-icon"><use href="#i-file"/></svg> My Resumes</a>
+  <a href="/interview-prep" class="nav-item">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Interview Prep
+  </a>
+  <a href="/presence" class="nav-item active">
+    <svg class="nav-icon"><use href="#i-globe"/></svg> Presence Audit
+  </a>
+
+  <div class="credit-pill">
+    <span>◈</span>
+    <span><span class="credit-pill-count" id="sidebarCredits">—</span> credits</span>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="user-name" id="sidebarName">—</div>
+    <div class="user-info" id="sidebarEmail">Loading…</div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h1>Presence Audit</h1>
+    <p>AI-powered analysis of your LinkedIn &amp; GitHub — personalised, actionable tips to stand out to recruiters.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="input-panel" id="inputPanel">
+    <div class="panel-heading">
+      <svg width="14" height="14"><use href="#i-globe"/></svg>
+      Your profiles
+    </div>
+
+    <div class="prefill-notice" id="prefillNotice">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="prefillMsg">Loaded from your Kairo profile — fill in anything missing.</span>
+    </div>
+
+    <div class="hint-box">
+      <strong>What gets scored:</strong> GitHub repo quality, README hygiene, pinned projects, commit consistency, contribution activity — and LinkedIn headline clarity, About section completeness, keyword density, and skill relevance for your target role.
+    </div>
+
+    <div class="input-grid">
+      <div class="input-group">
+        <label>GitHub Username</label>
+        <input type="text" id="in-github" placeholder="e.g. torvalds">
+      </div>
+      <div class="input-group">
+        <label>LinkedIn Profile URL</label>
+        <input type="url" id="in-linkedin" placeholder="https://linkedin.com/in/yourname">
+      </div>
+      <div class="input-group">
+        <label>Target Role</label>
+        <input type="text" id="in-role" placeholder="e.g. SDE Intern, Data Analyst, PM">
+      </div>
+      <div class="input-group">
+        <label>Target Company Type</label>
+        <select id="in-company">
+          <option value="any">Any / Not sure yet</option>
+          <option value="startup">Early-stage startup</option>
+          <option value="product">Product company (mid-size)</option>
+          <option value="faang">FAANG / Big Tech</option>
+          <option value="consulting">Consulting / Services</option>
+          <option value="finance">Finance / Quant</option>
+          <option value="research">Research / Academia</option>
+        </select>
+      </div>
+      <div class="input-group span2">
+        <label>What's your current situation? (optional — helps us give specific advice)</label>
+        <textarea id="in-context" placeholder="e.g. I've pinned 3 repos on GitHub but none have READMEs. My LinkedIn headline is generic. I haven't posted in months and have no consistent presence…"></textarea>
+      </div>
+    </div>
+
+    <button class="btn-run" id="runBtn" onclick="runAudit()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Run Audit
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div class="loading-label" id="loadingLabel">Analysing your presence…</div>
+    <div class="loading-sub" id="loadingSub">This takes 10–15 seconds</div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorState">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span id="errorMsg">Something went wrong. Please try again.</span>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsArea">
+
+    <div class="rerun-bar">
+      <div class="rerun-label">Audit for <strong id="rerunTarget">—</strong></div>
+      <button class="btn-ghost" onclick="resetAudit()">↺ Run Again</button>
+    </div>
+
+    <!-- Scores -->
+    <div class="score-strip">
+      <div class="score-card">
+        <div class="score-accent" style="background:var(--blue)"></div>
+        <div class="score-platform">GitHub</div>
+        <div class="score-num" id="sc-github" style="color:var(--blue)">—</div>
+        <div class="score-verdict" id="sv-github"></div>
+        <div class="score-track"><div class="score-fill" id="sf-github" style="background:var(--blue)"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-accent" style="background:var(--gold)"></div>
+        <div class="score-platform">LinkedIn</div>
+        <div class="score-num" id="sc-linkedin" style="color:var(--gold)">—</div>
+        <div class="score-verdict" id="sv-linkedin"></div>
+        <div class="score-track"><div class="score-fill" id="sf-linkedin" style="background:var(--gold)"></div></div>
+      </div>
+      <div class="score-card">
+        <div class="score-accent" style="background:var(--green)"></div>
+        <div class="score-platform">Overall Presence</div>
+        <div class="score-num" id="sc-overall" style="color:var(--green)">—</div>
+        <div class="score-verdict" id="sv-overall"></div>
+        <div class="score-track"><div class="score-fill" id="sf-overall" style="background:var(--green)"></div></div>
+      </div>
+    </div>
+
+    <!-- GitHub tips -->
+    <div class="audit-section">
+      <div class="section-hd">
+        <div class="section-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        </div>
+        <div class="section-title">GitHub — What to Improve</div>
+        <div class="section-tag" id="gh-tag">—</div>
+      </div>
+      <div class="tips-grid" id="githubTips"></div>
+    </div>
+
+    <!-- LinkedIn tips -->
+    <div class="audit-section">
+      <div class="section-hd">
+        <div class="section-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </div>
+        <div class="section-title">LinkedIn — What to Improve</div>
+        <div class="section-tag" id="li-tag">—</div>
+      </div>
+      <div class="tips-grid" id="linkedinTips"></div>
+    </div>
+
+    <!-- Consistency check -->
+    <div class="audit-section">
+      <div class="section-hd">
+        <div class="section-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="section-title">Profile Consistency Check</div>
+        <div class="section-tag">Quick wins</div>
+      </div>
+      <div class="checklist" id="consistencyList"></div>
+    </div>
+
+    <!-- 4-week plan -->
+    <div class="audit-section">
+      <div class="section-hd">
+        <div class="section-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="section-title">4-Week Action Plan</div>
+        <div class="section-tag">Structured</div>
+      </div>
+      <div class="weekly-plan">
+        <div class="week-hd"><span>Week</span><span>Focus &amp; Tasks</span></div>
+        <div id="weeklyPlan"></div>
+      </div>
+    </div>
+
+  </div><!-- /resultsArea -->
+</main>
+
+<script>
+// ── Sidebar bootstrap ──────────────────────────────────────────────────
+(async () => {
+  try {
+    const data = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json());
+    const s = data.student || {};
+    document.getElementById('sidebarName').textContent  = s.name  || '—';
+    document.getElementById('sidebarEmail').textContent = s.email || '';
+    if (typeof data.credits === 'number') {
+      document.getElementById('sidebarCredits').textContent = data.credits;
+    }
+
+    // Pre-fill from profile
+    const p = s.profile_data || {};
+    const github   = p.github_username || '';
+    const linkedin = p.linkedin_url    || '';
+    const role     = p.target_role || (p.career_goals && p.career_goals.target_role) || '';
+
+    if (github || linkedin || role) {
+      if (github)   document.getElementById('in-github').value   = github;
+      if (linkedin) document.getElementById('in-linkedin').value = linkedin;
+      if (role)     document.getElementById('in-role').value     = role;
+
+      const filled = [github && 'GitHub', linkedin && 'LinkedIn URL', role && 'target role'].filter(Boolean);
+      document.getElementById('prefillMsg').textContent =
+        `Loaded from your profile: ${filled.join(', ')}. Add anything missing.`;
+      document.getElementById('prefillNotice').classList.add('show');
+    }
+  } catch (_) {}
+})();
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function priorityClass(p) {
+  const l = (p || '').toLowerCase();
+  if (l.includes('high') || l.includes('critical')) return 'high';
+  if (l.includes('low'))  return 'low';
+  return 'medium';
+}
+function dotClass(status) {
+  const l = (status || '').toLowerCase();
+  if (l === 'good' || l === 'done' || l === 'yes') return 'good';
+  if (l === 'bad'  || l === 'no'   || l === 'missing') return 'bad';
+  return 'warn';
+}
+function dotSymbol(cls) {
+  return cls === 'good' ? '✓' : cls === 'bad' ? '✕' : '!';
+}
+function animateScore(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let cur = 0, target = Math.max(0, Math.min(10, parseInt(value) || 0));
+  const t = setInterval(() => {
+    cur = Math.min(cur + 1, target);
+    el.textContent = cur + '/10';
+    if (cur >= target) clearInterval(t);
+  }, 40);
+}
+
+// ── Render functions ───────────────────────────────────────────────────
+function renderTips(id, tips) {
+  const el = document.getElementById(id);
+  if (!tips || !tips.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:0.83rem;grid-column:1/-1;padding:0.5rem 0">No tips generated for this section.</p>';
+    return;
+  }
+  el.innerHTML = tips.map(t => `
+    <div class="tip-card">
+      <div class="tip-priority ${priorityClass(t.priority)}">${esc(t.priority || 'Medium')}</div>
+      <div class="tip-title">${esc(t.title)}</div>
+      <div class="tip-body">${esc(t.description)}</div>
+      ${t.action ? `<div class="tip-cta">${esc(t.action)}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderChecklist(id, items) {
+  const el = document.getElementById(id);
+  if (!items || !items.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:0.83rem">No checks generated.</p>';
+    return;
+  }
+  el.innerHTML = items.map(c => {
+    const cls = dotClass(c.status);
+    return `<div class="check-item">
+      <div class="check-dot ${cls}">${dotSymbol(cls)}</div>
+      <div class="check-body">
+        <strong>${esc(c.label)}</strong>
+        <span>${esc(c.detail)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderWeeklyPlan(id, weeks) {
+  const el = document.getElementById(id);
+  if (!weeks || !weeks.length) {
+    el.innerHTML = '<div class="week-row"><div class="week-day">—</div><div class="week-tasks"><div class="week-task">No plan generated.</div></div></div>';
+    return;
+  }
+  el.innerHTML = weeks.map(w => `
+    <div class="week-row">
+      <div class="week-day">Week ${esc(w.week)}</div>
+      <div class="week-tasks">${(w.tasks || []).map(t => `<div class="week-task">${esc(t)}</div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ── Main ───────────────────────────────────────────────────────────────
+async function runAudit() {
+  const github   = document.getElementById('in-github').value.trim();
+  const linkedin = document.getElementById('in-linkedin').value.trim();
+  const role     = document.getElementById('in-role').value.trim();
+  const company  = document.getElementById('in-company').value;
+  const context  = document.getElementById('in-context').value.trim();
+
+  if (!github && !linkedin) {
+    alert('Please enter at least your GitHub username or LinkedIn URL.');
+    return;
+  }
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('errorState').classList.remove('active');
+  document.getElementById('resultsArea').classList.remove('active');
+  document.getElementById('loadingState').classList.add('active');
+
+  const loadMsgs = [
+    'Reviewing your GitHub presence…',
+    'Analysing LinkedIn signal strength…',
+    'Scoring against recruiter expectations…',
+    'Writing your action plan…'
+  ];
+  let mi = 0;
+  const ticker = setInterval(() => {
+    document.getElementById('loadingSub').textContent = loadMsgs[++mi % loadMsgs.length];
+  }, 3200);
+
+  try {
+    const res = await fetch('/api/presence-audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ github_username: github, linkedin_url: linkedin, target_role: role, company_type: company, context })
+    });
+    clearInterval(ticker);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    // Scores
+    const sc = data.scores || {};
+    animateScore('sc-github',   sc.github   || 0);
+    animateScore('sc-linkedin', sc.linkedin  || 0);
+    animateScore('sc-overall',  sc.overall   || 0);
+    document.getElementById('sv-github').textContent   = sc.github_verdict   || '';
+    document.getElementById('sv-linkedin').textContent = sc.linkedin_verdict  || '';
+    document.getElementById('sv-overall').textContent  = sc.overall_verdict   || '';
+    setTimeout(() => {
+      document.getElementById('sf-github').style.width   = ((parseInt(sc.github)   || 0) * 10) + '%';
+      document.getElementById('sf-linkedin').style.width = ((parseInt(sc.linkedin) || 0) * 10) + '%';
+      document.getElementById('sf-overall').style.width  = ((parseInt(sc.overall)  || 0) * 10) + '%';
+    }, 100);
+
+    // Tags
+    document.getElementById('gh-tag').textContent = (data.github_tips  || []).length + ' suggestions';
+    document.getElementById('li-tag').textContent = (data.linkedin_tips || []).length + ' suggestions';
+
+    renderTips('githubTips',   data.github_tips        || []);
+    renderTips('linkedinTips', data.linkedin_tips       || []);
+    renderChecklist('consistencyList', data.consistency_checks || []);
+    renderWeeklyPlan('weeklyPlan', data.weekly_plan     || []);
+
+    const label = [github && `@${github}`, role].filter(Boolean).join(' · ');
+    document.getElementById('rerunTarget').textContent = label || 'your profile';
+
+    document.getElementById('loadingState').classList.remove('active');
+    document.getElementById('resultsArea').classList.add('active');
+
+  } catch (err) {
+    clearInterval(ticker);
+    document.getElementById('loadingState').classList.remove('active');
+    document.getElementById('errorMsg').textContent = err.message || 'Something went wrong. Please try again.';
+    document.getElementById('errorState').classList.add('active');
+    document.getElementById('runBtn').disabled = false;
+  }
+}
+
+function resetAudit() {
+  document.getElementById('resultsArea').classList.remove('active');
+  document.getElementById('errorState').classList.remove('active');
+  document.getElementById('runBtn').disabled = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
