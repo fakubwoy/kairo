@@ -315,8 +315,26 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
       <div>
         <div class="panel">
           <h2>Job Description</h2>
-          <label class="field-label">Paste the JD or describe the role</label>
-          <textarea id="jdInput" rows="10" placeholder="Paste the full job description here..."></textarea>
+
+          <!-- URL import -->
+          <label class="field-label">Import from a job posting URL</label>
+          <div style="display:flex;gap:0.5rem;margin-bottom:1.2rem;">
+            <input type="url" id="jdUrlInput"
+              placeholder="https://naukri.com/... or internshala.com/..."
+              style="flex:1;"/>
+            <button class="btn-outline" id="fetchJdBtn" onclick="fetchJdFromUrl()"
+              style="white-space:nowrap;padding:0 1rem;height:38px;align-self:stretch;">
+              Import
+            </button>
+          </div>
+
+          <!-- fetch status bar -->
+          <div id="fetchStatus" style="display:none;margin-bottom:0.8rem;padding:0.55rem 0.8rem;font-size:0.8rem;border-left:2px solid var(--gold);color:var(--muted);background:rgba(201,168,76,0.04);">
+            <span id="fetchStatusText"></span>
+          </div>
+
+          <label class="field-label">Or paste the JD directly</label>
+          <textarea id="jdInput" rows="8" placeholder="Paste the full job description here..."></textarea>
           <button class="btn-gold" id="generateBtn" onclick="generateResume()">
             <svg width="15" height="15"><use href="#i-zap"/></svg> Generate Custom Resume
           </button>
@@ -516,6 +534,57 @@ function switchTab(tab) {
     document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
   });
   if (tab === 'saved') loadSavedResumes();
+}
+
+// ── JD URL fetch ─────────────────────────────────────────────────────────────
+async function fetchJdFromUrl() {
+  const urlInput = document.getElementById('jdUrlInput');
+  const url = urlInput.value.trim();
+  if (!url) { showToast('Enter a job posting URL first', false); return; }
+
+  // Validate it looks like a URL
+  try { new URL(url); } catch(e) { showToast('That doesn\'t look like a valid URL', false); return; }
+
+  const btn = document.getElementById('fetchJdBtn');
+  const statusBar = document.getElementById('fetchStatus');
+  const statusText = document.getElementById('fetchStatusText');
+
+  btn.textContent = '…';
+  btn.disabled = true;
+  statusBar.style.display = 'block';
+  statusText.textContent = 'Fetching job posting…';
+
+  try {
+    const res = await fetch('/api/fetch-jd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+
+    if (data.jd) {
+      document.getElementById('jdInput').value = data.jd;
+      const wordCount = data.jd.split(/\s+/).filter(Boolean).length;
+      statusBar.style.borderLeftColor = 'var(--green)';
+      statusText.style.color = 'var(--green)';
+      statusText.textContent = `✓ Imported ${wordCount} words from ${data.source || 'job posting'} — review below before generating`;
+      showToast('JD imported successfully');
+      // Auto-hide status after 6s
+      setTimeout(() => { statusBar.style.display = 'none'; }, 6000);
+    } else {
+      statusBar.style.borderLeftColor = 'var(--red)';
+      statusText.style.color = 'var(--red)';
+      statusText.textContent = data.error || 'Could not extract the job description from that page';
+    }
+  } catch(e) {
+    statusBar.style.borderLeftColor = 'var(--red)';
+    statusText.style.color = 'var(--red)';
+    statusText.textContent = 'Network error — try again or paste the JD manually';
+  } finally {
+    btn.textContent = 'Import';
+    btn.disabled = false;
+  }
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────

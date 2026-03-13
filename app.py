@@ -861,6 +861,170 @@ def delete_document(doc_index):
     return jsonify({'ok': True, 'remaining': len(uploaded_docs)})
 
 
+
+@app.route('/api/fetch-jd', methods=['POST'])
+def fetch_jd():
+    """
+    Scrape a job posting URL and return clean JD text.
+    Strategy:
+      1. Site-specific CSS selectors for known job boards
+      2. Heuristic fallback — score all block elements by length & keyword density
+      3. LLM cleanup pass to extract only the actual JD content
+    """
+    import re as _re
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return jsonify({'error': 'Server missing beautifulsoup4 — contact admin'}), 500
+
+    data = request.json or {}
+    url = data.get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+
+    # Normalise — ensure scheme
+    if not url.startswith('http'):
+        url = 'https://' + url
+
+    parsed_host = url.split('/')[2].lower().replace('www.', '')
+
+    # LinkedIn blocks scraping — tell the user clearly
+    if 'linkedin.com' in parsed_host:
+        return jsonify({
+            'error': 'LinkedIn blocks automated access. Please open the job post, '
+                     'copy the description text, and paste it directly below.'
+        }), 422
+
+    # Site-specific selectors: (host_substring, css_selector)
+    SITE_SELECTORS = [
+        ('naukri.com',       'div.styles_job-desc-container__txpYf, div#job_description, div.job-desc'),
+        ('internshala.com',  'div.internship_details, div#about_internship, div.detail_view'),
+        ('foundit.in',       'div.jobDescription, div.job-description'),
+        ('instahire.in',     'div.job-description, div.jd-content'),
+        ('wellfound.com',    'div.job-description, section.description'),
+        ('indeed.com',       'div#jobDescriptionText, div.jobsearch-jobDescriptionText'),
+        ('glassdoor.com',    'div.jobDescriptionContent, div[data-test="jobDescriptionContent"]'),
+        ('shine.com',        'div.job-description, div.jd-content-wrap'),
+        ('monster.com',      'div.job-description, div#JobDescription'),
+        ('freshersworld.com','div.job-description, div.jobdetails-section'),
+        ('cutshort.io',      'div.job-description, div.description-content'),
+        ('hirist.tech',      'div.job-description, div.jd-section'),
+    ]
+
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+        resp.raise_for_status()
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'The page took too long to respond. Try again or paste the JD manually.'}), 504
+    except requests.exceptions.HTTPError as e:
+        code = e.response.status_code if e.response else 0
+        if code == 403:
+            return jsonify({'error': 'This site blocks automated access. Please paste the JD manually.'}), 422
+        return jsonify({'error': f'Could not load the page (HTTP {code}). Try pasting the JD manually.'}), 422
+    except Exception as e:
+        return jsonify({'error': f'Could not reach that URL: {str(e)}'}), 500
+
+    soup = BeautifulSoup(resp.text, 'html.parser')
+
+    # Remove boilerplate tags
+    for tag in soup(['script', 'style', 'noscript', 'nav', 'footer', 'header',
+                     'aside', 'form', 'iframe', 'button', 'svg', 'img']):
+        tag.decompose()
+
+    jd_text = ''
+    source_name = parsed_host.split('.')[0].capitalize()
+
+    # 1. Try site-specific selectors first
+    for host_sub, selector_str in SITE_SELECTORS:
+        if host_sub in parsed_host:
+            for sel in selector_str.split(','):
+                el = soup.select_one(sel.strip())
+                if el:
+                    candidate = el.get_text(separator='\n', strip=True)
+                    if len(candidate) > 200:
+                        jd_text = candidate
+                        break
+            if jd_text:
+                break
+
+    # 2. Generic heuristic — score block elements
+    if not jd_text:
+        JD_KEYWORDS = [
+            'responsibilities', 'requirements', 'qualifications', 'skills',
+            'experience', 'bachelor', 'degree', 'must have', 'nice to have',
+            'we are looking', 'you will', 'job description', 'about the role',
+            "what you'll do", 'what we expect', 'minimum', 'preferred',
+        ]
+        best_score = 0
+        best_el = None
+        for el in soup.find_all(['div', 'section', 'article', 'main', 'td']):
+            text = el.get_text(separator=' ', strip=True)
+            if len(text) < 200 or len(text) > 15000:
+                continue
+            # Score by length + keyword hits
+            kw_hits = sum(1 for kw in JD_KEYWORDS if kw in text.lower())
+            score = len(text) * 0.01 + kw_hits * 40
+            if score > best_score:
+                best_score = score
+                best_el = el
+        if best_el:
+            jd_text = best_el.get_text(separator='\n', strip=True)
+
+    # 3. Whole-page fallback
+    if not jd_text:
+        jd_text = soup.get_text(separator='\n', strip=True)
+
+    if not jd_text or len(jd_text) < 100:
+        return jsonify({
+            'error': 'Could not extract any text from that page. '
+                     'The site may require login or block bots. Please paste the JD manually.'
+        }), 422
+
+    # 4. Deduplicate blank lines and trim
+    lines = [l.strip() for l in jd_text.splitlines()]
+    lines = [l for l in lines if l]  # drop empties
+    # Remove consecutive duplicate lines (navigation artifacts)
+    deduped = []
+    for line in lines:
+        if not deduped or line != deduped[-1]:
+            deduped.append(line)
+    jd_text = '\n'.join(deduped)
+
+    # 5. LLM cleanup pass — extract only actual JD content, strip nav/ads/noise
+    if len(jd_text) > 400:
+        cleanup_prompt = (
+            "You are given raw text scraped from a job posting webpage. "
+            "Extract ONLY the actual job description content: role summary, responsibilities, "
+            "requirements, qualifications, skills, and any other relevant job details. "
+            "Remove all navigation text, ads, cookie notices, company boilerplate headers/footers, "
+            "and unrelated page content. "
+            "Return the cleaned job description as plain text, preserving the original wording. "
+            "Do NOT summarise or rewrite. Extract faithfully. "
+            "If there is no recognisable job description, return exactly: NO_JD_FOUND\n\n"
+            + "RAW TEXT:\n" + jd_text[:6000]
+        )
+        cleaned = call_llm([{"role": "user", "content": cleanup_prompt}],
+                           "You are a precise text extractor. Output only the extracted job description, nothing else.")
+        if cleaned and 'NO_JD_FOUND' not in cleaned and len(cleaned) > 150:
+            jd_text = cleaned.strip()
+
+    # Cap final output
+    jd_text = jd_text[:5000]
+
+    return jsonify({'jd': jd_text, 'source': source_name, 'url': url})
+
+
 @app.route('/api/generate-resume', methods=['POST'])
 def generate_resume():
     data = request.json

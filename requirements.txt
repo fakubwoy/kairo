@@ -9,3 +9,4 @@ gunicorn==21.2.0
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 redis==5.0.1
+beautifulsoup4==4.12.3
