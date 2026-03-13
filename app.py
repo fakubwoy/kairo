@@ -2452,6 +2452,34 @@ Rules:
  
     return jsonify(result)
 
+
+@app.route('/api/presence-audit/deep-dive', methods=['POST'])
+def presence_audit_deep_dive():
+    """
+    Returns an in-depth AI explanation for a single audit tip.
+    Read-only — no credits charged, no user input beyond the prompt.
+    """
+    data = request.json or {}
+    prompt = data.get('prompt', '').strip()
+    if not prompt:
+        return jsonify({'error': 'No prompt provided'}), 400
+
+    system_prompt = (
+        "You are a senior tech recruiter and career coach. "
+        "Give practical, specific, actionable advice. "
+        "Use plain text with ### headings and - bullet points. "
+        "No markdown code fences. Be concise but thorough."
+    )
+
+    raw = call_llm(
+        [{'role': 'user', 'content': prompt}],
+        system_prompt,
+        max_tokens=600
+    )
+
+    return jsonify({'content': raw})
+
+
 @app.route('/api/conversations/active')
 def active_conversation():
     """Return the most recent conversation with its messages for session restore."""

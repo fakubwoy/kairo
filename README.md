@@ -23,7 +23,8 @@ kairo/
     ├── dashboard.html      # User dashboard + profile editor + ambassador hub
     ├── interview.html      # AI chat interface (profile builder)
     ├── interview_prep.html # Mock interview (AI interviewer + voice answers)
-    └── resume.html         # Resume generator + saved resumes viewer
+    ├── resume.html         # Resume generator + saved resumes viewer
+    └── presence.html       # Presence audit (GitHub + LinkedIn scorer)
 ```
 
 ---
@@ -39,6 +40,8 @@ kairo/
 **Mock Interview** — 8 tailored questions (behavioural, technical, profile-based) delivered via TTS; voice or text answers; detailed report with score, readiness level, per-question feedback, and actionable tips; credit check enforced before session start
 
 **Voice Input** — Groq Whisper transcription in both profile builder and mock interview; broad browser compatibility including Brave; auto-sends after 1.8s
+
+**Presence Audit** — AI-powered LinkedIn & GitHub audit; scores both platforms 1–10; generates 4–6 prioritised tips per platform with clickable deep-dive drawer (read-only AI explanation with why-it-matters, what-good-looks-like, common mistakes, step-by-step fix, and before/after example); profile consistency checklist; 4-week structured action plan; pre-fills from Kairo profile if logged in; no credits charged
 
 **Imports** — GitHub profile import, LinkedIn text paste, document upload (PDF/image)
 
@@ -265,6 +268,8 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | POST | `/api/generate-intro-script` | Generate a self-intro video script (costs 3 credits) |
 | GET | `/api/llm-status` | Check status of all LLM backends (Groq, OpenRouter, Ollama) |
 | GET | `/api/health` | Health check with active backend name |
+| POST | `/api/presence-audit` | Score GitHub + LinkedIn presence and return prioritised tips, consistency checks, and 4-week plan |
+| POST | `/api/presence-audit/deep-dive` | Return an in-depth AI explanation for a single audit tip (why it matters, examples, step-by-step fix) |
 
 ### Admin (protected by `ADMIN_SECRET`)
 | Method | Endpoint | Description |

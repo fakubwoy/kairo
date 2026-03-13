@@ -222,11 +222,118 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .week-task { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
 .week-task strong { color: var(--cream); }
 
+/* ── Deep-dive drawer ───────────────────────────────────────────────── */
+.drawer-backdrop {
+  position: fixed; inset: 0; background: rgba(10,10,15,0.72);
+  z-index: 100; opacity: 0; pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+.drawer-backdrop.open { opacity: 1; pointer-events: all; }
+
+.drawer {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: min(520px, 100vw); background: var(--surface);
+  border-left: 1px solid rgba(201,168,76,0.18);
+  z-index: 101; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.3s cubic-bezier(.22,1,.36,1);
+}
+.drawer.open { transform: translateX(0); }
+
+.drawer-head {
+  padding: 1.2rem 1.4rem 1rem;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+  display: flex; flex-direction: column; gap: 0.35rem; flex-shrink: 0;
+}
+.drawer-eyebrow {
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); display: flex; align-items: center; gap: 0.5rem;
+}
+.drawer-close {
+  margin-left: auto; background: transparent; border: none;
+  color: var(--muted); cursor: pointer; padding: 0.1rem 0.3rem;
+  font-size: 1.1rem; line-height: 1; transition: color 0.18s;
+}
+.drawer-close:hover { color: var(--cream); }
+.drawer-title {
+  font-size: 1.05rem; font-weight: 600; color: var(--cream); line-height: 1.35;
+}
+.drawer-priority-badge {
+  display: inline-block; font-size: 0.68rem; letter-spacing: 0.07em;
+  text-transform: uppercase; font-weight: 600;
+  padding: 0.15rem 0.55rem; background: rgba(201,168,76,0.1);
+}
+.drawer-priority-badge.high { color: var(--red); background: rgba(239,154,154,0.1); }
+.drawer-priority-badge.medium { color: var(--gold); }
+.drawer-priority-badge.low { color: var(--green); background: rgba(76,175,125,0.1); }
+
+.drawer-body {
+  flex: 1; overflow-y: auto; padding: 1.3rem 1.4rem;
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.2) transparent;
+}
+.drawer-section-label {
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 0.5rem; margin-top: 1.2rem;
+}
+.drawer-section-label:first-child { margin-top: 0; }
+.drawer-summary {
+  font-size: 0.86rem; color: var(--cream); line-height: 1.7;
+  padding: 0.9rem 1rem; background: rgba(245,240,232,0.03);
+  border: 1px solid rgba(201,168,76,0.1); margin-bottom: 0.2rem;
+}
+.drawer-action-box {
+  font-size: 0.84rem; color: var(--gold); padding: 0.75rem 1rem;
+  border: 1px solid rgba(201,168,76,0.2); background: rgba(201,168,76,0.05);
+  margin-bottom: 1rem;
+}
+.drawer-action-box::before { content: '→  '; }
+
+.drawer-ai-wrap {
+  border: 1px solid rgba(201,168,76,0.12); background: rgba(245,240,232,0.02);
+  min-height: 120px; padding: 1rem;
+}
+.drawer-ai-loading {
+  display: flex; align-items: center; gap: 0.7rem;
+  color: var(--muted); font-size: 0.83rem;
+}
+.drawer-ai-loading .mini-spin {
+  width: 16px; height: 16px; border: 1.5px solid rgba(201,168,76,0.15);
+  border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+.drawer-ai-content {
+  font-size: 0.85rem; color: var(--cream); line-height: 1.78;
+  display: none;
+}
+.drawer-ai-content.visible { display: block; }
+.drawer-ai-content .ai-h { font-weight: 600; color: var(--gold-light); margin: 1rem 0 0.3rem; font-size: 0.88rem; }
+.drawer-ai-content .ai-h:first-child { margin-top: 0; }
+.drawer-ai-content .ai-li { padding-left: 1.1em; position: relative; margin-bottom: 0.28rem; }
+.drawer-ai-content .ai-li::before { content: '·'; position: absolute; left: 0; color: var(--gold); }
+.drawer-ai-content .ai-example {
+  background: rgba(201,168,76,0.06); border-left: 2px solid rgba(201,168,76,0.35);
+  padding: 0.55rem 0.9rem; margin: 0.6rem 0; font-size: 0.82rem;
+  color: var(--gold-light); font-style: italic;
+}
+.drawer-ai-content p { margin-bottom: 0.6rem; }
+
+/* Tip action row — clickable */
+.tip-cta {
+  cursor: pointer; user-select: none;
+  transition: color 0.18s;
+  display: flex; align-items: baseline; gap: 0.3rem;
+}
+.tip-cta:hover { color: var(--gold-light); }
+.expand-hint {
+  font-size: 0.7rem; color: var(--muted);
+  opacity: 0; transition: opacity 0.15s; white-space: nowrap;
+}
+.tip-cta:hover .expand-hint { opacity: 1; }
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main { margin-left: 0; padding: 1.5rem; }
   .input-grid, .tips-grid, .score-strip { grid-template-columns: 1fr; }
   .span2 { grid-column: 1; }
+  .drawer { width: 100vw; }
 }
 </style>
 </head>
@@ -421,6 +528,34 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   </div><!-- /resultsArea -->
 </main>
 
+<!-- Deep-dive drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="deepDrawer" role="dialog" aria-modal="true">
+  <div class="drawer-head">
+    <div class="drawer-eyebrow">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Deep Dive
+      <button class="drawer-close" onclick="closeDrawer()" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="drawer-title" id="drawerTitle"></div>
+    <span class="drawer-priority-badge" id="drawerBadge"></span>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section-label">Summary</div>
+    <div class="drawer-summary" id="drawerSummary"></div>
+    <div class="drawer-section-label">Action Step</div>
+    <div class="drawer-action-box" id="drawerAction"></div>
+    <div class="drawer-section-label">In-depth Explanation</div>
+    <div class="drawer-ai-wrap">
+      <div class="drawer-ai-loading" id="drawerLoading">
+        <div class="mini-spin"></div>
+        Getting detailed breakdown&hellip;
+      </div>
+      <div class="drawer-ai-content" id="drawerAiContent"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Sidebar bootstrap ──────────────────────────────────────────────────
 (async () => {
@@ -485,19 +620,125 @@ function animateScore(id, value) {
 }
 
 // ── Render functions ───────────────────────────────────────────────────
-function renderTips(id, tips) {
+// ── Deep-dive drawer ──────────────────────────────────────────────────
+let _auditContext = {};   // store role/company for richer AI prompts
+
+function openDrawer(tip, section) {
+  const pc = priorityClass(tip.priority);
+  document.getElementById('drawerTitle').textContent   = tip.title || '';
+  document.getElementById('drawerSummary').textContent = tip.description || '';
+  document.getElementById('drawerAction').textContent  = tip.action || '';
+  const badge = document.getElementById('drawerBadge');
+  badge.textContent  = tip.priority || 'Medium';
+  badge.className    = 'drawer-priority-badge ' + pc;
+
+  // Reset AI area
+  const loadEl    = document.getElementById('drawerLoading');
+  const contentEl = document.getElementById('drawerAiContent');
+  loadEl.style.display    = 'flex';
+  contentEl.classList.remove('visible');
+  contentEl.innerHTML     = '';
+
+  // Open
+  document.getElementById('drawerBackdrop').classList.add('open');
+  document.getElementById('deepDrawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Fetch deep-dive from AI
+  fetchDeepDive(tip, section);
+}
+
+function closeDrawer() {
+  document.getElementById('drawerBackdrop').classList.remove('open');
+  document.getElementById('deepDrawer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+function formatAiText(raw) {
+  // Convert simple markdown-ish output to structured HTML
+  const lines = raw.split('\n');
+  let html = '';
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { html += '<br>'; continue; }
+    if (t.startsWith('### ') || t.startsWith('## ') || t.startsWith('# ')) {
+      html += `<div class="ai-h">${esc(t.replace(/^#+\s*/, ''))}</div>`;
+    } else if (t.startsWith('- ') || t.startsWith('* ')) {
+      html += `<div class="ai-li">${esc(t.slice(2))}</div>`;
+    } else if (t.startsWith('"') && t.endsWith('"')) {
+      html += `<div class="ai-example">${esc(t)}</div>`;
+    } else {
+      html += `<p>${esc(t)}</p>`;
+    }
+  }
+  return html;
+}
+
+async function fetchDeepDive(tip, section) {
+  const role    = _auditContext.role    || 'tech role';
+  const company = _auditContext.company || 'tech company';
+  const platform = section === 'github' ? 'GitHub' : 'LinkedIn';
+
+  const prompt = `You are a senior tech recruiter and career coach helping an Indian tech student land a ${role} role at a ${company}.
+
+The student got this audit tip about their ${platform} presence:
+
+TIP TITLE: ${tip.title}
+BRIEF SUMMARY: ${tip.description}
+ACTION STEP: ${tip.action}
+
+Give a DETAILED, PRACTICAL explanation of this tip. Structure your response as follows:
+- Start with WHY this matters to recruiters (2-3 sentences)
+- Then a section "### What Good Looks Like" — describe exactly what an excellent ${platform} profile looks like for this specific point, with a concrete real-world example (use "example name" style, not real people)
+- Then a section "### Common Mistakes" — 3-4 bullet points of what students typically do wrong
+- Then a section "### Step-by-Step Fix" — numbered action steps they can do today
+- End with a section "### Example" — write out a short, specific before/after example relevant to a ${role} applying at a ${company}
+
+Be specific to the ${role} and ${company} type. Do not be generic. Max 350 words.`;
+
+  try {
+    const res = await fetch('/api/presence-audit/deep-dive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json();
+    const raw = data.content || data.text || '';
+
+    document.getElementById('drawerLoading').style.display = 'none';
+    const contentEl = document.getElementById('drawerAiContent');
+    contentEl.innerHTML = formatAiText(raw);
+    contentEl.classList.add('visible');
+  } catch (err) {
+    document.getElementById('drawerLoading').style.display = 'none';
+    const contentEl = document.getElementById('drawerAiContent');
+    contentEl.innerHTML = '<p style="color:var(--muted)">Could not load deep-dive. Please try again.</p>';
+    contentEl.classList.add('visible');
+  }
+}
+
+function renderTips(id, tips, section) {
   const el = document.getElementById(id);
   if (!tips || !tips.length) {
     el.innerHTML = '<p style="color:var(--muted);font-size:0.83rem;grid-column:1/-1;padding:0.5rem 0">No tips generated for this section.</p>';
     return;
   }
-  el.innerHTML = tips.map(t => `
+  el.innerHTML = tips.map((t, i) => `
     <div class="tip-card">
       <div class="tip-priority ${priorityClass(t.priority)}">${esc(t.priority || 'Medium')}</div>
       <div class="tip-title">${esc(t.title)}</div>
       <div class="tip-body">${esc(t.description)}</div>
-      ${t.action ? `<div class="tip-cta">${esc(t.action)}</div>` : ''}
+      ${t.action ? `<div class="tip-cta" onclick="openDrawer(_tipData['${id}'][${i}], '${section}')">
+        <span>${esc(t.action)}</span>
+        <span class="expand-hint">click to expand</span>
+      </div>` : ''}
     </div>`).join('');
+  // Store tip data for click handler
+  if (!window._tipData) window._tipData = {};
+  window._tipData[id] = tips;
 }
 
 function renderChecklist(id, items) {
@@ -589,8 +830,9 @@ async function runAudit() {
     document.getElementById('gh-tag').textContent = (data.github_tips  || []).length + ' suggestions';
     document.getElementById('li-tag').textContent = (data.linkedin_tips || []).length + ' suggestions';
 
-    renderTips('githubTips',   data.github_tips        || []);
-    renderTips('linkedinTips', data.linkedin_tips       || []);
+    _auditContext = { role: role, company: company };
+    renderTips('githubTips',   data.github_tips   || [], 'github');
+    renderTips('linkedinTips', data.linkedin_tips || [], 'linkedin');
     renderChecklist('consistencyList', data.consistency_checks || []);
     renderWeeklyPlan('weeklyPlan', data.weekly_plan     || []);
 
