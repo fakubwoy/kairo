@@ -1349,21 +1349,31 @@ fetch('/api/auth/me').then(r => r.json()).then(data => {
 // ── Profile Editor ────────────────────────────────────────────────────────────
 function toggleProfileEditor() {
   const body = document.getElementById('profileEditorBody');
-  const btn = document.getElementById('profileEditorToggle');
+  const btn  = document.getElementById('profileEditorToggle');
   const open = body.classList.toggle('open');
   btn.innerHTML = open
     ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> Close'
     : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit';
+  // Re-fetch and populate every time the editor opens so data is always fresh
+  if (open) {
+    fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json()).then(data => {
+      if (data.profile) {
+        populateProfileEditor(data);
+        updateProfileDisplay(data.profile);
+        localStorage.setItem('kairo_user', JSON.stringify(data));
+      }
+    }).catch(() => {});
+  }
 }
 
 function switchPeTab(tab) {
   ['basics','projects','github','linkedin','documents','extras','faculty'].forEach(t => {
     const pane = document.getElementById(`pepane-${t}`);
-    const btn = document.getElementById(`petab-${t}`);
+    const btn  = document.getElementById(`petab-${t}`);
     if (pane) pane.classList.toggle('active', t === tab);
-    if (btn) btn.classList.toggle('active', t === tab);
+    if (btn)  btn.classList.toggle('active',  t === tab);
   });
-  // Auto-sync GitHub username from the basics github field when opening GitHub tab
+  // Auto-sync GitHub username from basics field when opening the GitHub tab
   if (tab === 'github') {
     const ghUrl = (document.getElementById('pe-github')?.value || '').trim();
     const ghField = document.getElementById('pe-githubUsername');
@@ -1703,58 +1713,87 @@ async function deleteDocument(idx) {
 
 function populateProfileEditor(data) {
   const p = data.profile || {};
-  document.getElementById('pe-name').value = data.name || p.name || '';
-  document.getElementById('pe-phone').value = p.phone || '';
+
+  // ── Basics ──────────────────────────────────────────────────────────────────
+  document.getElementById('pe-name').value    = data.name || p.name || '';
+  document.getElementById('pe-phone').value   = p.phone || '';
   document.getElementById('pe-linkedin').value = p.linkedin || '';
-  document.getElementById('pe-github').value = p.github || '';
-  document.getElementById('pe-branch').value = p.branch || '';
-  document.getElementById('pe-cgpa').value = p.cgpa || '';
-  document.getElementById('pe-year').value = p.year || p.graduation_year || '';
-  document.getElementById('pe-college').value = p.college || data.college || 'VIT Vellore';
+  document.getElementById('pe-github').value  = p.github || '';
+  document.getElementById('pe-branch').value  = p.branch || p.personal?.branch || '';
+  document.getElementById('pe-cgpa').value    = p.cgpa || p.academics?.cgpa || '';
+  document.getElementById('pe-year').value    = p.year || p.personal?.year || p.graduation_year || '';
+  document.getElementById('pe-college').value = p.college || p.personal?.college || data.college || 'VIT Vellore';
   document.getElementById('pe-summary').value = p.summary || '';
-  // Skills — flatten if structured
+
+  // ── Skills — handle both {technical:[]} object and flat array ───────────────
   const sk = p.skills || {};
-  const allSkills = [...(sk.technical||[]), ...(sk.tools||[])];
-  document.getElementById('pe-skills').value = allSkills.length ? allSkills.join(', ') : (Array.isArray(p.skills) ? p.skills.join(', ') : '');
-  // Projects
-  peProjects = JSON.parse(JSON.stringify(p.projects || []));
+  const allSkills = typeof sk === 'object' && !Array.isArray(sk)
+    ? [...(sk.technical || []), ...(sk.tools || [])]
+    : (Array.isArray(sk) ? sk : []);
+  document.getElementById('pe-skills').value = allSkills.join(', ');
+
+  // ── Projects — each item must have name field ────────────────────────────────
+  peProjects = JSON.parse(JSON.stringify(
+    (p.projects || []).filter(pr => pr && (pr.name || pr.description)).map(pr => ({
+      name:        pr.name        || '',
+      description: pr.description || '',
+      tech:        Array.isArray(pr.tech) ? pr.tech : (pr.tech ? String(pr.tech).split(',').map(s=>s.trim()).filter(Boolean) : []),
+      impact:      pr.impact      || '',
+      url:         pr.url         || pr.github_url || '',
+      duration:    pr.duration    || ''
+    }))
+  ));
   renderProjectsList();
-  // Document data
-  renderDocumentData(p);
-  // Pre-fill GitHub username from saved URL (handles https://github.com/user, github.com/user, or bare username)
+
+  // ── GitHub username pre-fill ─────────────────────────────────────────────────
   const ghUrl = (p.github || '').trim();
   const ghMatch = ghUrl.match(/github\.com\/([^/?#\s]+)/);
-  if (ghMatch) {
-    document.getElementById('pe-githubUsername').value = ghMatch[1].replace(/\/$/, '');
-  } else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) {
-    document.getElementById('pe-githubUsername').value = ghUrl;
-  }
-  // Extras — handle items as strings (from AI extraction) or objects (from editor)
+  const ghField = document.getElementById('pe-githubUsername');
+  if (ghMatch) ghField.value = ghMatch[1].replace(/\/$/, '');
+  else if (ghUrl && !ghUrl.includes('.') && !ghUrl.includes('/')) ghField.value = ghUrl;
+
+  // ── Documents ────────────────────────────────────────────────────────────────
+  renderDocumentData(p);
+
+  // ── Extracurriculars — handle plain strings OR objects ───────────────────────
   const rawExtras = [
     ...(p.extracurriculars || []),
-    ...(p.clubs || []).map(c => typeof c === 'string' ? c : (c.name || c.activity || '')),
-    ...(p.hackathons || []).map(h => typeof h === 'string' ? h : (h.name || h.activity || ''))
+    ...(p.clubs            || []),
+    ...(p.hackathons       || [])
   ];
-  peExtras = JSON.parse(JSON.stringify(rawExtras.map(e => {
+  // Deduplicate by activity name
+  const seenActivities = new Set();
+  peExtras = rawExtras.map(e => {
     if (typeof e === 'string') return { activity: e, type: 'Club/Society', role: '', year: '', description: '' };
-    return { activity: e.activity || e.name || '', type: e.type || 'Club/Society', role: e.role || '', year: e.year || '', description: e.description || '' };
-  }).filter(e => e.activity)));
+    return {
+      activity:    e.activity || e.name || '',
+      type:        e.type     || 'Club/Society',
+      role:        e.role     || '',
+      year:        e.year     || '',
+      description: e.description || ''
+    };
+  }).filter(e => {
+    if (!e.activity) return false;
+    if (seenActivities.has(e.activity)) return false;
+    seenActivities.add(e.activity);
+    return true;
+  });
   renderExtrasList();
 
-  // Faculty — handle from faculty_references field, or from conversation extraction which may store as structured objects
+  // ── Faculty References — handle any shape the DB might have stored ───────────
   const rawFaculty = p.faculty_references || [];
-  peFaculty = JSON.parse(JSON.stringify(rawFaculty.map(f => {
+  peFaculty = rawFaculty.map(f => {
     if (typeof f === 'string') return { name: f, designation: '', department: '', institution: 'VIT Vellore', email: '', phone: '', context: '' };
     return {
-      name: f.name || f.professor || '',
-      designation: f.designation || f.title || '',
-      department: f.department || f.school || '',
-      institution: f.institution || 'VIT Vellore',
-      email: f.email || '',
-      phone: f.phone || '',
-      context: f.context || f.relationship || f.description || ''
+      name:        f.name        || f.professor  || '',
+      designation: f.designation || f.title      || '',
+      department:  f.department  || f.school     || f.institution || '',
+      institution: f.institution && f.institution !== f.department ? f.institution : 'VIT Vellore',
+      email:       f.email && f.email !== 'Unknown' ? f.email : '',
+      phone:       f.phone       || '',
+      context:     f.context     || f.relationship || f.description || ''
     };
-  }).filter(f => f.name)));
+  }).filter(f => f.name);
   renderFacultyList();
 }
 
