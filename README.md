@@ -32,15 +32,17 @@ kairo/
 
 **Profile & Auth** — email login, AI chat interview, profile extraction, manual editing, document upload (PDF/image drag & drop), profile completion tracker
 
+**Profile Builder (interview.html)** — video-call style interface with Kairo as a well-wisher AI; speaks every response via TTS (Web Speech API); live transcript sidebar; conversation follows a structured 9-step flow: intro → college/university → academics → struggles & setbacks → wins & highlights → projects → internships → skills → goals; profile extracted at session end without polluting the conversation history (`extract_only` flag); returning users resume from where they left off with deep-merge profile logic (no data loss)
+
 **Resumes** — JD-based generation, ATS-friendly format, inline editing, PDF download, saved resumes viewer, version history with inline side-by-side diff
 
-**Voice Input** — microphone recording in both the profile builder and mock interview; transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser; fresh audio-only stream per recording for broad browser compatibility including Brave
+**Voice Input** — microphone recording in both the profile builder and mock interview; transcribed via Groq Whisper (whisper-large-v3, free); auto-detects best audio format per browser; fresh audio-only stream per recording for broad browser compatibility including Brave; auto-sends transcription after 1.8s delay
 
 **Mock Interview** — AI interviewer asks 8 tailored questions (behavioural, technical, profile-based) via TTS; candidate answers by voice or text; detailed post-interview report with overall score, readiness level, per-question scores, strengths, improvement areas, and actionable tips; full transcript saved to account
 
 **Imports & Tools** — GitHub profile import, LinkedIn text import, self-intro video script generator
 
-**Infrastructure** — SQLite/Postgres, Groq (primary) + OpenRouter + Ollama LLM fallbacks, Railway deployment
+**Infrastructure** — SQLite/Postgres, Groq (primary) + OpenRouter + Ollama LLM fallbacks, Railway deployment, optional Redis caching (conversations cached by key; cache cleared on restart, falls back to Postgres automatically)
 
 ---
 
@@ -163,7 +165,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 ### Chat (Profile Builder)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chat` | Send message to Kairo interview AI |
+| POST | `/api/chat` | Send message to Kairo interview AI. Pass `extract_only: true` for one-shot LLM calls that skip conversation history |
 | GET | `/api/conversations/active` | Get latest conversation |
 | POST | `/api/conversations/new` | Start a fresh conversation |
 
@@ -200,6 +202,12 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ## Roadmap
 
+- [x] Video-call style profile builder with TTS
+- [x] Live transcript sidebar during session
+- [x] Deep-merge profile logic for returning users
+- [x] PiP (picture-in-picture) self-view overlay
+- [x] Clean summary cards for projects & internships
+- [x] Profile completeness tracker with icons on dashboard
 - [ ] Chrome extension for job application
 - [ ] VIT email validation enforcement
 - [ ] Credit system for usage limits
