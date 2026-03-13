@@ -789,7 +789,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   display: block;
 }
 .project-entry input,
-.project-entry textarea {
+.project-entry textarea,
+.project-entry select {
   width: 100%;
   background: rgba(245,240,232,0.05);
   border: 1px solid rgba(201,168,76,0.15);
@@ -801,7 +802,18 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   transition: border-color 0.2s;
 }
 .project-entry input:focus,
-.project-entry textarea:focus { border-color: var(--gold); }
+.project-entry textarea:focus,
+.project-entry select:focus { border-color: var(--gold); }
+.project-entry select {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6560'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  padding-right: 2rem;
+}
+.project-entry select option { background: #1c1916; }
 .project-entry textarea { resize: vertical; min-height: 56px; }
 .project-remove-btn {
   position: absolute;
@@ -2271,7 +2283,7 @@ function renderExtrasList() {
         </div>
         <div>
           <span class="project-field-label">Type</span>
-          <select style="width:100%;background:rgba(245,240,232,0.05);border:1px solid rgba(201,168,76,0.2);color:var(--cream);padding:0.45rem 0.7rem;font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;" onchange="peExtras[${i}].type=this.value">
+          <select onchange="peExtras[${i}].type=this.value">
             <option value="Club/Society" ${e.type==='Club/Society'?'selected':''}>Club / Society</option>
             <option value="Hackathon" ${e.type==='Hackathon'?'selected':''}>Hackathon</option>
             <option value="Sports" ${e.type==='Sports'?'selected':''}>Sports</option>

@@ -2409,14 +2409,29 @@ Rules:
  
     raw = call_llm([{'role': 'user', 'content': prompt}], system_prompt)
  
-    # Parse JSON — same robust approach used elsewhere in app.py
+    # Parse JSON — robust extraction: find the outermost {...} block
     try:
         clean = raw.strip()
+        # Strip markdown fences if present
         if '```' in clean:
             for part in clean.split('```'):
                 if '{' in part:
                     clean = part.lstrip('json').strip()
                     break
+        # Extract the outermost JSON object using brace matching
+        start = clean.find('{')
+        if start != -1:
+            depth, end = 0, -1
+            for idx, ch in enumerate(clean[start:], start):
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = idx + 1
+                        break
+            if end != -1:
+                clean = clean[start:end]
         result = json.loads(clean)
     except Exception:
         # Graceful fallback so the frontend always gets a valid response shape
