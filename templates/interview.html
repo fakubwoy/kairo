@@ -261,6 +261,11 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     Interview Prep
   </a>
+  <div style="display:flex;align-items:center;gap:0.45rem;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);padding:0.35rem 0.75rem;margin:0.6rem 1.5rem 0;font-size:0.78rem;color:#e8d5a3;cursor:pointer;" onclick="window.location='/dashboard'" title="View credits on dashboard">
+    <span style="font-size:0.9rem;">✦</span>
+    <span id="sidebarCredits" style="font-weight:600;font-size:0.85rem;color:#c9a84c;">—</span>
+    <span style="color:#6b6560;">credits</span>
+  </div>
   <div class="sidebar-bottom">
     <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
       <div class="user-name-sb" id="sidebarName">Loading…</div>
@@ -502,6 +507,11 @@ document.getElementById('sidebarName').textContent = user.name || 'Profile';
 document.getElementById('sidebarEmail').textContent = user.email || '—';
 document.getElementById('candidate-label').textContent = user.name?.split(' ')[0] || 'You';
 
+// Load credit balance
+fetch('/api/credits').then(r => r.ok ? r.json() : null).then(d => {
+  if (d) { const el = document.getElementById('sidebarCredits'); if (el) el.textContent = d.balance; }
+}).catch(() => {});
+
 // Preload voices
 if (window.speechSynthesis) {
   window.speechSynthesis.getVoices();
@@ -666,6 +676,12 @@ async function sendAnswer(text) {
       body: JSON.stringify({ message: text, conversation_id: conversationId })
     });
     const data = await res.json();
+    if (res.status === 402 || data.error === 'insufficient_credits') {
+      const msg = `⚠️ ${data.message || 'Not enough credits.'} <a href="/dashboard" style="color:var(--gold);text-decoration:underline;">Go to Dashboard →</a>`;
+      showMessage('Kairo', msg);
+      setStatus('ready', 'Ready');
+      return;
+    }
     if (data.response) {
       messages = data.messages || messages;
       conversationId = data.conversation_id;
@@ -673,6 +689,10 @@ async function sendAnswer(text) {
       appendLiveTranscript('Kairo', data.response);
       updateTopicProgress();
       speakText(data.response, null);
+      // Refresh credit display
+      fetch('/api/credits').then(r => r.ok ? r.json() : null).then(d => {
+        if (d) { const el = document.getElementById('sidebarCredits'); if (el) el.textContent = d.balance; }
+      }).catch(() => {});
       if (data.profile_complete) {
         const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
         if (data.profile) ud.profile = data.profile;

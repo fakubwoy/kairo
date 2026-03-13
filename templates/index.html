@@ -522,6 +522,16 @@ footer {
       <input type="password" id="loginPassword" placeholder="Enter your password">
     </div>
 
+    <!-- Referral code — only shown on signup -->
+    <div class="form-group" id="refGroup" style="display:none;">
+      <label>Referral Code <span style="color:var(--muted);font-weight:400;text-transform:none;">(optional)</span></label>
+      <div style="display:flex;gap:0.5rem;align-items:center;">
+        <input type="text" id="loginRefCode" placeholder="e.g. ARJUN-4F2A" style="text-transform:uppercase;letter-spacing:0.05em;flex:1;">
+        <span id="refValidIcon" style="font-size:1.1rem;flex-shrink:0;min-width:1.2rem;"></span>
+      </div>
+      <div id="refValidMsg" style="font-size:0.78rem;margin-top:0.3rem;min-height:1rem;"></div>
+    </div>
+
     <button class="btn-primary" id="authBtn" onclick="doAuth()">Sign In →</button>
 
     <div style="margin-top:1rem; text-align:center; font-size:0.82rem; color:var(--muted);">
@@ -540,52 +550,97 @@ footer {
 
 <script>
 let authMode = 'signin'; // 'signin' | 'signup'
+let _refValidTimer = null;
 
-function showLogin() { document.getElementById('loginModal').classList.add('active'); }
+function showLogin(forceSignup = false) {
+  document.getElementById('loginModal').classList.add('active');
+  if (forceSignup && authMode !== 'signup') toggleMode();
+}
 function hideLogin() { document.getElementById('loginModal').classList.remove('active'); }
 
 function toggleMode() {
   authMode = authMode === 'signin' ? 'signup' : 'signin';
   const isSignup = authMode === 'signup';
-  document.getElementById('modalTitle').textContent = isSignup ? 'Create account' : 'Welcome back';
+  document.getElementById('modalTitle').textContent    = isSignup ? 'Create account' : 'Welcome back';
   document.getElementById('modalSubtitle').textContent = isSignup ? 'Sign up with your VIT email' : 'Sign in to your Kairo account';
-  document.getElementById('nameGroup').style.display = isSignup ? 'block' : 'none';
-  document.getElementById('authBtn').textContent = isSignup ? 'Create Account →' : 'Sign In →';
-  document.getElementById('toggleText').textContent = isSignup ? 'Already have an account?' : 'New to Kairo?';
-  document.getElementById('toggleLink').textContent = isSignup ? 'Sign in' : 'Create account';
+  document.getElementById('nameGroup').style.display   = isSignup ? 'block' : 'none';
+  document.getElementById('refGroup').style.display    = isSignup ? 'block' : 'none';
+  document.getElementById('authBtn').textContent       = isSignup ? 'Create Account →' : 'Sign In →';
+  document.getElementById('toggleText').textContent    = isSignup ? 'Already have an account?' : 'New to Kairo?';
+  document.getElementById('toggleLink').textContent    = isSignup ? 'Sign in' : 'Create account';
+  if (!isSignup) clearRefValidation();
+}
+
+function clearRefValidation() {
+  document.getElementById('refValidIcon').textContent = '';
+  document.getElementById('refValidMsg').textContent  = '';
+  document.getElementById('refValidMsg').style.color  = '';
+}
+
+async function validateRefCode(code) {
+  if (!code || code.length < 4) { clearRefValidation(); return; }
+  try {
+    const res = await fetch('/api/referral/validate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    const iconEl = document.getElementById('refValidIcon');
+    const msgEl  = document.getElementById('refValidMsg');
+    if (data.valid) {
+      iconEl.textContent   = '✓';
+      iconEl.style.color   = 'var(--green)';
+      msgEl.textContent    = data.message;
+      msgEl.style.color    = 'var(--green)';
+    } else {
+      iconEl.textContent   = '✗';
+      iconEl.style.color   = '#ef9a9a';
+      msgEl.textContent    = 'Code not found.';
+      msgEl.style.color    = '#ef9a9a';
+    }
+  } catch { clearRefValidation(); }
 }
 
 async function doAuth() {
-  const name = document.getElementById('loginName').value.trim();
-  const email = document.getElementById('loginEmail').value.trim();
+  const name     = document.getElementById('loginName').value.trim();
+  const email    = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
-  const btn = document.getElementById('authBtn');
+  const refCode  = document.getElementById('loginRefCode').value.trim().toUpperCase();
+  const btn      = document.getElementById('authBtn');
 
   if (!email || !password) { alert('Please fill in all fields'); return; }
   if (authMode === 'signup' && !name) { alert('Please enter your name'); return; }
 
   btn.textContent = 'Please wait…';
-  btn.disabled = true;
+  btn.disabled    = true;
 
   try {
-    const res = await fetch('/api/auth/login', {
+    const body = { name, email, password };
+    if (authMode === 'signup' && refCode) body.referral_code = refCode;
+
+    const res  = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (data.error) {
       alert(data.error);
       btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
-      btn.disabled = false;
+      btn.disabled    = false;
       return;
+    }
+    // Show referral bonus toast before redirect
+    if (data.referral_msg) {
+      setTimeout(() => alert(data.referral_msg), 200);
     }
     localStorage.setItem('kairo_user', JSON.stringify(data));
     window.location.href = '/dashboard';
   } catch(e) {
     alert('Something went wrong. Please try again.');
     btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
-    btn.disabled = false;
+    btn.disabled    = false;
   }
 }
 
@@ -593,6 +648,26 @@ async function doAuth() {
 function doLogin() { doAuth(); }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Auto-fill referral code from ?ref= URL param and switch to signup
+  const urlRef = new URLSearchParams(location.search).get('ref');
+  if (urlRef) {
+    showLogin(true);
+    const refInput = document.getElementById('loginRefCode');
+    refInput.value = urlRef.toUpperCase();
+    validateRefCode(urlRef.toUpperCase());
+  }
+
+  document.getElementById('loginRefCode').addEventListener('input', function() {
+    clearTimeout(_refValidTimer);
+    const val = this.value.trim().toUpperCase();
+    this.value = val;
+    if (val.length >= 4) {
+      _refValidTimer = setTimeout(() => validateRefCode(val), 500);
+    } else {
+      clearRefValidation();
+    }
+  });
+
   document.getElementById('loginPassword').addEventListener('keydown', e => {
     if (e.key === 'Enter') doAuth();
   });

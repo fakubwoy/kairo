@@ -282,6 +282,11 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     Interview Prep
   </a>
+  <div style="display:flex;align-items:center;gap:0.45rem;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);padding:0.35rem 0.75rem;margin:0.6rem 1.5rem 0;font-size:0.78rem;color:#e8d5a3;cursor:pointer;" onclick="window.location='/dashboard'" title="View credits on dashboard">
+    <span style="font-size:0.9rem;">✦</span>
+    <span id="sidebarCredits" style="font-weight:600;font-size:0.85rem;color:#c9a84c;">—</span>
+    <span style="color:#6b6560;">credits</span>
+  </div>
   <div class="sidebar-bottom">
     <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
       <div class="user-name-sb" id="sidebarName">Loading...</div>
@@ -511,6 +516,10 @@ select { background: var(--surface2); border: 1px solid var(--border); color: va
     if (d.email) document.getElementById('sidebarEmail').textContent = d.email;
     if (d.id) { const u = JSON.parse(localStorage.getItem('kairo_user')||'{}'); Object.assign(u, d); localStorage.setItem('kairo_user', JSON.stringify(u)); }
   }).catch(()=>{});
+  // Load credit balance
+  fetch('/api/credits').then(r => r.ok ? r.json() : null).then(d => {
+    if (d) { const el = document.getElementById('sidebarCredits'); if (el) el.textContent = d.balance; }
+  }).catch(()=>{});
 })();
 
 function toggleAccountMenu() {
@@ -668,6 +677,17 @@ async function generateResume() {
       body: JSON.stringify({ job_description: jd })
     });
     const data = await res.json();
+    if (res.status === 402 || data.error === 'insufficient_credits') {
+      document.getElementById('previewBody').innerHTML = `<div class="empty-preview">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="margin:0.5rem 0;">${data.message || 'Not enough credits to generate a resume.'}</div>
+        <div style="font-size:0.82rem;color:var(--muted);">Generating a resume costs <strong style="color:var(--gold)">5 credits</strong>.</div>
+        <div style="margin-top:1rem;display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/dashboard" style="color:var(--gold);font-size:0.85rem;">View your credits →</a>
+        </div>
+      </div>`;
+      return;
+    }
     if (data.error) {
       document.getElementById('previewBody').innerHTML = `<div class="empty-preview"><svg width="32" height="32"><use href="#i-alert"/></svg><div>${data.error}</div><div style="margin-top:0.8rem"><a href="/interview" style="color:var(--gold)">Build your profile first →</a></div></div>`;
       return;
@@ -677,6 +697,10 @@ async function generateResume() {
     renderResume(data, 'previewBody', 'gen');
     document.getElementById('downloadBtn').style.display = 'inline-flex';
     document.getElementById('editBtn').style.display = 'inline-flex';
+    // Refresh credit display
+    fetch('/api/credits').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) { const el = document.getElementById('sidebarCredits'); if (el) el.textContent = d.balance; }
+    }).catch(()=>{});
     loadResumeCount();
   } catch(e) {
     document.getElementById('previewBody').innerHTML = '<div class="empty-preview"><div>Error generating resume. Please try again.</div></div>';

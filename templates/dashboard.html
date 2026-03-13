@@ -113,6 +113,134 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .account-menu-item.signout { color: #ef9a9a; border-top: 1px solid rgba(201,168,76,0.1); }
 .account-menu-item.signout:hover { background: rgba(239,83,80,0.08); }
 
+/* Credit pill in sidebar */
+.credit-pill {
+  display: flex; align-items: center; gap: 0.45rem;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 0.35rem 0.75rem;
+  margin: 0.6rem 1.5rem 0;
+  font-size: 0.78rem; color: var(--gold-light);
+  cursor: pointer; transition: background 0.2s;
+}
+.credit-pill:hover { background: rgba(201,168,76,0.18); }
+.credit-pill-icon { font-size: 0.9rem; }
+.credit-pill-count { font-weight: 600; font-size: 0.85rem; color: var(--gold); }
+
+/* Credit / Referral modal */
+.credits-panel {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 300;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.credits-panel.open { display: flex; }
+.credits-box {
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.3);
+  width: 100%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+  padding: 2rem; animation: slideUp 0.25s ease;
+}
+.credits-box h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; margin-bottom: 0.4rem;
+}
+.credits-box .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+.balance-hero {
+  text-align: center; padding: 1.2rem;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.15);
+  margin-bottom: 1.5rem;
+}
+.balance-hero .big-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8rem; font-weight: 900; color: var(--gold);
+  line-height: 1;
+}
+.balance-hero .big-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem; }
+.costs-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.5rem; margin-bottom: 1.5rem;
+}
+.cost-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(245,240,232,0.04);
+  border: 1px solid rgba(201,168,76,0.1);
+  padding: 0.55rem 0.8rem; font-size: 0.82rem;
+}
+.cost-item .cost-label { color: var(--muted); }
+.cost-item .cost-badge {
+  background: rgba(201,168,76,0.15); color: var(--gold);
+  padding: 0.1rem 0.5rem; font-size: 0.75rem; font-weight: 600;
+}
+.referral-block {
+  background: rgba(76,175,125,0.07);
+  border: 1px solid rgba(76,175,125,0.25);
+  padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+}
+.referral-block h4 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--green); }
+.referral-block p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+.referral-code-row {
+  display: flex; align-items: center; gap: 0.6rem; margin-top: 0.8rem;
+}
+.referral-code-display {
+  flex: 1; background: rgba(245,240,232,0.06);
+  border: 1px solid rgba(76,175,125,0.3);
+  color: var(--green); font-family: monospace;
+  font-size: 1rem; font-weight: 700;
+  padding: 0.5rem 0.8rem; letter-spacing: 0.1em;
+  text-align: center;
+}
+.btn-copy {
+  background: rgba(76,175,125,0.15); border: 1px solid rgba(76,175,125,0.3);
+  color: var(--green); padding: 0.5rem 0.9rem;
+  font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-copy:hover { background: rgba(76,175,125,0.28); }
+.referral-stats { display: flex; gap: 1rem; margin-top: 0.8rem; }
+.referral-stat {
+  flex: 1; text-align: center; background: rgba(245,240,232,0.04);
+  border: 1px solid rgba(201,168,76,0.1); padding: 0.6rem;
+}
+.referral-stat .rs-num {
+  font-size: 1.3rem; font-weight: 700; color: var(--gold);
+  font-family: 'Playfair Display', serif;
+}
+.referral-stat .rs-label { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+.ledger-section h4 { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.6rem; }
+.ledger-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.45rem 0; border-bottom: 1px solid rgba(201,168,76,0.06);
+  font-size: 0.82rem;
+}
+.ledger-row:last-child { border-bottom: none; }
+.ledger-desc { color: var(--cream); flex: 1; }
+.ledger-date { color: var(--muted); font-size: 0.75rem; margin: 0 0.8rem; }
+.ledger-delta-pos { color: var(--green); font-weight: 600; }
+.ledger-delta-neg { color: #ef9a9a; font-weight: 600; }
+
+/* Dashboard referral card */
+.referral-dashboard-card {
+  background: linear-gradient(135deg, rgba(76,175,125,0.08) 0%, rgba(201,168,76,0.08) 100%);
+  border: 1px solid rgba(76,175,125,0.2);
+  padding: 1.5rem 2rem; margin-top: 2rem;
+  display: flex; gap: 2rem; align-items: center;
+}
+.rdc-left { flex: 1; }
+.rdc-left h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin-bottom: 0.4rem; }
+.rdc-left p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+.rdc-code-wrap { flex-shrink: 0; text-align: center; }
+.rdc-code-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.3rem; }
+.rdc-code {
+  font-family: monospace; font-size: 1.2rem; font-weight: 700;
+  color: var(--green); letter-spacing: 0.12em;
+  background: rgba(76,175,125,0.1); border: 1px solid rgba(76,175,125,0.3);
+  padding: 0.5rem 1.2rem; display: block; cursor: pointer;
+}
+.rdc-code:hover { background: rgba(76,175,125,0.2); }
+
 /* Edit name modal */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -770,6 +898,13 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
   <a href="/interview" class="nav-item"><svg class="nav-icon"><use href="#i-mic"/></svg> Build Profile</a>
   <a href="/resume" class="nav-item"><svg class="nav-icon"><use href="#i-file"/></svg> My Resumes</a>
   <a href="/interview-prep" class="nav-item"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Interview Prep</a>
+
+  <!-- Credit pill -->
+  <div class="credit-pill" onclick="openCreditsPanel()" title="View credits & referral code">
+    <span class="credit-pill-icon">✦</span>
+    <span id="sidebarCredits" class="credit-pill-count">—</span>
+    <span style="color:var(--muted)">credits</span>
+  </div>
   <div class="sidebar-bottom">
     <div class="user-card" onclick="toggleAccountMenu()" id="userCard">
       <div class="user-name" id="sidebarName">Loading...</div>
@@ -1069,6 +1204,23 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
       <h3>Faculty References</h3>
       <p>Add professors and mentors who can vouch for you. Kairo includes them in your tailored resumes.</p>
       <div class="card-action">Add References →</div>
+    </div>
+  </div>
+
+  <!-- Referral banner -->
+  <div class="referral-dashboard-card" id="referralBanner" style="display:none;">
+    <div class="rdc-left">
+      <h3>🎁 Earn Free Credits — Refer a Classmate</h3>
+      <p>Share your unique code with VIT friends. You earn <strong style="color:var(--gold)">20 credits</strong> every time someone signs up with it, and they get <strong style="color:var(--green)">10 bonus credits</strong> too.</p>
+      <div style="margin-top:0.8rem; display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <span id="rdc-stats" style="font-size:0.82rem; color:var(--muted);">Loading…</span>
+        <button class="btn-copy" onclick="openCreditsPanel()" style="font-size:0.8rem; padding:0.35rem 0.8rem;">View ledger →</button>
+      </div>
+    </div>
+    <div class="rdc-code-wrap">
+      <div class="rdc-code-label">Your referral code</div>
+      <div class="rdc-code" id="rdcCode" onclick="copyReferralCode(this.textContent)" title="Click to copy">—</div>
+      <div style="font-size:0.72rem; color:var(--muted); margin-top:0.3rem; text-align:center;">click to copy</div>
     </div>
   </div>
 
@@ -2351,5 +2503,221 @@ function openFacultyPanel() {
 <style>
 #uploadDropZone.dragover { border-color: var(--gold); background: rgba(201,168,76,0.06); }
 </style>
+
+<!-- ── Credits & Referral Panel ─────────────────────────────────────── -->
+<div class="credits-panel" id="creditsPanel" onclick="e => { if(e.target===this) closeCreditsPanel(); }">
+  <div class="credits-box">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.3rem;">
+      <div>
+        <h2>✦ Your Credits</h2>
+        <div class="subtitle">Credits are spent when you use AI features. Earn more by referring friends.</div>
+      </div>
+      <button onclick="closeCreditsPanel()" style="background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;padding:0 0.2rem;">×</button>
+    </div>
+
+    <div class="balance-hero">
+      <div class="big-num" id="cp-balance">—</div>
+      <div class="big-label">credits remaining</div>
+    </div>
+
+    <!-- Cost table -->
+    <div style="font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem; font-weight:500; text-transform:uppercase; letter-spacing:0.05em;">Feature costs</div>
+    <div class="costs-grid">
+      <div class="cost-item"><span class="cost-label">Chat message</span><span class="cost-badge">1 cr</span></div>
+      <div class="cost-item"><span class="cost-label">Upload document</span><span class="cost-badge">2 cr</span></div>
+      <div class="cost-item"><span class="cost-label">Intro script</span><span class="cost-badge">3 cr</span></div>
+      <div class="cost-item"><span class="cost-label">Generate resume</span><span class="cost-badge">5 cr</span></div>
+      <div class="cost-item" style="grid-column:1/-1;"><span class="cost-label">Mock interview session</span><span class="cost-badge">10 cr</span></div>
+    </div>
+
+    <!-- Referral block -->
+    <div class="referral-block">
+      <h4>🎁 Earn credits by referring classmates</h4>
+      <p>Share your code with VIT friends. You get <strong style="color:var(--gold)">+20 credits</strong> per successful signup — they get <strong style="color:var(--green)">+10 bonus credits</strong> too.</p>
+      <div class="referral-code-row">
+        <div class="referral-code-display" id="cp-refcode">—</div>
+        <button class="btn-copy" id="cp-copy-btn" onclick="copyReferralCode(document.getElementById('cp-refcode').textContent)">Copy code</button>
+      </div>
+      <div class="referral-stats">
+        <div class="referral-stat">
+          <div class="rs-num" id="cp-total-refs">0</div>
+          <div class="rs-label">friends referred</div>
+        </div>
+        <div class="referral-stat">
+          <div class="rs-num" id="cp-earned">0</div>
+          <div class="rs-label">credits earned via referrals</div>
+        </div>
+        <div class="referral-stat">
+          <div class="rs-num" id="cp-balance2">—</div>
+          <div class="rs-label">current balance</div>
+        </div>
+      </div>
+      <div style="margin-top:0.9rem;">
+        <div style="font-size:0.78rem; color:var(--muted); margin-bottom:0.4rem;">Share this invite link</div>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <input id="cp-invite-link" readonly style="flex:1; background:rgba(245,240,232,0.05); border:1px solid rgba(76,175,125,0.2); color:var(--muted); padding:0.4rem 0.6rem; font-size:0.78rem; font-family:monospace;" value="Loading…">
+          <button class="btn-copy" onclick="copyInviteLink()" style="padding:0.4rem 0.7rem; font-size:0.78rem;">Copy link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction ledger -->
+    <div class="ledger-section">
+      <h4>Recent transactions</h4>
+      <div id="cp-ledger"><div style="color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Credits & Referral JS ─────────────────────────────────────────── */
+let _creditsData = null;
+
+async function loadCreditsData(force = false) {
+  if (_creditsData && !force) return _creditsData;
+  try {
+    const res = await fetch('/api/credits');
+    if (!res.ok) return null;
+    _creditsData = await res.json();
+    return _creditsData;
+  } catch { return null; }
+}
+
+async function loadReferralData() {
+  try {
+    const res = await fetch('/api/referral');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+function updateSidebarCredits(balance) {
+  const el = document.getElementById('sidebarCredits');
+  if (el) el.textContent = balance != null ? balance : '—';
+}
+
+async function openCreditsPanel() {
+  document.getElementById('creditsPanel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Load in parallel
+  const [credits, referral] = await Promise.all([loadCreditsData(true), loadReferralData()]);
+
+  if (credits) {
+    document.getElementById('cp-balance').textContent  = credits.balance;
+    document.getElementById('cp-balance2').textContent = credits.balance;
+    updateSidebarCredits(credits.balance);
+
+    // Ledger
+    const ledgerEl = document.getElementById('cp-ledger');
+    if (credits.ledger && credits.ledger.length) {
+      ledgerEl.innerHTML = credits.ledger.map(e => {
+        const isPos = e.delta > 0;
+        const dt = new Date(e.created_at).toLocaleDateString('en-IN', {day:'numeric',month:'short'});
+        return `<div class="ledger-row">
+          <span class="ledger-desc">${e.description || e.action}</span>
+          <span class="ledger-date">${dt}</span>
+          <span class="${isPos ? 'ledger-delta-pos' : 'ledger-delta-neg'}">${isPos ? '+' : ''}${e.delta}</span>
+        </div>`;
+      }).join('');
+    } else {
+      ledgerEl.innerHTML = '<div style="color:var(--muted);font-size:0.82rem;padding:0.5rem 0;">No transactions yet.</div>';
+    }
+  }
+
+  if (referral) {
+    const code = referral.referral_code || '—';
+    document.getElementById('cp-refcode').textContent = code;
+    document.getElementById('cp-total-refs').textContent = referral.total_referrals || 0;
+
+    // Count credits earned from referrals using ledger
+    if (credits && credits.ledger) {
+      const earned = credits.ledger
+        .filter(e => e.action === 'referral_reward' && e.delta > 0)
+        .reduce((s, e) => s + e.delta, 0);
+      document.getElementById('cp-earned').textContent = earned;
+    }
+
+    // Invite link
+    const inviteLink = `${location.origin}/?ref=${code}`;
+    document.getElementById('cp-invite-link').value = inviteLink;
+
+    // Update referral banner on dashboard too
+    const banner = document.getElementById('referralBanner');
+    const rdcCode = document.getElementById('rdcCode');
+    const rdcStats = document.getElementById('rdc-stats');
+    if (banner) banner.style.display = 'flex';
+    if (rdcCode) rdcCode.textContent = code;
+    if (rdcStats) {
+      const refs = referral.total_referrals || 0;
+      rdcStats.textContent = refs > 0
+        ? `${refs} friend${refs !== 1 ? 's' : ''} referred · ${refs * 20} credits earned`
+        : 'No referrals yet — share your code to start earning!';
+    }
+  }
+}
+
+function closeCreditsPanel() {
+  document.getElementById('creditsPanel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+document.getElementById('creditsPanel').addEventListener('click', function(e) {
+  if (e.target === this) closeCreditsPanel();
+});
+
+function copyReferralCode(code) {
+  if (!code || code === '—') return;
+  navigator.clipboard.writeText(code.trim()).then(() => {
+    const btn = document.getElementById('cp-copy-btn');
+    const rdcEl = document.getElementById('rdcCode');
+    if (btn) { const orig = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = orig, 1800); }
+    if (rdcEl && rdcEl.textContent.trim() === code.trim()) {
+      const orig = rdcEl.style.color;
+      rdcEl.style.color = 'var(--gold)';
+      setTimeout(() => rdcEl.style.color = orig, 1200);
+    }
+  });
+}
+
+function copyInviteLink() {
+  const link = document.getElementById('cp-invite-link').value;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+}
+
+// ── Load credits on page init ─────────────────────────────────────────
+(async () => {
+  const credits = await loadCreditsData();
+  if (credits) updateSidebarCredits(credits.balance);
+
+  // Show referral banner
+  const referral = await loadReferralData();
+  if (referral) {
+    const code = referral.referral_code || '—';
+    const banner = document.getElementById('referralBanner');
+    const rdcCode = document.getElementById('rdcCode');
+    const rdcStats = document.getElementById('rdc-stats');
+    if (banner) banner.style.display = 'flex';
+    if (rdcCode) rdcCode.textContent = code;
+    if (rdcStats) {
+      const refs = referral.total_referrals || 0;
+      rdcStats.textContent = refs > 0
+        ? `${refs} friend${refs !== 1 ? 's' : ''} referred · ${refs * 20} credits earned`
+        : 'Share your code to start earning credits!';
+    }
+  }
+})();
+
+// ── Escape key closes panel ───────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCreditsPanel();
+});
+</script>
 </body>
 </html>

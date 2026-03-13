@@ -167,6 +167,91 @@ class MockInterview(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
 
+# ── Credit System ─────────────────────────────────────────────────────────────
+
+# How many credits each action costs
+CREDIT_COSTS = {
+    'chat_message':       1,   # each AI chat message
+    'generate_resume':    5,   # generate a tailored resume
+    'mock_interview':    10,   # start a mock interview session
+    'upload_document':    2,   # upload and parse a document
+    'intro_script':       3,   # generate self-intro video script
+}
+
+# Starting credits and bonus amounts
+CREDITS_ON_SIGNUP      = 50   # free credits for every new account
+CREDITS_REFERRAL_BONUS = 20   # credits awarded to referrer when referral signs up
+CREDITS_REFEREE_BONUS  = 10   # extra credits awarded to the new user who used a referral code
+
+class CreditLedger(db.Model):
+    """Append-only ledger of every credit transaction for a student."""
+    id          = db.Column(db.Integer, primary_key=True)
+    student_id  = db.Column(db.String(36), db.ForeignKey('student.id'), nullable=False)
+    delta       = db.Column(db.Integer, nullable=False)          # positive = earned, negative = spent
+    action      = db.Column(db.String(80), nullable=False)       # e.g. 'signup_bonus', 'generate_resume'
+    description = db.Column(db.String(255))
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Ambassador(db.Model):
+    """Campus ambassador / referral tracking."""
+    id            = db.Column(db.Integer, primary_key=True)
+    student_id    = db.Column(db.String(36), db.ForeignKey('student.id'), unique=True, nullable=False)
+    referral_code = db.Column(db.String(20), unique=True, nullable=False)
+    is_ambassador = db.Column(db.Boolean, default=False)         # True = official campus ambassador
+    total_referrals = db.Column(db.Integer, default=0)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ── Credit helpers ────────────────────────────────────────────────────────────
+
+def _get_balance(student_id):
+    """Return current credit balance for a student."""
+    row = db.session.execute(
+        db.text("SELECT COALESCE(SUM(delta), 0) FROM credit_ledger WHERE student_id = :sid"),
+        {'sid': student_id}
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def _add_credits(student_id, delta, action, description=''):
+    entry = CreditLedger(student_id=student_id, delta=delta, action=action, description=description)
+    db.session.add(entry)
+    db.session.commit()
+    return _get_balance(student_id)
+
+
+def _spend_credits(student_id, action):
+    """Deduct credits for action. Returns (ok: bool, balance: int, cost: int)."""
+    cost = CREDIT_COSTS.get(action, 0)
+    if cost == 0:
+        return True, _get_balance(student_id), 0
+    balance = _get_balance(student_id)
+    if balance < cost:
+        return False, balance, cost
+    entry = CreditLedger(student_id=student_id, delta=-cost, action=action,
+                          description=f'Used {action.replace("_", " ")}')
+    db.session.add(entry)
+    db.session.commit()
+    return True, balance - cost, cost
+
+
+def _generate_referral_code(name, student_id):
+    """Generate a short unique referral code like ARJUN-4F2A."""
+    prefix = (name or 'USER').upper().split()[0][:6]
+    suffix = student_id[-4:].upper()
+    return f"{prefix}-{suffix}"
+
+
+def _ensure_ambassador_record(student):
+    """Create an Ambassador record if one doesn't exist yet."""
+    if not Ambassador.query.filter_by(student_id=student.id).first():
+        code = _generate_referral_code(student.name, student.id)
+        amb = Ambassador(student_id=student.id, referral_code=code, is_ambassador=False)
+        db.session.add(amb)
+        db.session.commit()
+        return amb
+    return Ambassador.query.filter_by(student_id=student.id).first()
+
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
 def _call_groq(messages, system_prompt, max_tokens=1000):
@@ -486,6 +571,7 @@ def login():
     email = data.get('email', '').lower().strip()
     name = data.get('name', '').strip()
     password = data.get('password', '').strip()
+    referral_code = data.get('referral_code', '').strip().upper()
 
     if not email:
         return jsonify({'error': 'Email required'}), 400
@@ -500,8 +586,10 @@ def login():
         return jsonify({'error': 'Please use your VIT email (e.g. name2022@vitstudent.ac.in)'}), 400
 
     student = Student.query.filter_by(email=email).first()
+    is_new = not student
+    referral_msg = None
 
-    if not student:
+    if is_new:
         # New account — register
         if not name:
             return jsonify({'error': 'Name required for new accounts'}), 400
@@ -514,6 +602,27 @@ def login():
         )
         db.session.add(student)
         db.session.commit()
+
+        # Award signup credits
+        _add_credits(student.id, CREDITS_ON_SIGNUP, 'signup_bonus',
+                     f'Welcome to Kairo! {CREDITS_ON_SIGNUP} free credits.')
+
+        # Process referral code if provided
+        if referral_code:
+            referrer_amb = Ambassador.query.filter_by(referral_code=referral_code).first()
+            if referrer_amb and referrer_amb.student_id != student.id:
+                _add_credits(student.id, CREDITS_REFEREE_BONUS, 'referral_bonus',
+                             f'Joined via referral code {referral_code}')
+                _add_credits(referrer_amb.student_id, CREDITS_REFERRAL_BONUS, 'referral_reward',
+                             f'Referred a new student ({email})')
+                referrer_amb.total_referrals += 1
+                db.session.commit()
+                referral_msg = f'Referral applied! You got {CREDITS_REFEREE_BONUS} extra credits.'
+            else:
+                referral_msg = 'Referral code not found — no bonus applied.'
+
+        # Give every new student their own referral code
+        _ensure_ambassador_record(student)
     else:
         # Existing account
         if student.password_hash is None:
@@ -526,15 +635,23 @@ def login():
             db.session.commit()
         elif not check_password_hash(student.password_hash, password):
             return jsonify({'error': 'Incorrect password'}), 401
+        # Back-fill ambassador record for legacy accounts
+        _ensure_ambassador_record(student)
 
     session['student_id'] = student.id
     session['student_email'] = student.email
 
+    amb = Ambassador.query.filter_by(student_id=student.id).first()
     return jsonify({
         'id': student.id,
         'email': student.email,
         'name': student.name,
-        'profile': json.loads(student.profile_data or '{}')
+        'profile': json.loads(student.profile_data or '{}'),
+        'credits': _get_balance(student.id),
+        'referral_code': amb.referral_code if amb else None,
+        'is_ambassador': amb.is_ambassador if amb else False,
+        'is_new': is_new,
+        'referral_msg': referral_msg,
     })
 
 @app.route('/api/auth/me')
@@ -545,11 +662,17 @@ def me():
     student = Student.query.get(sid)
     if not student:
         return jsonify({'error': 'Student not found'}), 404
+    _ensure_ambassador_record(student)
+    amb = Ambassador.query.filter_by(student_id=student.id).first()
     return jsonify({
         'id': student.id,
         'email': student.email,
         'name': student.name,
-        'profile': json.loads(student.profile_data or '{}')
+        'profile': json.loads(student.profile_data or '{}'),
+        'credits': _get_balance(student.id),
+        'referral_code': amb.referral_code if amb else None,
+        'is_ambassador': amb.is_ambassador if amb else False,
+        'total_referrals': amb.total_referrals if amb else 0,
     })
 
 @app.route('/api/auth/logout', methods=['POST'])
@@ -602,11 +725,21 @@ def chat():
         sid = 'demo'
 
     # extract_only: one-shot LLM call, never saved to conversation history
-    # Used by the frontend summary generator to avoid polluting the transcript
     if data.get('extract_only'):
         extract_system = "You are a JSON extractor. Return only valid JSON, no markdown, no explanation."
         result = call_llm([{"role": "user", "content": user_message}], extract_system)
         return jsonify({'response': result, 'conversation_id': None, 'profile_complete': False, 'messages': []})
+
+    # Credit check for real users (silent bootstraps are free, cost borne by first real message)
+    if sid != 'demo' and not data.get('silent_bootstrap'):
+        ok, balance, cost = _spend_credits(sid, 'chat_message')
+        if not ok:
+            return jsonify({
+                'error': 'insufficient_credits',
+                'message': f'You need {cost} credit(s) but only have {balance}. Earn more by referring friends!',
+                'balance': balance,
+                'cost': cost
+            }), 402
 
     # Get or create conversation
     conv = None
@@ -687,19 +820,29 @@ def chat():
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     sid = session.get('student_id')
-    
+
     if 'file' not in request.files:
         return jsonify({'error': 'No file'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
+
     filename = secure_filename(file.filename)
     ext = filename.rsplit('.', 1)[-1].lower()
-    
+
     if ext not in ['pdf', 'png', 'jpg', 'jpeg']:
         return jsonify({'error': 'Only PDF and images allowed'}), 400
+
+    # Credit check
+    if sid:
+        ok, balance, cost = _spend_credits(sid, 'upload_document')
+        if not ok:
+            return jsonify({
+                'error': 'insufficient_credits',
+                'message': f'Uploading a document costs {cost} credits but you only have {balance}.',
+                'balance': balance, 'cost': cost
+            }), 402
     
     unique_name = f"{uuid.uuid4()}_{filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
@@ -1633,8 +1776,16 @@ def generate_resume():
     
     if not job_description:
         return jsonify({'error': 'Job description required'}), 400
-    
-    profile_data = data.get('profile_data', {})
+
+    # Credit check
+    if sid and sid != 'demo':
+        ok, balance, cost = _spend_credits(sid, 'generate_resume')
+        if not ok:
+            return jsonify({
+                'error': 'insufficient_credits',
+                'message': f'Generating a resume costs {cost} credits but you only have {balance}. Refer friends to earn more!',
+                'balance': balance, 'cost': cost
+            }), 402
     
     # Try to get from DB
     if sid and sid != 'demo':
@@ -2052,6 +2203,16 @@ def generate_intro_script():
     sid = session.get('student_id')
     data = request.json or {}
 
+    # Credit check
+    if sid and sid != 'demo':
+        ok, balance, cost = _spend_credits(sid, 'intro_script')
+        if not ok:
+            return jsonify({
+                'error': 'insufficient_credits',
+                'message': f'Generating an intro script costs {cost} credits but you only have {balance}.',
+                'balance': balance, 'cost': cost
+            }), 402
+
     profile_data = data.get('profile_data', {})
     job_role = data.get('job_role', '').strip()
     duration_seconds = int(data.get('duration_seconds', 60))
@@ -2270,7 +2431,16 @@ def start_mock_interview():
     data = request.get_json()
     job_title = data.get('job_title', 'Software Engineer')
     job_description = data.get('job_description', '')
-    
+
+    # Credit check
+    ok, balance, cost = _spend_credits(sid, 'mock_interview')
+    if not ok:
+        return jsonify({
+            'error': 'insufficient_credits',
+            'message': f'Starting a mock interview costs {cost} credits but you only have {balance}. Refer friends to earn more!',
+            'balance': balance, 'cost': cost
+        }), 402
+
     student = Student.query.get(sid)
     if not student:
         return jsonify({'error': 'Student not found'}), 404
@@ -2464,6 +2634,110 @@ def get_mock_interview(interview_id):
     })
 
 
+
+# ── Credits API ───────────────────────────────────────────────────────────────
+
+@app.route('/api/credits', methods=['GET'])
+def get_credits():
+    """Return balance and recent ledger for the logged-in student."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    balance = _get_balance(sid)
+    ledger = CreditLedger.query.filter_by(student_id=sid)\
+                .order_by(CreditLedger.created_at.desc()).limit(20).all()
+    return jsonify({
+        'balance': balance,
+        'costs': CREDIT_COSTS,
+        'ledger': [{
+            'delta': e.delta,
+            'action': e.action,
+            'description': e.description,
+            'created_at': e.created_at.isoformat(),
+        } for e in ledger]
+    })
+
+
+# ── Referral / Ambassador API ─────────────────────────────────────────────────
+
+@app.route('/api/referral', methods=['GET'])
+def get_referral():
+    """Return the student's own referral code and stats."""
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+    student = Student.query.get(sid)
+    if not student:
+        return jsonify({'error': 'Not found'}), 404
+    amb = _ensure_ambassador_record(student)
+    if not amb:
+        amb = Ambassador.query.filter_by(student_id=sid).first()
+    balance = _get_balance(sid)
+    return jsonify({
+        'referral_code': amb.referral_code,
+        'is_ambassador': amb.is_ambassador,
+        'total_referrals': amb.total_referrals,
+        'credits_per_referral': CREDITS_REFERRAL_BONUS,
+        'credits_referee_bonus': CREDITS_REFEREE_BONUS,
+        'balance': balance,
+    })
+
+
+@app.route('/api/referral/validate', methods=['POST'])
+def validate_referral():
+    """Check whether a referral code is valid (used during signup preview)."""
+    code = (request.json or {}).get('code', '').strip().upper()
+    if not code:
+        return jsonify({'valid': False, 'message': 'No code provided'}), 400
+    amb = Ambassador.query.filter_by(referral_code=code).first()
+    if not amb:
+        return jsonify({'valid': False, 'message': 'Code not found'})
+    referrer = Student.query.get(amb.student_id)
+    return jsonify({
+        'valid': True,
+        'referrer_name': referrer.name.split()[0] if referrer and referrer.name else 'a student',
+        'bonus_credits': CREDITS_REFEREE_BONUS,
+        'message': f'Code valid! You\'ll get {CREDITS_REFEREE_BONUS} bonus credits on signup.',
+    })
+
+
+@app.route('/api/admin/ambassador', methods=['POST'])
+def toggle_ambassador():
+    """Promote or demote a student to campus ambassador (admin only via secret key)."""
+    secret = request.json.get('admin_secret', '')
+    if secret != os.environ.get('ADMIN_SECRET', 'kairo-admin-2026'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    email = request.json.get('email', '').lower().strip()
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+    amb = Ambassador.query.filter_by(student_id=student.id).first()
+    if not amb:
+        return jsonify({'error': 'No ambassador record'}), 404
+    amb.is_ambassador = not amb.is_ambassador
+    db.session.commit()
+    return jsonify({'email': email, 'is_ambassador': amb.is_ambassador,
+                    'referral_code': amb.referral_code})
+
+
+@app.route('/api/admin/grant-credits', methods=['POST'])
+def admin_grant_credits():
+    """Manually grant credits to a student (admin only)."""
+    secret = request.json.get('admin_secret', '')
+    if secret != os.environ.get('ADMIN_SECRET', 'kairo-admin-2026'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    email = request.json.get('email', '').lower().strip()
+    amount = int(request.json.get('amount', 0))
+    reason = request.json.get('reason', 'Admin grant')
+    if amount <= 0:
+        return jsonify({'error': 'Amount must be positive'}), 400
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+    new_balance = _add_credits(student.id, amount, 'admin_grant', reason)
+    return jsonify({'email': email, 'granted': amount, 'new_balance': new_balance})
+
+
 @app.route('/api/health')
 def health():
     s = get_llm_status()
@@ -2531,6 +2805,26 @@ with app.app_context():
                 overall_score INTEGER,
                 created_at TIMESTAMP DEFAULT NOW(),
                 completed_at TIMESTAMP
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS credit_ledger (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(36) NOT NULL REFERENCES student(id),
+                delta INTEGER NOT NULL,
+                action VARCHAR(80) NOT NULL,
+                description VARCHAR(255),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS ambassador (
+                id SERIAL PRIMARY KEY,
+                student_id VARCHAR(36) NOT NULL REFERENCES student(id) UNIQUE,
+                referral_code VARCHAR(20) NOT NULL UNIQUE,
+                is_ambassador BOOLEAN DEFAULT FALSE,
+                total_referrals INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
             )
         """))
         # Column back-fills (safe on repeated runs)
