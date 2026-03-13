@@ -191,6 +191,15 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .summary-card li:last-child { border-bottom: none; }
 .summary-card li::before { content: '→'; color: var(--gold); flex-shrink: 0; }
 .summary-card p { font-size: 0.84rem; color: var(--cream); line-height: 1.7; }
+/* Project / internship items */
+.item-list { display: flex; flex-direction: column; gap: 0.9rem; }
+.item-card { background: rgba(201,168,76,0.03); border: 1px solid rgba(201,168,76,0.1); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.item-name { font-size: 0.9rem; font-weight: 600; color: var(--cream); }
+.item-meta { font-size: 0.78rem; color: var(--gold); display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.item-meta-sep { color: rgba(201,168,76,0.3); }
+.item-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+.item-impact { font-size: 0.78rem; color: var(--green); font-weight: 500; display: flex; align-items: flex-start; gap: 0.35rem; }
+.item-impact::before { content: '↑'; flex-shrink: 0; }
 
 /* Full transcript on summary page */
 .transcript-section { margin-bottom: 2rem; max-width: 960px; }
@@ -310,6 +319,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
     </div>
     <div class="start-btn-row">
       <button class="btn btn-gold btn-lg" onclick="startSession()">Begin Session →</button>
+      <span style="font-size:0.8rem;color:var(--muted)">Camera is optional but recommended</span>
     </div>
     <div class="past-sessions">
       <h3>Previous Sessions</h3>
@@ -1048,42 +1058,75 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
 }
 
 function renderSummaryCards(p) {
-  const grid = document.getElementById('summary-grid'); let html = '';
-  if (p.personal && Object.values(p.personal).some(v=>v))
+  const grid = document.getElementById('summary-grid');
+  let html = '';
+
+  // Personal info
+  if (p.personal && Object.values(p.personal).some(v => v))
     html += `<div class="summary-card"><h3>Personal Info</h3><ul>
-      ${p.personal.name ? `<li>${p.personal.name}</li>` : ''}
+      ${p.personal.name    ? `<li>${p.personal.name}</li>` : ''}
       ${p.personal.college ? `<li>${p.personal.college}</li>` : ''}
-      ${p.personal.branch ? `<li>${p.personal.branch}</li>` : ''}
-      ${p.personal.year ? `<li>Year ${p.personal.year}</li>` : ''}
-      ${p.personal.location ? `<li>${p.personal.location}</li>` : ''}
+      ${p.personal.branch  ? `<li>${p.personal.branch}</li>` : ''}
+      ${p.personal.year    ? `<li>${p.personal.year}</li>` : ''}
+      ${p.personal.location? `<li>${p.personal.location}</li>` : ''}
     </ul></div>`;
+
+  // Academics
   if (p.academics && (p.academics.cgpa || p.academics.notable_courses?.length || p.academics.achievements?.length))
     html += `<div class="summary-card"><h3>Academics</h3><ul>
       ${p.academics.cgpa ? `<li>CGPA: ${p.academics.cgpa}</li>` : ''}
-      ${(p.academics.notable_courses||[]).map(c=>`<li>${c}</li>`).join('')}
-      ${(p.academics.achievements||[]).map(a=>`<li>${a}</li>`).join('')}
+      ${(p.academics.notable_courses||[]).map(c => `<li>${c}</li>`).join('')}
+      ${(p.academics.achievements||[]).map(a => `<li>${a}</li>`).join('')}
     </ul></div>`;
+
+  // Skills — tag chips
   if (p.skills?.length)
-    html += `<div class="summary-card"><h3>Technical Skills</h3><ul>${p.skills.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card"><h3>Technical Skills</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.2rem;">
+        ${p.skills.map(s => `<span style="font-size:0.75rem;padding:0.2rem 0.6rem;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);color:var(--cream);">${s}</span>`).join('')}
+      </div></div>`;
+
+  // Projects — full width, one card per project
   if (p.projects?.length)
-    html += `<div class="summary-card"><h3>Projects</h3><ul>${p.projects.map(pr=>`
-      <li><strong>${pr.name||'Project'}</strong>${pr.tech?' — '+pr.tech:''}
-      ${pr.description?`<br><span style="color:var(--muted);font-size:0.78rem;">${pr.description}</span>`:''}
-      ${pr.impact?`<br><span style="color:var(--green);font-size:0.75rem;">${pr.impact}</span>`:''}
-      </li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card" style="grid-column:1/-1;"><h3>Projects</h3>
+      <div class="item-list">
+        ${p.projects.map(pr => `
+          <div class="item-card">
+            <div class="item-name">${pr.name || 'Project'}</div>
+            ${pr.tech ? `<div class="item-meta">${pr.tech.split(',').map(t => `<span>${t.trim()}</span>`).join('<span class="item-meta-sep">·</span>')}</div>` : ''}
+            ${pr.description ? `<div class="item-desc">${pr.description}</div>` : ''}
+            ${pr.impact ? `<div class="item-impact">${pr.impact}</div>` : ''}
+          </div>`).join('')}
+      </div></div>`;
+
+  // Internships — full width, one card per role
   if (p.internships?.length)
-    html += `<div class="summary-card"><h3>Internships</h3><ul>${p.internships.map(i=>`
-      <li><strong>${i.company||'Company'}</strong>${i.role?' — '+i.role:''}${i.duration?' ('+i.duration+')':''}
-      ${i.description?`<br><span style="color:var(--muted);font-size:0.78rem;">${i.description}</span>`:''}
-      </li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card" style="grid-column:1/-1;"><h3>Internships</h3>
+      <div class="item-list">
+        ${p.internships.map(i => `
+          <div class="item-card">
+            <div class="item-name">${i.company || 'Company'}${i.role ? ` <span style="font-weight:400;color:var(--muted);">— ${i.role}</span>` : ''}</div>
+            ${i.duration ? `<div class="item-meta">${i.duration}</div>` : ''}
+            ${i.description ? `<div class="item-desc">${i.description}</div>` : ''}
+          </div>`).join('')}
+      </div></div>`;
+
+  // Highlights
   if (p.highlights?.length)
-    html += `<div class="summary-card"><h3>Highlights &amp; Wins</h3><ul>${p.highlights.map(h=>`<li>${h}</li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card"><h3>Highlights &amp; Wins</h3><ul>${p.highlights.map(h => `<li>${h}</li>`).join('')}</ul></div>`;
+
+  // Struggles
   if (p.struggles?.length)
-    html += `<div class="summary-card"><h3>Challenges Overcome</h3><ul>${p.struggles.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card"><h3>Challenges Overcome</h3><ul>${p.struggles.map(s => `<li>${s}</li>`).join('')}</ul></div>`;
+
+  // Extracurriculars
   if (p.extracurriculars?.length)
-    html += `<div class="summary-card"><h3>Extracurriculars</h3><ul>${p.extracurriculars.map(e=>`<li>${e}</li>`).join('')}</ul></div>`;
+    html += `<div class="summary-card"><h3>Extracurriculars</h3><ul>${p.extracurriculars.map(e => `<li>${e}</li>`).join('')}</ul></div>`;
+
+  // Goals
   if (p.goals)
     html += `<div class="summary-card" style="grid-column:1/-1;"><h3>Goals &amp; Aspirations</h3><p>${p.goals}</p></div>`;
+
   grid.innerHTML = html || '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Not enough captured. Try a new session and share more details.</p></div>';
 }
 
