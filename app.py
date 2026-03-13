@@ -1044,20 +1044,18 @@ def fetch_jd():
 
 def _fetch_naukri_jd(url):
     """
-    Fetch JD from Naukri using their internal API.
-    Naukri job URLs contain a numeric job ID at the end (e.g. ...110326928982)
-    which maps to their REST API at https://www.naukri.com/jobapi/v4/job/{jobId}
+    Extract JD from a Naukri job page.
+
+    Naukri renders job data server-side as JSON inside a <script id="initial-data">
+    or window.__INITIAL_STATE__ block. We parse that directly — no internal API needed.
+
+    Falls back to CSS-selector extraction if the JSON approach fails.
     """
     import re as _re
+    import json as _json
 
-    # Extract job ID — last long numeric sequence in the URL path
-    job_id_match = _re.search(r'(\d{10,})', url)
-    if not job_id_match:
-        print("Naukri: could not extract job ID from URL")
-        return None
-
-    job_id = job_id_match.group(1)
-    api_url = f"https://www.naukri.com/jobapi/v4/job/{job_id}"
+    # Strip query params for a cleaner fetch
+    clean_url = url.split('?')[0]
 
     headers = {
         'User-Agent': (
@@ -1065,75 +1063,167 @@ def _fetch_naukri_jd(url):
             'AppleWebKit/537.36 (KHTML, like Gecko) '
             'Chrome/124.0.0.0 Safari/537.36'
         ),
-        'Accept': 'application/json',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://www.naukri.com/',
-        'appid': '109',
-        'systemid': '109',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Upgrade-Insecure-Requests': '1',
     }
 
     try:
-        resp = requests.get(api_url, headers=headers, timeout=12)
+        session_r = requests.Session()
+        # First visit homepage to get cookies (makes us look like a real browser)
+        session_r.get('https://www.naukri.com/', headers=headers, timeout=10)
+        resp = session_r.get(clean_url, headers=headers, timeout=15, allow_redirects=True)
         if resp.status_code != 200:
-            print(f"Naukri API returned {resp.status_code}")
+            print(f"Naukri page returned {resp.status_code}")
             return None
-
-        data = resp.json()
-        job_data = data.get('jobDetails') or data.get('job') or data
-
-        # Try to assemble JD from API fields
-        parts = []
-
-        title = job_data.get('title') or job_data.get('jobTitle', '')
-        if title:
-            parts.append(f"Job Title: {title}")
-
-        company = job_data.get('companyName') or ''
-        if company:
-            parts.append(f"Company: {company}")
-
-        job_desc = (
-            job_data.get('jobDescription')
-            or job_data.get('description')
-            or job_data.get('jobDesc')
-            or ''
-        )
-        if job_desc:
-            # Strip HTML tags if present
-            try:
-                from bs4 import BeautifulSoup as _BS
-                job_desc = _BS(job_desc, 'html.parser').get_text(separator='\n', strip=True)
-            except Exception:
-                pass
-            parts.append(job_desc)
-
-        # Skills / key requirements
-        skills = job_data.get('keySkills') or job_data.get('skills') or []
-        if isinstance(skills, list) and skills:
-            skill_names = [s.get('label') or s.get('name') or str(s) for s in skills if s]
-            parts.append("Key Skills: " + ', '.join(filter(None, skill_names)))
-        elif isinstance(skills, str) and skills:
-            parts.append("Key Skills: " + skills)
-
-        # Role / category info
-        for field in ['role', 'roleCategory', 'industry', 'functionalArea']:
-            val = job_data.get(field)
-            if val:
-                parts.append(f"{field.capitalize()}: {val}")
-
-        # Experience
-        exp = job_data.get('experience') or job_data.get('minimumExperience') or ''
-        if exp:
-            parts.append(f"Experience: {exp}")
-
-        result = '\n'.join(parts).strip()
-        if len(result) > 100:
-            print(f"Naukri API success: extracted {len(result)} chars")
-            return result
-
     except Exception as e:
-        print(f"Naukri API error: {e}")
+        print(f"Naukri page fetch error: {e}")
+        return None
 
+    # Force UTF-8 decoding
+    resp.encoding = 'utf-8'
+    html = resp.text
+
+    try:
+        from bs4 import BeautifulSoup as _BS
+    except ImportError:
+        return None
+
+    soup = _BS(html, 'html.parser')
+
+    # ── Strategy 1: Extract from embedded JSON in <script> tags ──────────────
+    # Naukri injects job data as JSON in various script patterns
+    json_patterns = [
+        r'window\.__INITIAL_DATA__\s*=\s*({.+?});?\s*</script>',
+        r'window\.__INITIAL_STATE__\s*=\s*({.+?});?\s*</script>',
+        r'<script[^>]+id=["\']initial-data["\'][^>]*>({.+?})</script>',
+        r'"jobDescription"\s*:\s*"((?:[^"\\]|\\.)+)"',
+    ]
+
+    for script_tag in soup.find_all('script'):
+        script_text = script_tag.string or ''
+        if not script_text or len(script_text) < 100:
+            continue
+
+        # Try to find JSON blob with job description
+        for pattern in json_patterns[:-1]:  # skip the last regex-only pattern
+            match = _re.search(pattern, script_text, _re.DOTALL)
+            if match:
+                try:
+                    data = _json.loads(match.group(1))
+                    jd = _deep_find_jd(data)
+                    if jd and len(jd) > 200:
+                        print(f"Naukri: extracted JD from embedded JSON ({len(jd)} chars)")
+                        return jd
+                except Exception:
+                    pass
+
+        # Direct jobDescription string search in script
+        if 'jobDescription' in script_text:
+            match = _re.search(r'"jobDescription"\s*:\s*"((?:[^"\\]|\\.)*)"', script_text)
+            if match:
+                try:
+                    raw = match.group(1).encode('utf-8').decode('unicode_escape')
+                    jd = _BS(raw, 'html.parser').get_text(separator='\n', strip=True)
+                    if len(jd) > 200:
+                        print(f"Naukri: extracted JD from script regex ({len(jd)} chars)")
+                        return jd
+                except Exception:
+                    pass
+
+    # ── Strategy 2: BeautifulSoup class-prefix matching ──────────────────────
+    # Naukri uses CSS Modules with hashed suffixes e.g. styles_JDC__dang-inner-html__h0K4t
+    # We match on the stable prefix part of the class name.
+    # Priority: most specific inner content div first, then outer containers.
+    PREFIX_TARGETS = [
+        'styles_JDC__dang-inner-html',   # div.styles_JDC__dang-inner-html__h0K4t (actual content)
+        'styles_job-desc-container',      # section.styles_job-desc-container__txpYf (outer wrapper)
+        'styles_key-skill',               # div.styles_key-skill__GIPn_ (skills block)
+        'styles_JDC',
+        'styles_jdc',
+    ]
+
+    def find_by_class_prefix(s, prefix):
+        for tag in s.find_all(True):
+            classes = tag.get('class') or []
+            if any(c.startswith(prefix) for c in classes):
+                return tag
+        return None
+
+    for prefix in PREFIX_TARGETS:
+        el = find_by_class_prefix(soup, prefix)
+        if el:
+            text = el.get_text(separator='\n', strip=True)
+            if len(text) > 200:
+                print(f"Naukri: extracted JD via class prefix '{prefix}' ({len(text)} chars)")
+                return text
+
+    # Also try wildcard CSS selectors as secondary fallback
+    css_selectors = [
+        'section[class*="job-desc-container"]',
+        'div[class*="dang-inner-html"]',
+        'div[class*="JDC"]',
+        'div[class*="job-desc"]',
+        'div#job_description',
+    ]
+    for sel in css_selectors:
+        el = soup.select_one(sel)
+        if el:
+            text = el.get_text(separator='\n', strip=True)
+            if len(text) > 200:
+                print(f"Naukri: extracted JD via CSS selector '{sel}' ({len(text)} chars)")
+                return text
+
+    # ── Strategy 3: Find largest text block containing JD keywords ───────────
+    jd_keywords = ['responsibilities', 'requirements', 'skills', 'experience',
+                   'qualifications', 'you will', 'we are looking', 'role']
+    best, best_score = None, 0
+    for el in soup.find_all(['div', 'section', 'article']):
+        text = el.get_text(separator=' ', strip=True)
+        if len(text) < 300 or len(text) > 20000:
+            continue
+        hits = sum(1 for kw in jd_keywords if kw in text.lower())
+        score = hits * 50 + len(text) * 0.005
+        if score > best_score:
+            best_score, best = score, el
+    if best:
+        text = best.get_text(separator='\n', strip=True)
+        if len(text) > 200:
+            print(f"Naukri: extracted JD via heuristic ({len(text)} chars)")
+            return text
+
+    print("Naukri: all strategies failed")
+    return None
+
+
+def _deep_find_jd(obj, depth=0):
+    """Recursively search a dict/list for jobDescription field and return cleaned text."""
+    if depth > 8:
+        return None
+    if isinstance(obj, dict):
+        for key in ('jobDescription', 'job_description', 'description', 'jobDesc'):
+            val = obj.get(key)
+            if isinstance(val, str) and len(val) > 200:
+                try:
+                    from bs4 import BeautifulSoup as _BS
+                    return _BS(val, 'html.parser').get_text(separator='\n', strip=True)
+                except Exception:
+                    return val
+        for v in obj.values():
+            result = _deep_find_jd(v, depth + 1)
+            if result:
+                return result
+    elif isinstance(obj, list):
+        for item in obj:
+            result = _deep_find_jd(item, depth + 1)
+            if result:
+                return result
     return None
 
 
