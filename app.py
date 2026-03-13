@@ -905,7 +905,35 @@ def fetch_jd():
             'source': 'Naukri',
         }), 422
 
-    # ── 0b. JS-rendered sites — return helpful manual-paste error immediately ──
+    # ── 0b. Internshala — dedicated scraper ──────────────────────────────────────
+    if 'internshala.com' in parsed_host:
+        result = _fetch_internshala_jd(url)
+        if result and len(result.get('jd', '').strip()) > 100:
+            return jsonify({**result, 'source': 'Internshala'})
+        return jsonify({
+            'error': (
+                'Could not auto-import this Internshala listing. Please: open the '
+                'job/internship post → select all the description text → paste it below.'
+            ),
+            'manual_paste': True,
+            'source': 'Internshala',
+        }), 422
+
+    # ── 0c. Hirist — dedicated API scraper ───────────────────────────────────────
+    if 'hirist.tech' in parsed_host or 'hirist.com' in parsed_host:
+        hirist_jd = _fetch_hirist_jd(url)
+        if hirist_jd and len(hirist_jd.strip()) > 100:
+            return jsonify({'jd': hirist_jd, 'source': 'Hirist'})
+        return jsonify({
+            'error': (
+                'Could not auto-import this Hirist listing. Please: open the job '
+                'post → select all the description text → paste it below.'
+            ),
+            'manual_paste': True,
+            'source': 'Hirist',
+        }), 422
+
+    # ── 0d. JS-rendered sites — return helpful manual-paste error immediately ──
     # These sites load job content via JavaScript after page load.
     # Server-side requests only get an empty HTML shell — scraping cannot work.
     JS_RENDERED_SITES = {
@@ -930,19 +958,16 @@ def fetch_jd():
             }), 422
 
     # Site-specific selectors: (host_substring, css_selector)
+    # Note: naukri, internshala, hirist handled by dedicated scrapers above.
     SITE_SELECTORS = [
-        ('naukri.com',       'div.styles_job-desc-container__txpYf, div#job_description, div.job-desc, div[class*="jd-desc"], div[class*="job-desc"]'),
-        ('internshala.com',  'div.internship_details, div#about_internship, div.detail_view'),
-        ('foundit.in',       'div.jobDescription, div.job-description'),
-        ('instahire.in',     'div.job-description, div.jd-content'),
-        ('wellfound.com',    'div.job-description, section.description'),
-        ('indeed.com',       'div#jobDescriptionText, div.jobsearch-jobDescriptionText'),
-        ('glassdoor.com',    'div.jobDescriptionContent, div[data-test="jobDescriptionContent"]'),
-        ('shine.com',        'div.job-description, div.jd-content-wrap'),
-        ('monster.com',      'div.job-description, div#JobDescription'),
-        ('freshersworld.com','div.job-description, div.jobdetails-section'),
-        ('cutshort.io',      'div.job-description, div.description-content'),
-        ('hirist.tech',      'div.job-description, div.jd-section'),
+        ('foundit.in',        'div.jobDescription, div.job-description'),
+        ('instahire.in',      'div.job-description, div.jd-content'),
+        ('indeed.com',        'div#jobDescriptionText, div.jobsearch-jobDescriptionText'),
+        ('glassdoor.com',     'div.jobDescriptionContent, div[data-test="jobDescriptionContent"]'),
+        ('shine.com',         'div.job-description, div.jd-content-wrap'),
+        ('monster.com',       'div.job-description, div#JobDescription'),
+        ('freshersworld.com', 'div.job-description, div.jobdetails-section'),
+        ('timesjobs.com',     'div.jd-desc, div[class*="job-desc"]'),
     ]
 
     headers = {
@@ -1224,6 +1249,228 @@ def _fetch_naukri_jd(url):
             return text
 
     print("Naukri: all strategies failed")
+    return None
+
+
+def _fetch_internshala_jd(url):
+    """
+    Extract full job/internship details from an Internshala listing page.
+
+    Internshala is server-side rendered. The DOM structure (confirmed from DevTools):
+      - div.internship_details          — outer wrapper
+      - div.text-container              — about the job body text
+      - div.text-container.who_can_apply — who can apply section
+      - span.round_tabs                 — individual skill tags
+      - h2/h3.section_heading           — section headings
+      - div.text-container.about_company_text_container — company description
+
+    We scrape all relevant sections and assemble them into clean structured text.
+    """
+    import re as _re
+    try:
+        from bs4 import BeautifulSoup as _BS
+    except ImportError:
+        return None
+
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://internshala.com/',
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        if resp.status_code != 200:
+            print(f"Internshala: page returned {resp.status_code}")
+            return None
+    except Exception as e:
+        print(f"Internshala: fetch error: {e}")
+        return None
+
+    resp.encoding = 'utf-8'
+    soup = _BS(resp.text, 'html.parser')
+
+    sections = []
+
+    # ── Job title ──────────────────────────────────────────────────────────────
+    title_el = soup.select_one('h1.heading_title, h1.heading_2_4')
+    if title_el:
+        sections.append(f"Role: {title_el.get_text(strip=True)}")
+
+    # ── Company name ──────────────────────────────────────────────────────────
+    company_el = soup.select_one('a.link_display_like_text, div.company_name a')
+    if company_el:
+        sections.append(f"Company: {company_el.get_text(strip=True)}")
+
+    # ── Meta info (stipend, duration, location, deadline) ─────────────────────
+    meta_items = []
+    for item in soup.select('div.item_body, div#stipend_container span, div.other_detail_item'):
+        t = item.get_text(separator=' ', strip=True)
+        if t:
+            meta_items.append(t)
+    if meta_items:
+        sections.append("Details: " + " | ".join(dict.fromkeys(meta_items)))  # dedup
+
+    # ── Skills required ───────────────────────────────────────────────────────
+    skill_tags = soup.select('span.round_tabs')
+    if skill_tags:
+        skills = [s.get_text(strip=True) for s in skill_tags if s.get_text(strip=True)]
+        sections.append("Skills Required: " + ", ".join(skills))
+
+    # ── Main section headings + their body text ───────────────────────────────
+    # Walk through the internship_details container section by section
+    detail_container = soup.select_one('div.internship_details, div#details_container')
+    if detail_container:
+        current_heading = None
+        current_body = []
+
+        for el in detail_container.find_all(['h2', 'h3', 'p', 'ul', 'div'], recursive=True):
+            tag = el.name
+            classes = el.get('class') or []
+
+            # Section headings
+            if tag in ('h2', 'h3') and any('section_heading' in c for c in classes):
+                if current_heading and current_body:
+                    combined = '\n'.join(current_body).strip()
+                    if len(combined) > 20:
+                        sections.append(f"\n{current_heading}:\n{combined}")
+                current_heading = el.get_text(strip=True)
+                current_body = []
+                continue
+
+            # text-container divs hold the actual paragraph content
+            if tag == 'div' and any('text-container' in c for c in classes):
+                text = el.get_text(separator='\n', strip=True)
+                if text and len(text) > 10:
+                    current_body.append(text)
+
+            # Paragraphs inside those containers (already captured via parent, skip)
+
+        # Flush last section
+        if current_heading and current_body:
+            combined = '\n'.join(current_body).strip()
+            if len(combined) > 20:
+                sections.append(f"\n{current_heading}:\n{combined}")
+
+    # ── Fallback: grab entire internship_details block if sections are thin ───
+    if len(sections) < 3:
+        fallback = soup.select_one(
+            'div.internship_details, div.detail_view, div#about_internship, '
+            'div[class*="internship_detail"]'
+        )
+        if fallback:
+            text = fallback.get_text(separator='\n', strip=True)
+            if len(text) > 200:
+                print(f"Internshala: used fallback selector ({len(text)} chars)")
+                return {'jd': text}
+
+    if not sections:
+        print("Internshala: all strategies failed")
+        return None
+
+    jd_text = '\n'.join(sections)
+    print(f"Internshala: extracted JD ({len(jd_text)} chars, {len(sections)} sections)")
+    return {'jd': jd_text}
+
+
+def _fetch_hirist_jd(url):
+    """
+    Extract job description from a Hirist.tech listing.
+
+    Hirist exposes job data via their internal REST API at:
+      GET https://www.hirist.tech/api/job/<job_id>
+    Job ID is embedded in the URL slug as the trailing integer, e.g.:
+      /j/python-developer-xyztech-123456  →  job_id = 123456
+
+    Falls back to HTML scraping if the API call fails.
+    """
+    import re as _re
+    import json as _json
+    try:
+        from bs4 import BeautifulSoup as _BS
+    except ImportError:
+        return None
+
+    headers = {
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        ),
+        'Accept': 'application/json, text/html, */*',
+        'Referer': 'https://www.hirist.tech/',
+    }
+
+    # ── Strategy 1: Internal API via job ID extracted from URL ────────────────
+    job_id_match = _re.search(r'-(\d+)(?:/|$|\?)', url)
+    if job_id_match:
+        job_id = job_id_match.group(1)
+        api_urls = [
+            f'https://www.hirist.tech/api/job/{job_id}',
+            f'https://www.hirist.tech/api/v1/job/{job_id}',
+            f'https://www.hirist.tech/api/jobs/{job_id}',
+        ]
+        for api_url in api_urls:
+            try:
+                resp = requests.get(api_url, headers={**headers, 'Accept': 'application/json'}, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    jd = _deep_find_jd(data)
+                    if jd and len(jd) > 100:
+                        print(f"Hirist: extracted JD via API ({len(jd)} chars)")
+                        return jd
+            except Exception:
+                pass
+
+    # ── Strategy 2: HTML scraping ─────────────────────────────────────────────
+    try:
+        resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        if resp.status_code != 200:
+            print(f"Hirist: page returned {resp.status_code}")
+            return None
+    except Exception as e:
+        print(f"Hirist: fetch error: {e}")
+        return None
+
+    resp.encoding = 'utf-8'
+    soup = _BS(resp.text, 'html.parser')
+
+    # Try known Hirist selectors (HTML-scraped structure)
+    selectors = [
+        'div.job-description',
+        'div.jd-section',
+        'div[class*="job-desc"]',
+        'div[class*="jd-content"]',
+        'section.job-detail',
+        'div#job-description',
+    ]
+    for sel in selectors:
+        el = soup.select_one(sel)
+        if el:
+            text = el.get_text(separator='\n', strip=True)
+            if len(text) > 200:
+                print(f"Hirist: extracted JD via selector '{sel}' ({len(text)} chars)")
+                return text
+
+    # Strategy 3: JSON-LD structured data (many job boards embed this for SEO)
+    for script in soup.find_all('script', type='application/ld+json'):
+        try:
+            data = _json.loads(script.string or '')
+            if isinstance(data, dict) and data.get('@type') in ('JobPosting', 'jobPosting'):
+                desc = data.get('description', '')
+                if desc and len(desc) > 100:
+                    text = _BS(desc, 'html.parser').get_text(separator='\n', strip=True)
+                    print(f"Hirist: extracted JD via JSON-LD ({len(text)} chars)")
+                    return text
+        except Exception:
+            pass
+
+    print("Hirist: all strategies failed")
     return None
 
 
