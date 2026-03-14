@@ -23,7 +23,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'kairo-secret-key-2026')
 # same-origin fetches. On local HTTP dev, Secure must be False.
 _is_prod = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DATABASE_URL','').startswith('postgresql'))
 app.config['SESSION_COOKIE_SECURE']   = _is_prod
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# SameSite=None is required so the Chrome extension (a cross-origin caller)
+# can send credentialed requests (session cookies) to the API.
+# SameSite=None is only safe over HTTPS — Railway enforces HTTPS in prod,
+# and _is_prod already gates SESSION_COOKIE_SECURE so local dev is unaffected.
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
 # Fix Railway's postgres:// URL (SQLAlchemy requires postgresql://)
@@ -34,7 +38,33 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
-CORS(app)
+
+# ── CORS — explicit allowlist only, credentials enabled ──────────────────────
+# We enumerate every allowed origin rather than using a wildcard so that
+# supports_credentials=True cannot be abused by arbitrary third-party sites.
+#
+# Origins:
+#   1. The Kairo web app itself (Railway production URL)
+#   2. Local dev server
+#   3. The Chrome extension — its origin is chrome-extension://<extension-id>
+#      Set EXTENSION_ORIGIN in Railway Variables after loading the unpacked
+#      extension (copy the 32-char ID shown in chrome://extensions).
+#      When you publish to the Chrome Web Store the ID changes — update the var.
+_ALLOWED_ORIGINS = [
+    'https://kairo.up.railway.app',
+    'http://localhost:5000',
+]
+_ext_origin = os.environ.get('EXTENSION_ORIGIN', '').strip()
+if _ext_origin:
+    _ALLOWED_ORIGINS.append(_ext_origin)
+
+CORS(
+    app,
+    origins=_ALLOWED_ORIGINS,
+    supports_credentials=True,          # allows session cookies cross-origin
+    allow_headers=['Content-Type'],
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+)
 
 db = SQLAlchemy(app)
 
