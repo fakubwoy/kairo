@@ -6,6 +6,15 @@ Built with Python (Flask) + vanilla HTML/CSS/JS. Uses open-source LLMs via Groq 
 
 ---
 
+## Repositories
+
+| Repo | Description |
+|------|-------------|
+| [kairo](https://github.com/fakubwoy/kairo) | Flask backend + web frontend |
+| [kairo-extension](https://github.com/fakubwoy/kairo-extension) | Chrome/Brave extension |
+
+---
+
 ## Project Structure
 
 ```
@@ -52,6 +61,84 @@ kairo/
 **Campus Ambassador Program** — official ambassadors earn 35 credits per referral (vs 20 for regular users); Ambassador Hub on the dashboard shows live stats (total signups, credits earned, week-over-week trend, full referral table with privacy-masked emails); share tools include copy code, copy invite link, WhatsApp share, and a downloadable recruitment poster (PNG with QR code, branding, and ambassador name) generated client-side on canvas; ambassador badge shown in sidebar; ambassador perk displayed in credits panel
 
 ---
+
+## Chrome Extension
+
+> Source: [kairo-extension](https://github.com/fakubwoy/kairo-extension)
+
+The Kairo extension sits in your browser and activates whenever you're on a job board. It reads the job description from the page, sends it to your Kairo profile, and generates a custom ATS-optimised resume in seconds — without leaving the page.
+
+### Extension Features
+
+- Detects job title, company, and full JD automatically on supported job portals
+- One-click tailored resume generation using your Kairo profile (costs 5 credits)
+- Paste any JD manually for unsupported sites
+- View saved resumes directly from the popup
+- Quick links to Dashboard, Profile Builder, and Presence Audit
+- Live credit balance display in the toolbar popup
+- Floating action button injected automatically on supported job portals
+- Shares session with the Kairo website — if you're already logged in on kairo.up.railway.app, the extension picks it up automatically
+
+### Extension File Structure
+
+```
+kairo-extension/
+├── manifest.json               # Extension config (Manifest V3)
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+├── pages/
+│   ├── popup.html              # Main popup UI (320px)
+│   └── onboarding.html         # First-install welcome screen
+├── scripts/
+│   ├── background.js           # Service worker — all API calls to Kairo backend
+│   ├── content.js              # Injected into job portals — JD scraping + floating button
+│   └── popup.js                # Popup logic — auth, resume loading, job detection
+└── styles/
+    ├── popup.css
+    └── content.css
+```
+
+### Supported Job Portals
+
+| Portal | Auto-extraction |
+|--------|----------------|
+| Naukri | Yes |
+| Internshala | Yes |
+| LinkedIn Jobs | Yes |
+| Indeed | Yes |
+| Unstop | Yes |
+| Wellfound | Yes |
+| Greenhouse | Yes |
+| Lever | Yes |
+| Hirist | Yes |
+
+For any other site, use the **Paste JD** option in the popup.
+
+### Extension Installation (Developer / Unpacked)
+
+**1. Download and extract**
+
+Download the zip and extract the `kairo-extension/` folder somewhere permanent (e.g. `~/kairo-extension`). Do not delete this folder — Chrome loads the extension from it directly.
+
+**2. Load in Brave / Chrome**
+
+1. Go to `brave://extensions` (or `chrome://extensions`)
+2. Enable **Developer mode** using the toggle in the top-right
+3. Click **Load unpacked**
+4. Select the `kairo-extension/` folder
+
+The Kairo icon (gold **K**) will appear in your toolbar.
+
+**3. Configure the server URL** *(only needed for local dev or custom deployments)*
+
+1. Click the Kairo toolbar icon
+2. Click the **settings (⚙)** icon in the top-right of the popup
+3. Update the URL (e.g. `http://localhost:5000`)
+4. Click **Save Settings**
+
+The extension points to `https://kairo.up.railway.app` by default.
 
 ## Credit System Details
 
@@ -171,6 +258,7 @@ In Railway dashboard → your service → **Variables** tab, add:
 SECRET_KEY=<generate a random 32-char string>
 GROQ_API_KEY=<your groq key>
 ADMIN_SECRET=<your admin secret for ambassador/credit management>
+EXTENSION_ORIGIN=chrome-extension://<your extension id>
 ```
 
 ### Step 4: (Optional) Add Postgres database
@@ -195,7 +283,8 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | `OLLAMA_BASE_URL` | No | Local Ollama URL (local dev only) |
 | `OLLAMA_MODEL` | No | Ollama model name (default: llama3.2) |
 | `REDIS_URL` | No | Optional Redis for conversation caching |
-| `ADMIN_SECRET` | No | Secret key for admin endpoints|
+| `ADMIN_SECRET` | No | Secret key for admin endpoints |
+| `EXTENSION_ORIGIN` | No | Chrome extension origin for CORS (`chrome-extension://ID`) |
 | `GITHUB_TOKEN` | No | GitHub token for higher API rate limits on profile import |
 
 *Groq is the primary provider and also powers Whisper voice transcription. For local dev, Ollama works without any API key (voice input requires Groq).
@@ -230,7 +319,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 ### Resumes
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/generate-resume` | Generate resume from JD (costs 5 credits) |
+| POST | `/api/generate-resume` | Generate resume from JD (costs 5 credits). Used by both the web app and the Chrome extension |
 | GET | `/api/resumes` | List all saved resumes |
 | GET | `/api/resumes/<id>` | Get a specific saved resume |
 | POST | `/api/resumes/<id>/save-edit` | Save an inline edit, creates a new version snapshot |
@@ -249,7 +338,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 ### Credits & Referrals
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/credits` | Get balance and last 20 ledger transactions |
+| GET | `/api/credits` | Get balance and last 20 ledger transactions. Also used by the Chrome extension for live credit display |
 | GET | `/api/referral` | Get own referral code, stats, and per-referral reward (ambassador-aware) |
 | POST | `/api/referral/validate` | Check if a referral code is valid before signup |
 
@@ -264,7 +353,7 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | POST | `/api/transcribe` | Transcribe audio via Groq Whisper |
 | POST | `/api/github-profile` | Import profile data from GitHub username |
 | POST | `/api/linkedin-hints` | Extract structured profile data from pasted LinkedIn text |
-| POST | `/api/fetch-jd` | Scrape and clean a job description from a URL (supports Naukri, Internshala, Hirist, Indeed, and more) |
+| POST | `/api/fetch-jd` | Scrape and clean a job description from a URL (supports Naukri, Internshala, Hirist, Indeed, and more). Also called by the Chrome extension |
 | POST | `/api/generate-intro-script` | Generate a self-intro video script (costs 3 credits) |
 | GET | `/api/llm-status` | Check status of all LLM backends (Groq, OpenRouter, Ollama) |
 | GET | `/api/health` | Health check with active backend name |
@@ -279,11 +368,23 @@ Railway auto-deploys on every push to main. Your app will be live at:
 
 ---
 
-## Roadmap
+## Troubleshooting
 
-- [ ] Chrome extension for one-click job application
-- [ ] VIT course template pre-loading (known subjects, branches, electives)
-- [ ] VIT email validation enforcement
+**Extension won't load**
+Make sure you're selecting the `kairo-extension/` folder itself (the one containing `manifest.json`), not the parent zip folder.
+
+**"Sign in failed" or network error from extension**
+- Check that the server URL in extension settings matches your deployment (default: `https://kairo.up.railway.app`)
+- Check that `EXTENSION_ORIGIN` is set correctly in Railway Variables
+
+**Resumes not showing in extension**
+You need at least one generated resume saved on your account. Generate one first from any job posting.
+
+**JD not detected on a job page**
+Some portals (LinkedIn, Greenhouse, Lever) render content client-side. Use the **Paste JD** button in the popup instead.
+
+**Credits showing "—" in extension**
+This usually means the session cookie isn't being sent. Ensure `EXTENSION_ORIGIN` is set in Railway and the `app.py` CORS config is updated as described above.
 
 ---
 
@@ -301,8 +402,17 @@ Railway auto-deploys on every push to main. Your app will be live at:
 | PDF extraction | pdfplumber |
 | QR code generation | QRCode.js (client-side, CDN) |
 | Frontend | Vanilla HTML/CSS/JS |
+| Chrome Extension | Manifest V3, Vanilla JS |
+| Extension fonts | Playfair Display + DM Sans (Google Fonts) |
+| Extension icons | Feather Icons (inline SVG) |
 | Deployment | Railway |
 
 No paid APIs required. Groq provides free access to Llama 3.3 70B and Whisper Large v3 with a generous rate limit.
 
 ---
+
+## Related
+
+- [Kairo Web App](https://kairo.up.railway.app) — the full platform
+- [Kairo GitHub](https://github.com/fakubwoy/kairo) — Flask backend source
+- [Kairo Extension GitHub](https://github.com/fakubwoy/kairo-extension) — Chrome extension source
