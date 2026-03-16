@@ -534,36 +534,30 @@ footer {
 .demo-caption-role { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
 .demo-caption-text { font-size: 0.82rem; color: var(--cream); line-height: 1.5; max-height: 72px; overflow-y: auto; }
 
-/* User transcript toast — ephemeral subtitle chip */
+/* User transcript toast — ephemeral line above Kairo's caption */
 #demo-user-toast {
-  position: absolute;
-  bottom: 1.2rem;
-  left: 50%;
-  transform: translateX(-50%) translateY(6px);
-  background: rgba(245,240,232,0.06);
-  border: 1px solid rgba(245,240,232,0.1);
-  border-radius: 999px;
-  padding: 0.35rem 1rem;
-  font-size: 0.78rem;
+  display: none;
+  font-size: 0.75rem;
   font-style: italic;
-  color: rgba(245,240,232,0.45);
+  color: rgba(245,240,232,0.38);
+  margin-bottom: 0.4rem;
   white-space: nowrap;
-  max-width: 88%;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
+  max-width: 100%;
   opacity: 0;
+  transform: translateY(4px);
   transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 5;
 }
 #demo-user-toast.visible {
+  display: block;
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 #demo-user-toast.fade-out {
   opacity: 0;
-  transform: translateX(-50%) translateY(-4px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transform: translateY(-3px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 /* Controls bar */
@@ -737,10 +731,10 @@ footer {
       </div>
 
       <!-- User transcript toast -->
-      <div id="demo-user-toast"></div>
 
       <!-- Caption — sits below avatar, above controls -->
       <div class="demo-caption">
+        <div id="demo-user-toast"></div>
         <div class="demo-caption-role" id="demo-cap-role">Kairo</div>
         <div class="demo-caption-text" id="demo-cap-text">Starting your session…</div>
 
@@ -1095,12 +1089,16 @@ async function demoTranscribe() {
 function demoShowUserToast(text) {
   const toast = document.getElementById('demo-user-toast');
   toast.textContent = text;
-  toast.classList.remove('fade-out');
-  toast.classList.add('visible');
-  // Fade out after 1.4s so it's gone before Kairo responds
+  toast.classList.remove('fade-out', 'visible');
+  toast.style.display = 'block';
+  // Allow display:block to paint before transitioning in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => toast.classList.add('visible'));
+  });
   setTimeout(() => {
     toast.classList.add('fade-out');
-    setTimeout(() => { toast.classList.remove('visible','fade-out'); }, 400);
+    toast.classList.remove('visible');
+    setTimeout(() => { toast.style.display = 'none'; toast.classList.remove('fade-out'); }, 380);
   }, 1400);
 }
 
