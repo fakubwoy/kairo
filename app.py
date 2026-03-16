@@ -576,6 +576,33 @@ def deep_merge_profile(existing, new_data):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+# ── Demo rate-limit endpoints ─────────────────────────────────────────────────
+DEMO_MSG_LIMIT = 3   # exchanges before sign-up gate
+
+@app.route('/api/demo/check', methods=['POST'])
+def demo_check():
+    data    = request.get_json(silent=True) or {}
+    demo_id = str(data.get('demo_id', ''))[:64]
+    if not demo_id:
+        return jsonify({'used': 0})
+    used = session.get(f'demo:{demo_id}', 0)
+    return jsonify({'used': used, 'limit': DEMO_MSG_LIMIT})
+
+@app.route('/api/demo/sync', methods=['POST'])
+def demo_sync():
+    """Only ever increase the count — never decrease it."""
+    data    = request.get_json(silent=True) or {}
+    demo_id = str(data.get('demo_id', ''))[:64]
+    claimed = int(data.get('used', 0))
+    if not demo_id:
+        return jsonify({'ok': False})
+    session.permanent = True
+    key     = f'demo:{demo_id}'
+    current = session.get(key, 0)
+    session[key] = max(current, min(claimed, DEMO_MSG_LIMIT + 1))
+    return jsonify({'ok': True, 'used': session[key]})
+
+
 @app.route('/')
 def index():
     return render_template('index.html')

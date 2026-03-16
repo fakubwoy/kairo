@@ -431,6 +431,183 @@ footer {
   .steps-section { padding: 3rem 2rem; }
   footer { padding: 1.5rem 2rem; flex-direction: column; gap: 0.5rem; }
 }
+/* ─── Demo Video-Call Modal ───────────────────────────────── */
+#demoModal {
+  position: fixed; inset: 0; z-index: 600;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
+}
+#demoModal.active { display: flex; }
+
+.demo-shell {
+  width: min(560px, 98vw);
+  max-height: 92vh;
+  background: #080608;
+  border: 1px solid rgba(201,168,76,0.25);
+  display: flex; flex-direction: column;
+  animation: slideUp 0.3s ease; position: relative; overflow: hidden;
+}
+
+/* Header bar */
+.demo-header {
+  padding: 0.7rem 1.2rem;
+  background: rgba(10,10,15,0.96);
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.demo-header-left { display: flex; align-items: center; gap: 0.7rem; }
+.demo-logo { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 900; color: var(--gold); }
+.demo-status-pill {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.72rem; color: var(--muted);
+  padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.demo-sdot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.demo-sdot.listening { background: var(--green); animation: pulse 1s infinite; }
+.demo-sdot.speaking  { background: var(--gold);  animation: pulse 1s infinite; }
+.demo-sdot.thinking  { background: #5c8de0;       animation: pulse 1s infinite; }
+.demo-sdot.ready     { background: var(--green); }
+
+.demo-close {
+  background: none; border: none; color: var(--muted);
+  font-size: 1rem; cursor: pointer; padding: 0.2rem 0.4rem;
+  transition: color 0.2s;
+}
+.demo-close:hover { color: var(--cream); }
+
+/* AI panel — the big centre stage */
+.demo-ai-panel {
+  flex: 1; min-height: 240px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  background: #080608; position: relative;
+  padding: 1.8rem 1.5rem 0;
+}
+.demo-avatar-block {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1; justify-content: center;
+}
+.demo-ai-ring {
+  width: 110px; height: 110px; border-radius: 50%;
+  border: 2px solid rgba(201,168,76,0.25);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1rem; transition: border-color 0.3s;
+}
+.demo-ai-ring.speaking {
+  border-color: var(--gold);
+  animation: ringPulse 1s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,0.4)}
+  50%{box-shadow:0 0 0 12px rgba(201,168,76,0)}
+}
+.demo-ai-inner {
+  width: 86px; height: 86px; border-radius: 50%;
+  background: linear-gradient(135deg,#1a1410,#2a1f0e);
+  border: 1px solid rgba(201,168,76,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold);
+}
+.demo-ai-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.15rem; }
+.demo-ai-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--cream); }
+
+.demo-wave { display: flex; align-items: center; gap: 3px; height: 16px; margin-top: 0.5rem; }
+.demo-wave-bar { width: 3px; background: var(--gold); border-radius: 2px; height: 3px; }
+.demo-ai-panel.speaking .demo-wave-bar { animation: waveAnim 0.8s ease-in-out infinite; }
+.demo-wave-bar:nth-child(1){animation-delay:0s}.demo-wave-bar:nth-child(2){animation-delay:.1s}
+.demo-wave-bar:nth-child(3){animation-delay:.2s}.demo-wave-bar:nth-child(4){animation-delay:.3s}
+.demo-wave-bar:nth-child(5){animation-delay:.4s}.demo-wave-bar:nth-child(6){animation-delay:.3s}
+.demo-wave-bar:nth-child(7){animation-delay:.2s}.demo-wave-bar:nth-child(8){animation-delay:.1s}
+@keyframes waveAnim{0%,100%{height:3px}50%{height:14px}}
+
+/* Caption box — sits below avatar in normal flow */
+.demo-caption {
+  width: 100%;
+  background: rgba(10,10,15,0.9);
+  border: 1px solid rgba(201,168,76,0.18);
+  border-left: none; border-right: none;
+  padding: 0.65rem 1.2rem;
+  flex-shrink: 0;
+}
+.demo-caption-role { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.demo-caption-text { font-size: 0.82rem; color: var(--cream); line-height: 1.5; max-height: 72px; overflow-y: auto; }
+
+/* Answer preview bubble (floats above mic) */
+#demo-answer-preview {
+  display: none; position: absolute;
+  bottom: calc(100% + 0.5rem); left: 50%; transform: translateX(-50%);
+  background: rgba(10,10,15,0.96);
+  border: 1px solid rgba(201,168,76,0.2);
+  padding: 0.45rem 0.9rem; font-size: 0.78rem; color: var(--cream);
+  max-width: 340px; text-align: center; white-space: pre-wrap; z-index: 10;
+}
+
+/* Controls bar */
+.demo-controls {
+  padding: 0.75rem 1.2rem;
+  background: rgba(8,6,8,0.98);
+  border-top: 1px solid rgba(201,168,76,0.1);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-shrink: 0;
+}
+.demo-mic-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+.demo-mic-btn {
+  width: 62px; height: 62px; border-radius: 50%;
+  background: rgba(201,168,76,0.1);
+  border: 2px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.25s; gap: 3px; position: relative; z-index: 2;
+}
+.demo-mic-btn svg { width: 20px; height: 20px; }
+.demo-mic-lbl { font-size: 0.5rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.demo-mic-btn:not(:disabled):hover { background: rgba(201,168,76,0.18); border-color: var(--gold); transform: scale(1.04); }
+.demo-mic-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.demo-mic-btn.recording { background: rgba(224,92,92,0.2); border-color: #e05c5c; color: #e05c5c; }
+.demo-mic-btn.recording .demo-mic-lbl { color: #e05c5c; }
+.demo-mic-btn.transcribing { background: rgba(92,141,224,0.15); border-color: #5c8de0; color: #5c8de0; animation: btnPulse 1s infinite; }
+@keyframes btnPulse{0%,100%{opacity:1}50%{opacity:.5}}
+.demo-mic-ring {
+  position: absolute; width: 62px; height: 62px; border-radius: 50%;
+  border: 2px solid #e05c5c; opacity: 0; pointer-events: none; z-index: 1;
+}
+.demo-mic-ring.active { animation: micRingPulse 1.2s ease-out infinite; }
+@keyframes micRingPulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.85);opacity:0}}
+
+.demo-send-btn {
+  height: 46px; padding: 0 1.2rem;
+  background: var(--gold); color: var(--ink);
+  border: none; font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+}
+.demo-send-btn:hover { background: var(--gold-light); }
+.demo-send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Sign-up gate overlay */
+.demo-gate-overlay {
+  display: none; position: absolute; inset: 0;
+  background: rgba(8,6,8,0.96);
+  flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 2.5rem 2rem;
+  animation: msgIn 0.4s ease;
+  z-index: 30;
+}
+.demo-gate-overlay.visible { display: flex; }
+@keyframes msgIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.demo-gate-icon { font-size: 2.2rem; margin-bottom: 0.7rem; }
+.demo-gate-overlay h3 {
+  font-family: 'Playfair Display', serif; font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.demo-gate-overlay p {
+  color: rgba(245,240,232,0.55); font-size: 0.88rem;
+  line-height: 1.6; max-width: 30ch; margin: 0 auto 1.5rem;
+}
+.demo-gate-overlay .btn-primary { padding: 0.8rem 2rem; font-size: 0.95rem; }
+.demo-gate-note { margin-top: 0.6rem; font-size: 0.72rem; color: rgba(107,101,96,0.65); }
 </style>
 </head>
 <body>
@@ -447,7 +624,7 @@ footer {
     <p>Talk to Kairo for 20 minutes. Share your projects, experiences, and ideas. We build your professional profile and generate custom resumes for every job you apply to.</p>
     <div class="hero-actions">
       <button class="btn-primary" onclick="showLogin()">Start Your Profile →</button>
-      <button class="btn-secondary" onclick="window.location.href='/interview'">Try Demo</button>
+      <button class="btn-secondary" onclick="openDemo()">Try Demo</button>
     </div>
   </div>
 
@@ -502,6 +679,79 @@ footer {
   </div>
 </section>
 
+<!-- ── Demo Voice-Call Modal ─────────────────────────── -->
+<div id="demoModal">
+  <div class="demo-shell">
+
+    <!-- Header -->
+    <div class="demo-header">
+      <div class="demo-header-left">
+        <div class="demo-logo">Kairo</div>
+        <div class="demo-status-pill">
+          <div class="demo-sdot ready" id="demo-sdot"></div>
+          <span id="demo-stext">Ready</span>
+        </div>
+      </div>
+      <button class="demo-close" onclick="closeDemo()">✕</button>
+    </div>
+
+    <!-- AI panel -->
+    <div class="demo-ai-panel" id="demo-ai-panel">
+
+      <!-- Avatar block -->
+      <div class="demo-avatar-block">
+        <div class="demo-ai-ring" id="demo-ai-ring">
+          <div class="demo-ai-inner">K</div>
+        </div>
+        <div class="demo-ai-label">Your Career Co-pilot</div>
+        <div class="demo-ai-name">Kairo</div>
+        <div class="demo-wave" id="demo-wave">
+          <div class="demo-wave-bar"></div><div class="demo-wave-bar"></div>
+          <div class="demo-wave-bar"></div><div class="demo-wave-bar"></div>
+          <div class="demo-wave-bar"></div><div class="demo-wave-bar"></div>
+          <div class="demo-wave-bar"></div><div class="demo-wave-bar"></div>
+        </div>
+        <!-- Answer preview bubble -->
+        <div id="demo-answer-preview"></div>
+      </div>
+
+      <!-- Caption — sits below avatar, above controls -->
+      <div class="demo-caption">
+        <div class="demo-caption-role" id="demo-cap-role">Kairo</div>
+        <div class="demo-caption-text" id="demo-cap-text">Starting your session…</div>
+      </div>
+
+      <!-- Sign-up gate overlay -->
+      <div class="demo-gate-overlay" id="demo-gate">
+        <div class="demo-gate-icon">✦</div>
+        <h3>Want to continue?</h3>
+        <p>Create a free account to unlock your full profile, resumes, and unlimited sessions with Kairo.</p>
+        <button class="btn-primary" onclick="closeDemo(); showLogin(true);">Create Free Account →</button>
+        <div class="demo-gate-note">No credit card · VIT email only</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="demo-controls" id="demo-controls">
+      <div style="width:46px"></div><!-- spacer -->
+
+      <div class="demo-mic-wrap">
+        <button class="demo-mic-btn" id="demo-mic-btn" onclick="demoToggleRecording()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/>
+          </svg>
+          <span class="demo-mic-lbl" id="demo-mic-lbl">Speak</span>
+        </button>
+        <div class="demo-mic-ring" id="demo-mic-ring"></div>
+      </div>
+
+      <button class="demo-send-btn" id="demo-send-btn" onclick="demoSendPending()" disabled>Send →</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- Login Modal -->
 <div class="modal-overlay" id="loginModal">
   <div class="modal" style="position:relative;">
@@ -549,7 +799,10 @@ footer {
 </footer>
 
 <script>
-let authMode = 'signin'; // 'signin' | 'signup'
+/* ═══════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════ */
+let authMode = 'signin';
 let _refValidTimer = null;
 
 function showLogin(forceSignup = false) {
@@ -560,15 +813,15 @@ function hideLogin() { document.getElementById('loginModal').classList.remove('a
 
 function toggleMode() {
   authMode = authMode === 'signin' ? 'signup' : 'signin';
-  const isSignup = authMode === 'signup';
-  document.getElementById('modalTitle').textContent    = isSignup ? 'Create account' : 'Welcome back';
-  document.getElementById('modalSubtitle').textContent = isSignup ? 'Sign up with your VIT email' : 'Sign in to your Kairo account';
-  document.getElementById('nameGroup').style.display   = isSignup ? 'block' : 'none';
-  document.getElementById('refGroup').style.display    = isSignup ? 'block' : 'none';
-  document.getElementById('authBtn').textContent       = isSignup ? 'Create Account →' : 'Sign In →';
-  document.getElementById('toggleText').textContent    = isSignup ? 'Already have an account?' : 'New to Kairo?';
-  document.getElementById('toggleLink').textContent    = isSignup ? 'Sign in' : 'Create account';
-  if (!isSignup) clearRefValidation();
+  const s = authMode === 'signup';
+  document.getElementById('modalTitle').textContent    = s ? 'Create account' : 'Welcome back';
+  document.getElementById('modalSubtitle').textContent = s ? 'Sign up with your VIT email' : 'Sign in to your Kairo account';
+  document.getElementById('nameGroup').style.display   = s ? 'block' : 'none';
+  document.getElementById('refGroup').style.display    = s ? 'block' : 'none';
+  document.getElementById('authBtn').textContent       = s ? 'Create Account →' : 'Sign In →';
+  document.getElementById('toggleText').textContent    = s ? 'Already have an account?' : 'New to Kairo?';
+  document.getElementById('toggleLink').textContent    = s ? 'Sign in' : 'Create account';
+  if (!s) clearRefValidation();
 }
 
 function clearRefValidation() {
@@ -580,75 +833,334 @@ function clearRefValidation() {
 async function validateRefCode(code) {
   if (!code || code.length < 4) { clearRefValidation(); return; }
   try {
-    const res = await fetch('/api/referral/validate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ code })
-    });
+    const res  = await fetch('/api/referral/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ code }) });
     const data = await res.json();
     const iconEl = document.getElementById('refValidIcon');
     const msgEl  = document.getElementById('refValidMsg');
-    if (data.valid) {
-      iconEl.textContent   = '✓';
-      iconEl.style.color   = 'var(--green)';
-      msgEl.textContent    = data.message;
-      msgEl.style.color    = 'var(--green)';
-    } else {
-      iconEl.textContent   = '✗';
-      iconEl.style.color   = '#ef9a9a';
-      msgEl.textContent    = 'Code not found.';
-      msgEl.style.color    = '#ef9a9a';
-    }
+    if (data.valid) { iconEl.textContent='✓'; iconEl.style.color='var(--green)'; msgEl.textContent=data.message; msgEl.style.color='var(--green)'; }
+    else            { iconEl.textContent='✗'; iconEl.style.color='#ef9a9a';      msgEl.textContent='Code not found.'; msgEl.style.color='#ef9a9a'; }
   } catch { clearRefValidation(); }
 }
 
 async function doAuth() {
-  const name     = document.getElementById('loginName').value.trim();
-  const email    = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const refCode  = document.getElementById('loginRefCode').value.trim().toUpperCase();
-  const btn      = document.getElementById('authBtn');
-
-  if (!email || !password) { alert('Please fill in all fields'); return; }
-  if (authMode === 'signup' && !name) { alert('Please enter your name'); return; }
-
-  btn.textContent = 'Please wait…';
-  btn.disabled    = true;
-
+  const name=document.getElementById('loginName').value.trim(), email=document.getElementById('loginEmail').value.trim(),
+        password=document.getElementById('loginPassword').value, refCode=document.getElementById('loginRefCode').value.trim().toUpperCase(),
+        btn=document.getElementById('authBtn');
+  if (!email||!password){alert('Please fill in all fields');return;}
+  if (authMode==='signup'&&!name){alert('Please enter your name');return;}
+  btn.textContent='Please wait…'; btn.disabled=true;
   try {
-    const body = { name, email, password };
-    if (authMode === 'signup' && refCode) body.referral_code = refCode;
+    const body={name,email,password};
+    if (authMode==='signup'&&refCode) body.referral_code=refCode;
+    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    if (data.error){alert(data.error);btn.textContent=authMode==='signup'?'Create Account →':'Sign In →';btn.disabled=false;return;}
+    if (data.referral_msg) setTimeout(()=>alert(data.referral_msg),200);
+    localStorage.setItem('kairo_user',JSON.stringify(data));
+    window.location.href='/dashboard';
+  } catch(e){alert('Something went wrong. Please try again.');btn.textContent=authMode==='signup'?'Create Account →':'Sign In →';btn.disabled=false;}
+}
+function doLogin(){doAuth();}
 
-    const res  = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
-    });
+/* ═══════════════════════════════════════════════════
+   DEMO — VOICE CALL INTERFACE
+   • Mimics the interview.html session UI
+   • 3 full exchanges before the sign-up gate appears
+   • Counter is NEVER shown to the user
+   • localStorage + server session for anti-bypass
+═══════════════════════════════════════════════════ */
+
+const DEMO_LIMIT    = 3;          // exchanges before gate
+const DEMO_LS_KEY   = 'kairo_demo_used';
+const DEMO_ID_KEY   = 'kairo_demo_id';
+const DEMO_SYSTEM   = `You are Kairo, an AI career coach for VIT Vellore students.
+Help them articulate projects, internships, and ambitions into a career profile.
+Be warm, concise, and genuinely curious. Ask ONE focused question at a time.
+Keep each reply to 2–3 sentences. Never mention Claude or Anthropic.
+This is a short demo — impress the user so they want to sign up.`;
+
+// State
+let demoHistory      = [];
+let demoPending      = '';          // transcribed / typed answer waiting to send
+let demoExchanges    = 0;           // completed user→AI round-trips
+let demoIsTyping     = false;
+let demoGateShown    = false;
+let demoStream       = null;        // mic stream
+let demoRecorder     = null;
+let demoAudioChunks  = [];
+let demoIsRecording  = false;
+let demoCurrentSpeech= null;
+
+/* ── Persistent demo ID ── */
+function getDemoId() {
+  let id = localStorage.getItem(DEMO_ID_KEY);
+  if (!id) { id = 'demo_' + Date.now() + '_' + Math.random().toString(36).slice(2,10); localStorage.setItem(DEMO_ID_KEY, id); }
+  return id;
+}
+function getDemoUsed() { return parseInt(localStorage.getItem(DEMO_LS_KEY)||'0', 10); }
+function setDemoUsed(n) { localStorage.setItem(DEMO_LS_KEY, String(n)); }
+
+async function syncDemoCount(used) {
+  try {
+    await fetch('/api/demo/sync', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ demo_id: getDemoId(), used }), credentials:'include' });
+  } catch(_) {}
+}
+async function fetchServerCount() {
+  try {
+    const res  = await fetch('/api/demo/check', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ demo_id: getDemoId() }), credentials:'include' });
     const data = await res.json();
-    if (data.error) {
-      alert(data.error);
-      btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
-      btn.disabled    = false;
-      return;
+    if (typeof data.used === 'number') {
+      const best = Math.max(data.used, getDemoUsed());
+      setDemoUsed(best); return best;
     }
-    // Show referral bonus toast before redirect
-    if (data.referral_msg) {
-      setTimeout(() => alert(data.referral_msg), 200);
-    }
-    localStorage.setItem('kairo_user', JSON.stringify(data));
-    window.location.href = '/dashboard';
-  } catch(e) {
-    alert('Something went wrong. Please try again.');
-    btn.textContent = authMode === 'signup' ? 'Create Account →' : 'Sign In →';
-    btn.disabled    = false;
+  } catch(_) {}
+  return getDemoUsed();
+}
+
+/* ── Open / close ── */
+async function openDemo() {
+  document.getElementById('demoModal').classList.add('active');
+  if (demoHistory.length > 0) return; // already initialised
+
+  // Check limit first
+  const used = await fetchServerCount();
+  demoExchanges = used;
+
+  if (used >= DEMO_LIMIT) {
+    showDemoGate(); return;
+  }
+
+  // Greet
+  const opener = "Hey! I'm Kairo — your AI career co-pilot. I help VIT students build standout career profiles. To get started: what's your branch and year?";
+  demoShowCaption('Kairo', opener);
+  demoHistory.push({ role: 'assistant', content: opener });
+  demoSpeakText(opener);
+  demoSetStatus('speaking', 'Kairo is speaking…');
+}
+
+function closeDemo() {
+  document.getElementById('demoModal').classList.remove('active');
+  if (demoCurrentSpeech) { window.speechSynthesis?.cancel(); demoCurrentSpeech = null; }
+  if (demoIsRecording) demoStopRecording(true);
+}
+
+/* ── Status dot ── */
+function demoSetStatus(state, text) {
+  const dot  = document.getElementById('demo-sdot');
+  dot.className = 'demo-sdot';
+  dot.classList.add(state);
+  document.getElementById('demo-stext').textContent = text;
+}
+
+/* ── Caption ── */
+function demoShowCaption(role, text) {
+  document.getElementById('demo-cap-role').textContent = role;
+  document.getElementById('demo-cap-text').textContent = text;
+}
+
+/* ── AI speaking ring ── */
+function demoSetSpeaking(on) {
+  document.getElementById('demo-ai-ring').classList.toggle('speaking', on);
+  document.getElementById('demo-ai-panel').classList.toggle('speaking', on);
+}
+
+/* ── TTS ── */
+function demoSpeakText(text, onEnd) {
+  if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
+  if (demoCurrentSpeech) window.speechSynthesis.cancel();
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.93; utter.pitch = 1.0; utter.volume = 1.0;
+
+  // Wait for voices to load (Chrome async quirk)
+  const trySpeak = () => {
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.name.includes('Google UK English Male') || v.name.includes('Google US English') ||
+      v.name.includes('Daniel') || v.name.includes('Alex') || v.name.includes('Samantha')
+    );
+    if (preferred) utter.voice = preferred;
+
+    let fired = false;
+    const fireOnce = () => { if (fired) return; fired=true; demoSetSpeaking(false); if (onEnd) onEnd(); };
+    const fallback = setTimeout(fireOnce, Math.max(3000, text.length * 70 + 800));
+    utter.onstart  = () => { demoSetSpeaking(true); demoSetStatus('speaking','Kairo is speaking…'); };
+    utter.onend    = () => { clearTimeout(fallback); fireOnce(); demoSetStatus('ready','Ready'); };
+    utter.onerror  = () => { clearTimeout(fallback); fireOnce(); demoSetStatus('ready','Ready'); };
+    demoCurrentSpeech = utter;
+    window.speechSynthesis.speak(utter);
+  };
+
+  if (window.speechSynthesis.getVoices().length) trySpeak();
+  else window.speechSynthesis.onvoiceschanged = trySpeak;
+}
+
+/* ── Recording ── */
+async function demoToggleRecording() {
+  if (demoIsRecording) { demoStopRecording(false); return; }
+  if (demoCurrentSpeech && window.speechSynthesis?.speaking) {
+    window.speechSynthesis.cancel(); demoSetSpeaking(false);
+  }
+  await demoStartRecording();
+}
+
+async function demoStartRecording() {
+  demoAudioChunks = [];
+  let audioStream;
+  try { audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(e) {
+    demoShowCaption('Kairo', 'Microphone access is needed for the demo. Please allow mic access in your browser and try again.');
+    demoSetStatus('ready', 'Mic needed');
+    return;
+  }
+  const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+  try { demoRecorder = mimeType ? new MediaRecorder(audioStream,{mimeType}) : new MediaRecorder(audioStream); }
+  catch(e) { return; }
+
+  demoRecorder.ondataavailable = e => { if (e.data?.size > 0) demoAudioChunks.push(e.data); };
+  demoRecorder.onstop = () => { audioStream.getTracks().forEach(t=>t.stop()); demoTranscribe(); };
+  demoRecorder.start();
+  demoIsRecording = true;
+  demoSetMicState('recording');
+  demoSetStatus('listening','Listening…');
+}
+
+function demoStopRecording(cancel) {
+  if (demoRecorder && demoIsRecording) {
+    if (cancel) { demoRecorder.ondataavailable=null; demoRecorder.onstop=null; }
+    demoRecorder.stop();
+    demoIsRecording = false;
+    if (!cancel) { demoSetMicState('transcribing'); demoSetStatus('thinking','Transcribing…'); }
+    else          { demoSetMicState('ready'); }
   }
 }
 
-// Keep old name for any stray onclick refs
-function doLogin() { doAuth(); }
+async function demoTranscribe() {
+  if (!demoAudioChunks.length || demoAudioChunks.reduce((s,c)=>s+c.size,0) < 800) {
+    demoSetMicState('ready'); demoSetStatus('ready','Ready'); return;
+  }
+  const mimeType = demoAudioChunks[0].type || 'audio/webm';
+  const ext  = mimeType.includes('ogg')?'ogg':mimeType.includes('mp4')?'mp4':'webm';
+  const blob = new Blob(demoAudioChunks, { type: mimeType });
+  const fd   = new FormData();
+  fd.append('audio', blob, `answer.${ext}`);
+  try {
+    const res  = await fetch('/api/transcribe', { method:'POST', credentials:'include', body: fd });
+    const data = await res.json();
+    demoSetMicState('ready');
+    if (data.text?.trim()) {
+      demoPending = data.text.trim();
+      const preview = document.getElementById('demo-answer-preview');
+      preview.textContent = '"' + demoPending + '"';
+      preview.style.display = 'block';
+      document.getElementById('demo-send-btn').disabled = false;
+      document.getElementById('demo-mic-lbl').textContent = 'Re-record';
+      demoSetStatus('ready','Review & send');
+      // Auto-send after short delay
+      setTimeout(() => { if (demoPending) demoSendAnswer(demoPending); }, 1600);
+    } else {
+      demoSetStatus('ready','Ready');
+    }
+  } catch(e) {
+    demoSetMicState('ready'); demoSetStatus('ready','Ready');
+  }
+}
 
+function demoSetMicState(state) {
+  const btn  = document.getElementById('demo-mic-btn');
+  const ring = document.getElementById('demo-mic-ring');
+  const lbl  = document.getElementById('demo-mic-lbl');
+  btn.classList.remove('recording','transcribing');
+  ring.classList.remove('active');
+  btn.disabled = false;
+  if (state==='recording')    { btn.classList.add('recording');    ring.classList.add('active'); lbl.textContent='Stop'; }
+  else if (state==='transcribing') { btn.classList.add('transcribing'); btn.disabled=true; lbl.textContent='…'; }
+  else                        { lbl.textContent = demoPending ? 'Re-record' : 'Speak'; }
+}
+
+function demoSendPending() { if (demoPending.trim()) demoSendAnswer(demoPending); }
+
+/* ── Main send ── */
+async function demoSendAnswer(text) {
+  if (!text.trim() || demoIsTyping || demoGateShown) return;
+
+  // Clear preview
+  demoPending = '';
+  document.getElementById('demo-answer-preview').style.display = 'none';
+  document.getElementById('demo-send-btn').disabled = true;
+  demoSetMicState('ready');
+
+  // Show user caption briefly
+  demoShowCaption('You', text);
+  demoSetStatus('thinking','Kairo is thinking…');
+  demoIsTyping = true;
+
+  // Disable input during AI turn
+  document.getElementById('demo-mic-btn').disabled = true;
+
+  demoHistory.push({ role: 'user', content: text });
+
+  // Increment BEFORE API call so a refresh doesn't give a free message
+  demoExchanges++;
+  setDemoUsed(demoExchanges);
+  syncDemoCount(demoExchanges);
+
+  try {
+    const res  = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: DEMO_SYSTEM,
+        messages: demoHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data?.content?.[0]?.text || "Sorry, I had a hiccup. Could you say that again?";
+    demoHistory.push({ role: 'assistant', content: reply });
+    demoShowCaption('Kairo', reply);
+
+    if (demoExchanges >= DEMO_LIMIT) {
+      // Speak, then show gate naturally after speech ends
+      demoSpeakText(reply, () => {
+        setTimeout(showDemoGate, 600);
+      });
+    } else {
+      demoSpeakText(reply, () => {
+        // Re-enable input once Kairo is done speaking
+        document.getElementById('demo-mic-btn').disabled = false;
+        demoSetStatus('ready','Ready');
+      });
+    }
+  } catch(e) {
+    const err = 'Sorry, I had trouble connecting. Please try again.';
+    demoShowCaption('Kairo', err);
+    demoSpeakText(err);
+    document.getElementById('demo-mic-btn').disabled = false;
+    demoSetStatus('ready','Ready');
+  }
+
+  demoIsTyping = false;
+}
+
+function showDemoGate() {
+  if (demoGateShown) return;
+  demoGateShown = true;
+  if (demoCurrentSpeech) window.speechSynthesis?.cancel();
+  demoSetSpeaking(false);
+  document.getElementById('demo-gate').classList.add('visible');
+  document.getElementById('demo-controls').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════
+   DOMContentLoaded
+═══════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  // Auto-fill referral code from ?ref= URL param and switch to signup
+  // Auth: referral from URL
   const urlRef = new URLSearchParams(location.search).get('ref');
   if (urlRef) {
     showLogin(true);
@@ -661,19 +1173,15 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(_refValidTimer);
     const val = this.value.trim().toUpperCase();
     this.value = val;
-    if (val.length >= 4) {
-      _refValidTimer = setTimeout(() => validateRefCode(val), 500);
-    } else {
-      clearRefValidation();
-    }
+    if (val.length >= 4) _refValidTimer = setTimeout(() => validateRefCode(val), 500);
+    else clearRefValidation();
   });
 
-  document.getElementById('loginPassword').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doAuth();
-  });
-  document.getElementById('loginModal').addEventListener('click', function(e) {
-    if (e.target === this) hideLogin();
-  });
+  document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key==='Enter') doAuth(); });
+  document.getElementById('loginModal').addEventListener('click', function(e) { if (e.target===this) hideLogin(); });
+
+  // Demo
+  document.getElementById('demoModal').addEventListener('click', function(e) { if (e.target===this) closeDemo(); });
 });
 </script>
 </body>
