@@ -3070,10 +3070,17 @@ async function buildPoster(code) {
   });
 
   // ── Logo ──────────────────────────────────────────────────────────────
-  ctx.textAlign = 'center';
   ctx.font = '900 68px Georgia, serif';
-  ctx.fillStyle = '#c9a84c';
-  ctx.fillText('Kairo', W/2, 130);
+  ctx.textAlign = 'left';
+  const kaiW = ctx.measureText('Kai').width;
+  const roW  = ctx.measureText('ro').width;
+  const logoTotalW = kaiW + roW;
+  const logoX = W/2 - logoTotalW/2;
+  ctx.fillStyle = '#c9a84c';          // gold for "Kai"
+  ctx.fillText('Kai', logoX, 130);
+  ctx.fillStyle = '#f5f0e8';          // cream for "ro"
+  ctx.fillText('ro', logoX + kaiW, 130);
+  ctx.textAlign = 'center';
 
   // Tagline under logo
   ctx.font = '300 22px "Arial", sans-serif';
