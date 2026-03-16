@@ -61,7 +61,7 @@ nav {
   letter-spacing: -0.02em;
 }
 
-.logo span { color: var(--cream); }
+/* logo split: Kai=gold (inherited), ro=cream via inline style */
 
 nav-links { display: flex; gap: 2rem; align-items: center; }
 
@@ -528,20 +528,47 @@ footer {
   background: rgba(10,10,15,0.9);
   border: 1px solid rgba(201,168,76,0.18);
   border-left: none; border-right: none;
-  padding: 0.65rem 1.2rem;
+  padding: 0.65rem 1.2rem 0.8rem;
   flex-shrink: 0;
 }
 .demo-caption-role { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
 .demo-caption-text { font-size: 0.82rem; color: var(--cream); line-height: 1.5; max-height: 72px; overflow-y: auto; }
 
-/* Answer preview bubble (floats above mic) */
+/* Answer preview — user speech bubble inside the caption area */
 #demo-answer-preview {
-  display: none; position: absolute;
-  bottom: calc(100% + 0.5rem); left: 50%; transform: translateX(-50%);
-  background: rgba(10,10,15,0.96);
-  border: 1px solid rgba(201,168,76,0.2);
-  padding: 0.45rem 0.9rem; font-size: 0.78rem; color: var(--cream);
-  max-width: 340px; text-align: center; white-space: pre-wrap; z-index: 10;
+  display: none;
+  margin: 0.5rem 1.2rem 0;
+  padding: 0.6rem 1rem;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.22);
+  border-radius: 0 12px 12px 12px;
+  font-size: 0.83rem;
+  color: var(--cream);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+}
+#demo-answer-preview::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 10px; height: 10px;
+  border-top: 1px solid rgba(201,168,76,0.22);
+  border-left: 1px solid rgba(201,168,76,0.22);
+  background: rgba(10,10,15,0.9);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+#demo-answer-preview .preview-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+#demo-answer-preview .preview-text {
+  color: var(--cream);
+  font-style: italic;
 }
 
 /* Controls bar */
@@ -613,7 +640,7 @@ footer {
 <body>
 
 <nav>
-  <div class="logo">Kai<span>ro</span></div>
+  <div class="logo">Kai<span style="color:var(--cream)">ro</span></div>
   <button class="btn-primary" onclick="showLogin()">Get Started →</button>
 </nav>
 
@@ -686,7 +713,7 @@ footer {
     <!-- Header -->
     <div class="demo-header">
       <div class="demo-header-left">
-        <div class="demo-logo">Kairo</div>
+        <div class="demo-logo">Kai<span style="color:var(--cream)">ro</span></div>
         <div class="demo-status-pill">
           <div class="demo-sdot ready" id="demo-sdot"></div>
           <span id="demo-stext">Ready</span>
@@ -712,13 +739,16 @@ footer {
           <div class="demo-wave-bar"></div><div class="demo-wave-bar"></div>
         </div>
         <!-- Answer preview bubble -->
-        <div id="demo-answer-preview"></div>
       </div>
 
       <!-- Caption — sits below avatar, above controls -->
       <div class="demo-caption">
         <div class="demo-caption-role" id="demo-cap-role">Kairo</div>
         <div class="demo-caption-text" id="demo-cap-text">Starting your session…</div>
+        <div id="demo-answer-preview">
+          <div class="preview-label">You said</div>
+          <div class="preview-text" id="demo-preview-text"></div>
+        </div>
       </div>
 
       <!-- Sign-up gate overlay -->
@@ -1054,7 +1084,7 @@ async function demoTranscribe() {
     if (data.text?.trim()) {
       demoPending = data.text.trim();
       const preview = document.getElementById('demo-answer-preview');
-      preview.textContent = '"' + demoPending + '"';
+      document.getElementById('demo-preview-text').textContent = demoPending;
       preview.style.display = 'block';
       document.getElementById('demo-send-btn').disabled = false;
       document.getElementById('demo-mic-lbl').textContent = 'Re-record';
