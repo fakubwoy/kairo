@@ -2886,7 +2886,16 @@ function renderAmbassadorHub(data) {
   document.getElementById('ambTotalRefs').textContent    = data.total_referrals || 0;
   document.getElementById('ambTotalEarned').textContent  = data.total_credits_earned || 0;
   document.getElementById('ambThisWeekCount').textContent = data.this_week || 0;
-  document.getElementById('ambCurrentBalance').textContent = '—'; // filled by credits load
+  // Use already-loaded credits balance; fall back to fetching if not yet cached
+  const cachedBalance = _creditsData != null ? _creditsData.balance : null;
+  if (cachedBalance != null) {
+    document.getElementById('ambCurrentBalance').textContent = cachedBalance;
+  } else {
+    loadCreditsData().then(c => {
+      const el = document.getElementById('ambCurrentBalance');
+      if (el) el.textContent = (c && c.balance != null) ? c.balance : '—';
+    });
+  }
   document.getElementById('ambRewardRate').textContent   = '+' + (data.credits_per_referral || 35);
   document.getElementById('ambShareReward').textContent  = (data.credits_per_referral || 35) + ' credits';
 
