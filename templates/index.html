@@ -534,8 +534,37 @@ footer {
 .demo-caption-role { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.25rem; }
 .demo-caption-text { font-size: 0.82rem; color: var(--cream); line-height: 1.5; max-height: 72px; overflow-y: auto; }
 
-/* Answer preview — hidden, user transcription not shown */
-#demo-answer-preview { display: none !important; }
+/* User transcript toast — ephemeral subtitle chip */
+#demo-user-toast {
+  position: absolute;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(245,240,232,0.06);
+  border: 1px solid rgba(245,240,232,0.1);
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: rgba(245,240,232,0.45);
+  white-space: nowrap;
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 5;
+}
+#demo-user-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#demo-user-toast.fade-out {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-4px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
 
 /* Controls bar */
 .demo-controls {
@@ -707,14 +736,14 @@ footer {
         <!-- Answer preview bubble -->
       </div>
 
+      <!-- User transcript toast -->
+      <div id="demo-user-toast"></div>
+
       <!-- Caption — sits below avatar, above controls -->
       <div class="demo-caption">
         <div class="demo-caption-role" id="demo-cap-role">Kairo</div>
         <div class="demo-caption-text" id="demo-cap-text">Starting your session…</div>
-        <div id="demo-answer-preview">
-          <div class="preview-label">You said</div>
-          <div class="preview-text" id="demo-preview-text"></div>
-        </div>
+
       </div>
 
       <!-- Sign-up gate overlay -->
@@ -1049,9 +1078,7 @@ async function demoTranscribe() {
     demoSetMicState('ready');
     if (data.text?.trim()) {
       demoPending = data.text.trim();
-      const preview = document.getElementById('demo-answer-preview');
-      document.getElementById('demo-preview-text').textContent = demoPending;
-      preview.style.display = 'block';
+      demoShowUserToast(demoPending);
       document.getElementById('demo-send-btn').disabled = false;
       document.getElementById('demo-mic-lbl').textContent = 'Re-record';
       demoSetStatus('ready','Review & send');
@@ -1063,6 +1090,18 @@ async function demoTranscribe() {
   } catch(e) {
     demoSetMicState('ready'); demoSetStatus('ready','Ready');
   }
+}
+
+function demoShowUserToast(text) {
+  const toast = document.getElementById('demo-user-toast');
+  toast.textContent = text;
+  toast.classList.remove('fade-out');
+  toast.classList.add('visible');
+  // Fade out after 1.4s so it's gone before Kairo responds
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => { toast.classList.remove('visible','fade-out'); }, 400);
+  }, 1400);
 }
 
 function demoSetMicState(state) {
