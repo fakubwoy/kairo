@@ -3138,6 +3138,8 @@ with app.app_context():
     ]
 
     with db.engine.connect() as conn:
+        # Savepoints require an explicit transaction — begin one now.
+        conn.execute(db.text("BEGIN"))
         for stmt in DDL_STATEMENTS:
             # Each statement gets its own savepoint — if it fails (e.g. a
             # concurrent worker already created the table) we roll back only
@@ -3152,7 +3154,7 @@ with app.app_context():
                 err = str(e).lower()
                 if "already exists" not in err and "duplicate" not in err:
                     print(f"DDL warning: {e}")
-        conn.commit()
+        conn.execute(db.text("COMMIT"))
         print("Database schema ready.")
 
 if __name__ == '__main__':
