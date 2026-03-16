@@ -602,6 +602,36 @@ def demo_sync():
     session[key] = max(current, min(claimed, DEMO_MSG_LIMIT + 1))
     return jsonify({'ok': True, 'used': session[key]})
 
+@app.route('/api/demo/chat', methods=['POST'])
+def demo_chat():
+    """Demo AI chat — uses Groq via the same LLM stack, no auth required."""
+    data    = request.get_json(silent=True) or {}
+    demo_id = str(data.get('demo_id', ''))[:64]
+    message = str(data.get('message', '')).strip()[:2000]
+    system  = str(data.get('system', '')).strip()[:2000]
+    history = data.get('messages', [])
+
+    if not message:
+        return jsonify({'error': 'empty message'}), 400
+
+    # Enforce server-side limit
+    key  = f'demo:{demo_id}'
+    used = session.get(key, 0) if demo_id else 0
+    if used >= DEMO_MSG_LIMIT:
+        return jsonify({'error': 'limit_reached', 'message': 'Demo limit reached.'}), 403
+
+    # Build message list — strip any internal _silent flags
+    msgs = [{'role': m['role'], 'content': m['content']}
+            for m in history if m.get('role') in ('user', 'assistant')]
+
+    reply = call_llm(msgs, system_prompt=system, max_tokens=300)
+
+    # Increment count
+    if demo_id:
+        session.permanent = True
+        session[key] = min(used + 1, DEMO_MSG_LIMIT + 1)
+
+    return jsonify({'response': reply})
 
 @app.route('/')
 def index():

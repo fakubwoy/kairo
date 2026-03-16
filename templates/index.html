@@ -1109,18 +1109,19 @@ async function demoSendAnswer(text) {
   syncDemoCount(demoExchanges);
 
   try {
-    const res  = await fetch('https://api.anthropic.com/v1/messages', {
+    const res  = await fetch('/api/demo/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: DEMO_SYSTEM,
-        messages: demoHistory
+        message: text,
+        demo_id: getDemoId(),
+        messages: demoHistory,
+        system: DEMO_SYSTEM
       })
     });
     const data = await res.json();
-    const reply = data?.content?.[0]?.text || "Sorry, I had a hiccup. Could you say that again?";
+    const reply = data?.response || data?.content?.[0]?.text || "Sorry, I had a hiccup. Could you say that again?";
     demoHistory.push({ role: 'assistant', content: reply });
     demoShowCaption('Kairo', reply);
 
