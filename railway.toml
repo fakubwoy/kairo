@@ -3,5 +3,6 @@ builder = "NIXPACKS"
 
 [deploy]
 startCommand = "/opt/venv/bin/gunicorn app:app --bind 0.0.0.0:8080 --workers 2 --timeout 120"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
