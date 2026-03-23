@@ -1212,9 +1212,9 @@ function _serverProfileToSummarySchema(sp) {
         ? { activity: e, type: 'Club/Society', role: '', year: '', description: '' }
         : e
     ),
-    struggles:         sp.struggles         || [],
-    highlights:        sp.highlights        || [],
-    goals:             sp.goals             || '',
+    struggles:          sp.struggles  || [],
+    highlights:         sp.highlights || [],
+    goals:              sp.goals      || '',
     faculty_references: (sp.faculty_references || []).filter(f => f && f.name)
   };
 }
@@ -1232,7 +1232,6 @@ function _isProfileThin(p) {
 // ── Helper: merge server profile fields into a thin LLM extraction ───────────
 function _mergeServerIntoExtracted(extracted, sp) {
   const fromServer = _serverProfileToSummarySchema(sp);
-  // Only fill in fields that extraction left empty
   const merged = Object.assign({}, fromServer);
   if (extracted.personal && Object.values(extracted.personal).some(v => v))
     merged.personal = extracted.personal;
@@ -1279,7 +1278,6 @@ async function _persistFlatProfile(profile) {
       ),
       faculty_references: (profile.faculty_references || []).filter(f => f.name)
     };
-    // Strip empty values to avoid overwriting existing good data
     Object.keys(flat).forEach(k => {
       if (flat[k] === '' || (Array.isArray(flat[k]) && !flat[k].length)) delete flat[k];
     });
@@ -1296,17 +1294,24 @@ async function generateSummary() {
   const grid = document.getElementById('summary-grid');
   grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Kairo is reading through your conversation and building your profile…</p></div>';
 
+  // Always read a FRESH copy of the profile from localStorage.
+  // `user` is a const frozen at page-load time. If the student uploaded a
+  // resume after the page loaded, user.profile won't have resume_uploaded yet
+  // but localStorage will. Reading fresh here guarantees we never miss it.
+  const freshUserData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+  const serverProfile = freshUserData.profile || {};
+
   // Strip bootstrap/silent messages — only keep real conversational turns
   const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$|I've already uploaded my resume/;
   const cleanMessages = messages.filter(m =>
     !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim()))
   );
   const realUserTurns = cleanMessages.filter(m => m.role === 'user');
-  const serverProfile = user?.profile || {};
 
-  // ── SHORT-CIRCUIT: resume uploaded, student barely spoke ─────────────────
-  // If < 2 real user turns exist, the conversation has almost no extractable
-  // data. Directly convert the server profile (populated by resume parser).
+  // SHORT-CIRCUIT: resume uploaded, student barely/never spoke.
+  // Fewer than 2 real user turns means almost nothing was said. Skip the LLM
+  // extraction entirely and convert the server profile (already populated by
+  // the resume parser) directly into summary cards — instant and accurate.
   if (realUserTurns.length < 2 && serverProfile.resume_uploaded) {
     const syntheticProfile = _serverProfileToSummarySchema(serverProfile);
     renderSummaryCards(syntheticProfile);
@@ -1359,8 +1364,7 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
         grid.innerHTML = `<div class="summary-card" style="grid-column:1/-1;"><h3>Profile Summary</h3><p>${data.response.replace(/\n/g,'<br>')}</p></div>`;
         return;
       }
-      // If LLM extraction is thin (short conversation) but we have a server
-      // profile from the resume, merge so cards aren't near-empty.
+      // If LLM extraction is thin but we have a server profile, merge it in
       if (_isProfileThin(profile) && serverProfile.resume_uploaded) {
         profile = _mergeServerIntoExtracted(profile, serverProfile);
       }
