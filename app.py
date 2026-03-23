@@ -457,12 +457,93 @@ def get_llm_status():
     return status
 
 
+def _build_resume_context_block(profile_data):
+    """
+    When a student uploaded a resume but hasn't spoken in the profile builder,
+    generate a rich context block so Kairo knows exactly what was extracted and
+    can skip those questions, only filling genuine gaps.
+    """
+    if not profile_data.get("resume_uploaded"):
+        return ""
+
+    # Collect what we actually know from the resume
+    known = []
+    if profile_data.get("name"):       known.append(f"Name: {profile_data['name']}")
+    if profile_data.get("college"):    known.append(f"College: {profile_data['college']}")
+    if profile_data.get("branch"):     known.append(f"Branch/Degree: {profile_data['branch']}")
+    if profile_data.get("year"):       known.append(f"Year/Graduation: {profile_data['year']}")
+    if profile_data.get("cgpa"):       known.append(f"CGPA: {profile_data['cgpa']}")
+    if profile_data.get("location"):   known.append(f"Location: {profile_data['location']}")
+    if profile_data.get("email"):      known.append(f"Email: {profile_data['email']}")
+    if profile_data.get("phone"):      known.append(f"Phone: {profile_data['phone']}")
+    if profile_data.get("linkedin"):   known.append(f"LinkedIn: {profile_data['linkedin']}")
+    if profile_data.get("github"):     known.append(f"GitHub: {profile_data['github']}")
+
+    projects = profile_data.get("projects", [])
+    if projects:
+        proj_names = [p.get("name", "") for p in projects if p.get("name")]
+        if proj_names:
+            known.append(f"Projects: {', '.join(proj_names)}")
+
+    internships = profile_data.get("internships", [])
+    if internships:
+        intern_lines = []
+        for i in internships:
+            if i.get("company") or i.get("role"):
+                intern_lines.append(f"{i.get('role','')} at {i.get('company','')}".strip(" at"))
+        if intern_lines:
+            known.append(f"Internships: {', '.join(intern_lines)}")
+
+    skills = profile_data.get("skills", {})
+    if isinstance(skills, dict):
+        all_skills = skills.get("technical", []) + skills.get("tools", []) + skills.get("languages", [])
+        if all_skills:
+            known.append(f"Skills: {', '.join(all_skills[:12])}")
+    elif isinstance(skills, list) and skills:
+        known.append(f"Skills: {', '.join(skills[:12])}")
+
+    certs = profile_data.get("certifications", [])
+    if certs:
+        known.append(f"Certifications: {', '.join(str(c) for c in certs[:5])}")
+
+    achievements = profile_data.get("achievements", [])
+    if achievements:
+        known.append(f"Achievements: {', '.join(str(a) for a in achievements[:4])}")
+
+    extracurriculars = profile_data.get("extracurriculars", [])
+    if extracurriculars:
+        ec_names = [e.get("activity", "") for e in extracurriculars if e.get("activity")]
+        if ec_names:
+            known.append(f"Extracurriculars: {', '.join(ec_names[:4])}")
+
+    # Identify genuine gaps — things NOT in the resume that the chat should cover
+    gaps = []
+    if not projects:          gaps.append("projects (details, tech stack, impact)")
+    if not internships:       gaps.append("internships or work experience")
+    if not profile_data.get("cgpa"):    gaps.append("CGPA / academic performance")
+    if not profile_data.get("goals"):   gaps.append("career goals and interests")
+    if not achievements:      gaps.append("achievements, awards, hackathons")
+    if not extracurriculars:  gaps.append("clubs and extracurriculars")
+
+    known_block = "\n".join(f"  • {k}" for k in known) if known else "  (minimal data extracted)"
+    gaps_block  = "\n".join(f"  • {g}" for g in gaps)  if gaps  else "  (profile looks fairly complete — just deepen what's there)"
+
+    return f"""
+RESUME UPLOADED — PRE-POPULATED PROFILE:
+The student uploaded their resume before this conversation. Here is what was already extracted:
+{known_block}
+
+YOUR BEHAVIOUR FOR THIS SESSION:
+- Open by warmly acknowledging the resume: tell them what you already know about them in 1-2 sentences.
+- DO NOT re-ask any of the fields listed above — you already have them.
+- Focus the conversation on filling these genuine gaps:
+{gaps_block}
+- For existing data (especially projects and internships), you may dig DEEPER — ask for impact, tech stack details, team size, outcomes — but never re-ask the basic facts.
+- Keep a natural conversational tone; this should feel like catching up on what the resume couldn't capture."""
+
+
 def get_interview_system_prompt(profile_data):
-    resume_context = (
-        "\nNote: The student has already uploaded their existing resume — their profile is pre-populated. "
-        "Acknowledge this warmly at the start, tell them what you already know, and only ask about gaps "
-        "or things you want to dig deeper on. Don't re-ask information you already have."
-    ) if profile_data.get("resume_uploaded") else ""
+    resume_context = _build_resume_context_block(profile_data)
     return f"""You are Kairo, a warm and empathetic AI career co-pilot helping a student build their professional profile.
 
 Think of yourself as a well-wisher — a senior who genuinely cares about the student's journey and wants to understand their full story, not just their resume bullet points.
@@ -495,7 +576,51 @@ Guidelines:
 Start warmly — greet them by name if you know it, and ask where they're studying and what they're doing."""
 
 
+def _derive_summary_if_missing(profile_data):
+    """If no summary exists in the profile (student uploaded resume but never chatted),
+    generate a minimal one from structured fields so resume generation isn't blank."""
+    if profile_data.get("summary"):
+        return profile_data  # already has one
+    parts = []
+    name    = profile_data.get("name", "")
+    branch  = profile_data.get("branch", "")
+    college = profile_data.get("college", "")
+    year    = profile_data.get("year", "")
+    cgpa    = profile_data.get("cgpa", "")
+
+    if branch and college:
+        parts.append(f"{branch} student at {college}")
+    elif branch:
+        parts.append(f"{branch} student")
+    if year:
+        parts.append(f"graduating {year}")
+    if cgpa:
+        parts.append(f"CGPA {cgpa}")
+
+    skills = profile_data.get("skills", {})
+    skill_list = []
+    if isinstance(skills, dict):
+        skill_list = skills.get("technical", [])[:5]
+    elif isinstance(skills, list):
+        skill_list = skills[:5]
+    if skill_list:
+        parts.append(f"skilled in {', '.join(skill_list)}")
+
+    proj_count = len(profile_data.get("projects", []))
+    intern_count = len(profile_data.get("internships", []))
+    if proj_count:
+        parts.append(f"{proj_count} project{'s' if proj_count > 1 else ''}")
+    if intern_count:
+        parts.append(f"{intern_count} internship{'s' if intern_count > 1 else ''}")
+
+    if parts:
+        profile_data = dict(profile_data)  # don't mutate caller's dict
+        profile_data["summary"] = (name + " — " if name else "") + "; ".join(parts) + "."
+    return profile_data
+
+
 def get_resume_system_prompt(profile_data, job_description):
+    profile_data = _derive_summary_if_missing(profile_data)
     return f"""You are an expert resume writer specializing in fresher resumes for tech students.
 
 Student Profile:

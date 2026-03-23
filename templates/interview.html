@@ -784,7 +784,37 @@ async function loadConversation(forceNew) {
     }
     // Fresh start — send bootstrap silently, get Kairo's opening question
     const userName = user.name ? user.name.split(' ')[0] : null;
-    const boot = userName ? `Hi ${userName}! I want to build my career profile.` : `Hello! I want to build my career profile.`;
+
+    // If the student uploaded a resume, include a digest of what was extracted
+    // so the LLM has rich context even when the student hasn't spoken yet.
+    let boot;
+    const prof = user.profile || {};
+    if (prof.resume_uploaded) {
+      const parts = [];
+      if (userName)                    parts.push(`Hi, I'm ${userName}.`);
+      if (prof.college)                parts.push(`I study at ${prof.college}.`);
+      if (prof.branch)                 parts.push(`Branch: ${prof.branch}.`);
+      if (prof.year)                   parts.push(`Year: ${prof.year}.`);
+      if (prof.cgpa)                   parts.push(`CGPA: ${prof.cgpa}.`);
+
+      const projNames = (prof.projects || []).map(p => p.name).filter(Boolean).slice(0, 3);
+      if (projNames.length)            parts.push(`Projects I've worked on: ${projNames.join(', ')}.`);
+
+      const internCos = (prof.internships || []).map(i => i.company || i.role).filter(Boolean).slice(0, 2);
+      if (internCos.length)            parts.push(`Internship(s) at: ${internCos.join(', ')}.`);
+
+      let skills = [];
+      if (Array.isArray(prof.skills))  skills = prof.skills.slice(0, 8);
+      else if (prof.skills && typeof prof.skills === 'object') {
+        skills = [...(prof.skills.technical || []), ...(prof.skills.tools || [])].slice(0, 8);
+      }
+      if (skills.length)               parts.push(`Skills: ${skills.join(', ')}.`);
+
+      parts.push(`I've already uploaded my resume — please use what you already know and only ask me about the gaps.`);
+      boot = parts.join(' ');
+    } else {
+      boot = userName ? `Hi ${userName}! I want to build my career profile.` : `Hello! I want to build my career profile.`;
+    }
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
