@@ -458,6 +458,11 @@ def get_llm_status():
 
 
 def get_interview_system_prompt(profile_data):
+    resume_context = (
+        "\nNote: The student has already uploaded their existing resume — their profile is pre-populated. "
+        "Acknowledge this warmly at the start, tell them what you already know, and only ask about gaps "
+        "or things you want to dig deeper on. Don't re-ask information you already have."
+    ) if profile_data.get("resume_uploaded") else ""
     return f"""You are Kairo, a warm and empathetic AI career co-pilot helping a student build their professional profile.
 
 Think of yourself as a well-wisher — a senior who genuinely cares about the student's journey and wants to understand their full story, not just their resume bullet points.
@@ -477,7 +482,7 @@ Current profile data already collected:
 {json.dumps(profile_data, indent=2)}
 
 If a field already has data, skip or briefly confirm it — don't re-ask things you already know.
-{"resume_context": "The student has already uploaded their existing resume — their profile is pre-populated. Acknowledge this warmly at the start, tell them what you already know, and only ask about gaps or things you want to dig deeper on. Don't re-ask information you already have." if profile_data.get("resume_uploaded") else ""}
+{resume_context}
 
 Guidelines:
 - Ask ONE focused question at a time — never multi-part questions
