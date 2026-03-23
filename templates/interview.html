@@ -239,6 +239,84 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .loading-text { font-size: 0.9rem; color: var(--muted); }
 #toast { position: fixed; bottom: 2rem; right: 2rem; padding: 0.8rem 1.2rem; background: var(--surface); border: 1px solid rgba(201,168,76,0.3); font-size: 0.85rem; z-index: 200; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 320px; }
 #toast.show { transform: none; opacity: 1; }
+
+/* ── Resume Pre-Upload Card ── */
+.setup-resume-card {
+  max-width: 900px;
+  background: var(--surface);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.setup-resume-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.setup-resume-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold);
+  margin-top: 0.1rem;
+}
+.setup-resume-title {
+  font-size: 0.95rem; font-weight: 600; color: var(--cream);
+  margin-bottom: 0.2rem;
+}
+.setup-resume-sub {
+  font-size: 0.82rem; color: var(--muted); line-height: 1.5;
+}
+.resume-drop-zone {
+  border: 1.5px dashed rgba(201,168,76,0.3);
+  background: rgba(201,168,76,0.03);
+  padding: 1.2rem 1rem;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0.4rem; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: center; font-size: 0.85rem; color: var(--muted);
+}
+.resume-drop-zone:hover {
+  border-color: rgba(201,168,76,0.6);
+  background: rgba(201,168,76,0.06);
+}
+.resume-drop-zone.dragover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.1);
+}
+.resume-drop-hint { font-size: 0.72rem; color: rgba(107,101,96,0.6); margin-top: 0.1rem; }
+.resume-progress-row { display: flex; align-items: center; gap: 0.6rem; }
+.resume-result-success {
+  background: rgba(76,175,125,0.08);
+  border: 1px solid rgba(76,175,125,0.25);
+  padding: 0.9rem 1rem;
+  font-size: 0.83rem; color: var(--cream); line-height: 1.6;
+}
+.resume-result-error {
+  background: rgba(224,92,92,0.08);
+  border: 1px solid rgba(224,92,92,0.2);
+  padding: 0.9rem 1rem;
+  font-size: 0.83rem; color: #ef9a9a; line-height: 1.5;
+}
+.resume-preview-tags {
+  display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
+}
+.resume-preview-tag {
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.2);
+  color: var(--gold); font-size: 0.72rem; padding: 0.2rem 0.55rem;
+}
+.resume-skip-btn {
+  background: none; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+  color: var(--muted); cursor: pointer; padding: 0;
+  text-decoration: underline; text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.resume-skip-btn:hover { color: var(--cream); }
 </style>
 </head>
 <body>
@@ -318,6 +396,41 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
         <button class="btn btn-outline" onclick="startDevices()" style="margin-top:0.3rem;">Enable Camera &amp; Mic</button>
       </div>
     </div>
+    <!-- ── Resume pre-upload card ── -->
+    <div class="setup-resume-card" id="resumeUploadCard">
+      <div class="setup-resume-header">
+        <div class="setup-resume-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div>
+          <div class="setup-resume-title">Already have a resume? Upload it first</div>
+          <div class="setup-resume-sub">Kairo will read it and skip questions about things already on your resume — saving you 10–15 minutes.</div>
+        </div>
+      </div>
+
+      <!-- Upload zone -->
+      <div id="resumeDropZone" class="resume-drop-zone" onclick="document.getElementById('resumePdfInput').click()">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);opacity:0.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span id="resumeDropLabel">Click to upload your resume PDF</span>
+        <span class="resume-drop-hint">PDF only · max 16 MB</span>
+      </div>
+      <input type="file" id="resumePdfInput" accept=".pdf" style="display:none" onchange="handleResumeUpload(this)">
+
+      <!-- Progress / result -->
+      <div id="resumeUploadProgress" style="display:none;margin-top:0.8rem;">
+        <div class="resume-progress-row">
+          <div class="spinner" style="width:14px;height:14px;border-width:2px;flex-shrink:0;"></div>
+          <span id="resumeProgressMsg" style="font-size:0.83rem;color:var(--muted);">Uploading…</span>
+        </div>
+      </div>
+
+      <div id="resumeUploadResult" style="display:none;margin-top:0.8rem;"></div>
+
+      <div style="margin-top:0.75rem;">
+        <button class="resume-skip-btn" id="resumeSkipBtn" onclick="dismissResumeCard()">Skip — I'll answer Kairo's questions instead</button>
+      </div>
+    </div>
+
     <div class="instructions">
       <ul>
         <li>Kairo speaks every question aloud — answer naturally, like talking to someone who genuinely cares about your story.</li>
@@ -1368,6 +1481,206 @@ function startNewSession() {
   timerSeconds = 0; messages = []; conversationId = null;
   loadPastSessions();
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RESUME PRE-UPLOAD (setup screen)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Hide the card if user is not logged in (guest / demo users can't save profile)
+(function() {
+  if (!user.id) {
+    const card = document.getElementById('resumeUploadCard');
+    if (card) card.style.display = 'none';
+  }
+  // Also hide if profile already has a resume uploaded
+  const profile = user.profile || {};
+  if (profile.resume_uploaded) {
+    const card = document.getElementById('resumeUploadCard');
+    if (card) {
+      // Show a lightweight "already uploaded" indicator instead
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0.8rem;font-size:0.83rem;color:var(--muted);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4caf7d" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Resume already uploaded — your profile is pre-filled. <button class="resume-skip-btn" onclick="reuploadResume()" style="color:var(--gold);text-decoration:none;font-size:0.78rem;">Upload a different one →</button></span>
+        </div>`;
+    }
+  }
+})();
+
+function reuploadResume() {
+  // Re-render the full upload card
+  const card = document.getElementById('resumeUploadCard');
+  card.innerHTML = `
+    <div class="setup-resume-header">
+      <div class="setup-resume-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div>
+        <div class="setup-resume-title">Upload a new resume</div>
+        <div class="setup-resume-sub">This will replace the previously extracted resume data in your profile.</div>
+      </div>
+    </div>
+    <div id="resumeDropZone" class="resume-drop-zone" onclick="document.getElementById('resumePdfInput').click()">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gold);opacity:0.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span id="resumeDropLabel">Click to upload your resume PDF</span>
+      <span class="resume-drop-hint">PDF only · max 16 MB</span>
+    </div>
+    <input type="file" id="resumePdfInput" accept=".pdf" style="display:none" onchange="handleResumeUpload(this)">
+    <div id="resumeUploadProgress" style="display:none;margin-top:0.8rem;">
+      <div class="resume-progress-row">
+        <div class="spinner" style="width:14px;height:14px;border-width:2px;flex-shrink:0;"></div>
+        <span id="resumeProgressMsg" style="font-size:0.83rem;color:var(--muted);">Uploading…</span>
+      </div>
+    </div>
+    <div id="resumeUploadResult" style="display:none;margin-top:0.8rem;"></div>
+    <div style="margin-top:0.75rem;">
+      <button class="resume-skip-btn" id="resumeSkipBtn" onclick="dismissResumeCard()">Skip — I'll answer Kairo's questions instead</button>
+    </div>`;
+  setupDragAndDrop();
+}
+
+function dismissResumeCard() {
+  const card = document.getElementById('resumeUploadCard');
+  if (card) {
+    card.style.transition = 'opacity 0.25s';
+    card.style.opacity = '0';
+    setTimeout(() => { card.style.display = 'none'; }, 260);
+  }
+}
+
+async function handleResumeUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf') {
+    showUploadError('Only PDF files are supported. Please save your resume as a PDF and try again.');
+    return;
+  }
+
+  const progressDiv  = document.getElementById('resumeUploadProgress');
+  const progressMsg  = document.getElementById('resumeProgressMsg');
+  const resultDiv    = document.getElementById('resumeUploadResult');
+  const dropZone     = document.getElementById('resumeDropZone');
+  const dropLabel    = document.getElementById('resumeDropLabel');
+  const skipBtn      = document.getElementById('resumeSkipBtn');
+
+  // Show progress
+  resultDiv.style.display = 'none';
+  progressDiv.style.display = 'block';
+  progressMsg.textContent = 'Uploading resume…';
+  if (dropZone) dropZone.style.pointerEvents = 'none';
+  if (skipBtn) skipBtn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    progressMsg.textContent = 'Parsing resume with AI…';
+    const res = await fetch('/api/resume/parse-upload', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+    const data = await res.json();
+
+    progressDiv.style.display = 'none';
+    resultDiv.style.display = 'block';
+
+    if (!res.ok || data.error) {
+      resultDiv.innerHTML = `<div class="resume-result-error">
+        <strong>Could not parse resume:</strong> ${data.error || 'Unknown error. Please try a different PDF.'}</div>`;
+      if (dropZone) dropZone.style.pointerEvents = '';
+      if (skipBtn) skipBtn.disabled = false;
+      return;
+    }
+
+    // Build a readable preview of what was extracted
+    const p = data.profile || {};
+    const tags = [];
+    if (p.name)    tags.push(`👤 ${p.name}`);
+    if (p.college) tags.push(`🎓 ${p.college}`);
+    if (p.branch)  tags.push(`📚 ${p.branch}`);
+    if (p.cgpa)    tags.push(`⭐ CGPA ${p.cgpa}`);
+    const projCount  = (p.projects  || []).length;
+    const internCount = (p.internships || []).length;
+    const skillCount = ((p.skills?.technical||[]).length + (p.skills?.tools||[]).length);
+    if (projCount)   tags.push(`🛠 ${projCount} project${projCount > 1 ? 's' : ''}`);
+    if (internCount) tags.push(`💼 ${internCount} internship${internCount > 1 ? 's' : ''}`);
+    if (skillCount)  tags.push(`⚡ ${skillCount} skills`);
+
+    resultDiv.innerHTML = `
+      <div class="resume-result-success">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4caf7d" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong style="color:#81c784;">Resume parsed successfully!</strong>
+        </div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.5rem;">Kairo now knows the following from your resume:</div>
+        <div class="resume-preview-tags">${tags.map(t => `<span class="resume-preview-tag">${t}</span>`).join('')}</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-top:0.65rem;line-height:1.6;">
+          Kairo will skip questions about these during your session and only dig deeper where needed.
+          You can still start the session to add more detail or correct anything.
+        </div>
+      </div>`;
+
+    // Update localStorage so the card re-check works immediately
+    try {
+      const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+      ud.profile = Object.assign(ud.profile || {}, data.profile, { resume_uploaded: true });
+      localStorage.setItem('kairo_user', JSON.stringify(ud));
+    } catch(e) {}
+
+    // Swap drop zone for a "replace" link, keep skip btn
+    if (dropZone) dropZone.style.display = 'none';
+    if (dropLabel) dropLabel.textContent = file.name;
+    if (skipBtn) {
+      skipBtn.disabled = false;
+      skipBtn.textContent = 'Upload a different resume';
+      skipBtn.onclick = reuploadResume;
+    }
+
+    showToast('✓ Resume imported — profile pre-filled');
+
+  } catch(e) {
+    progressDiv.style.display = 'none';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="resume-result-error">Network error: ${e.message}. Please check your connection and try again.</div>`;
+    if (dropZone) dropZone.style.pointerEvents = '';
+    if (skipBtn) skipBtn.disabled = false;
+  }
+
+  // Reset the file input so the same file can be re-selected if needed
+  input.value = '';
+}
+
+function showUploadError(msg) {
+  const resultDiv = document.getElementById('resumeUploadResult');
+  if (resultDiv) {
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `<div class="resume-result-error">${msg}</div>`;
+  }
+}
+
+// ── Drag-and-drop wiring ──────────────────────────────────────────────────────
+function setupDragAndDrop() {
+  const zone = document.getElementById('resumeDropZone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer?.files[0];
+    if (!file) return;
+    // Inject into hidden input and trigger handler
+    const input = document.getElementById('resumePdfInput');
+    if (input) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      handleResumeUpload(input);
+    }
+  });
+}
+setupDragAndDrop();
 
 // ──────────────────────────────────────────────────────────────────────────────
 // UTILS

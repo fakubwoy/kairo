@@ -477,6 +477,7 @@ Current profile data already collected:
 {json.dumps(profile_data, indent=2)}
 
 If a field already has data, skip or briefly confirm it — don't re-ask things you already know.
+{"resume_context": "The student has already uploaded their existing resume — their profile is pre-populated. Acknowledge this warmly at the start, tell them what you already know, and only ask about gaps or things you want to dig deeper on. Don't re-ask information you already have." if profile_data.get("resume_uploaded") else ""}
 
 Guidelines:
 - Ask ONE focused question at a time — never multi-part questions
@@ -1039,6 +1040,126 @@ Return ONLY the JSON, no explanation, no markdown fences."""
         'insights': doc_insights_raw,
         'structured': doc_structured
     })
+
+@app.route('/api/resume/parse-upload', methods=['POST'])
+def resume_parse_upload():
+    """
+    Parse an existing resume PDF and merge the extracted structured data
+    into the student's profile so the Build Profile chat starts pre-populated.
+    No credit charge — this is an onboarding helper, not a generation step.
+    """
+    sid = session.get('student_id')
+    if not sid:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower()
+    if ext != 'pdf':
+        return jsonify({'error': 'Only PDF resumes are supported'}), 400
+
+    unique_name = f"resume_{uuid.uuid4()}_{filename}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+    file.save(filepath)
+
+    # ── Extract raw text ──────────────────────────────────────────────────────
+    extracted_text = ""
+    try:
+        with pdfplumber.open(filepath) as pdf:
+            for page in pdf.pages:
+                extracted_text += (page.extract_text() or "") + "\n"
+    except Exception as e:
+        return jsonify({'error': f'Could not read PDF: {e}'}), 422
+
+    if not extracted_text.strip():
+        return jsonify({'error': 'PDF appears to be empty or image-only — please use a text-based PDF'}), 422
+
+    # ── LLM: extract rich structured profile from resume ─────────────────────
+    RESUME_EXTRACT_PROMPT = """You are parsing a student resume to extract a comprehensive structured career profile.
+Return ONLY valid JSON (no markdown, no explanation) with these exact keys — use empty arrays/strings for absent fields, never invent data:
+{
+  "name": "",
+  "email": "",
+  "phone": "",
+  "linkedin": "",
+  "github": "",
+  "college": "",
+  "branch": "",
+  "year": "",
+  "cgpa": "",
+  "location": "",
+  "summary": "",
+  "projects": [{"name": "", "description": "", "tech": [], "role": "", "impact": "", "url": "", "duration": ""}],
+  "internships": [{"company": "", "role": "", "duration": "", "work": "", "description": ""}],
+  "skills": {"technical": [], "tools": [], "languages": []},
+  "certifications": [],
+  "achievements": [],
+  "hackathons": [],
+  "extracurriculars": [{"activity": "", "type": "", "role": "", "year": "", "description": ""}],
+  "clubs": [],
+  "goals": "",
+  "highlights": []
+}"""
+
+    raw = call_llm(
+        [{"role": "user", "content": f"Resume text:\n{extracted_text[:5000]}\n\nExtract the structured profile:"}],
+        RESUME_EXTRACT_PROMPT,
+        max_tokens=1800
+    )
+
+    extracted_profile = {}
+    try:
+        clean = raw.strip()
+        if "```" in clean:
+            for part in clean.split("```"):
+                if '{' in part:
+                    clean = part.lstrip("json").strip()
+                    break
+        extracted_profile = json.loads(clean)
+    except Exception:
+        extracted_profile = {}
+
+    if not extracted_profile:
+        return jsonify({'error': 'Could not parse resume — try a cleaner PDF'}), 422
+
+    # ── Merge into student profile ────────────────────────────────────────────
+    student = Student.query.get(sid)
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+
+    existing = json.loads(student.profile_data or '{}')
+
+    # Track uploaded resumes separately so we can show them in the UI
+    uploaded_resumes = existing.get('uploaded_resumes', [])
+    uploaded_resumes.append({
+        'filename': unique_name,
+        'original_name': filename,
+        'uploaded_at': datetime.utcnow().isoformat(),
+    })
+    existing['uploaded_resumes'] = uploaded_resumes
+    existing['resume_uploaded'] = True   # flag the chat bootstrap can check
+
+    merged = deep_merge_profile(existing, extracted_profile)
+    student.profile_data = json.dumps(merged)
+    db.session.commit()
+
+    # Return a subset for the UI preview (exclude verbose raw text)
+    preview = {k: v for k, v in extracted_profile.items()
+               if v and k not in ('summary',)}
+
+    return jsonify({
+        'ok': True,
+        'profile': extracted_profile,
+        'preview': preview,
+        'message': 'Resume parsed and profile pre-filled! Kairo will skip questions it already knows the answers to.',
+    })
+
 
 @app.route('/api/documents/<int:doc_index>', methods=['DELETE'])
 def delete_document(doc_index):
