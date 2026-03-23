@@ -1175,80 +1175,114 @@ function toggleTranscript() {
   toggle.textContent = body.classList.contains('open') ? '▼ Hide' : '▶ Show';
 }
 
-// ── Helper: convert server profile (flat DB schema) → summary card schema ────
+// ── Helpers for resume-only summary path ─────────────────────────────────────
+
+// Convert the flat server/DB profile schema into the nested schema that
+// renderSummaryCards expects. Handles every profile shape:
+//   • resume-parsed  (skills as {technical,tools,languages}, internships with work field)
+//   • chat-built     (skills may be flat array, internships with description)
+//   • legacy/mixed   (older accounts before the resume parser existed)
 function _serverProfileToSummarySchema(sp) {
-  const skills = sp.skills || {};
-  const skillList = Array.isArray(skills)
-    ? skills
-    : [...(skills.technical || []), ...(skills.tools || []), ...(skills.languages || [])];
+  // ── Skills: normalise to flat array regardless of storage shape ──────────
+  const rawSkills = sp.skills || {};
+  let skillList = [];
+  if (Array.isArray(rawSkills)) {
+    skillList = rawSkills;
+  } else if (typeof rawSkills === 'object') {
+    skillList = [
+      ...(rawSkills.technical || []),
+      ...(rawSkills.tools     || []),
+      ...(rawSkills.languages || []),
+      ...(rawSkills.soft      || []),
+    ];
+  }
+  // Deduplicate
+  skillList = [...new Set(skillList.filter(Boolean))];
+
+  // ── Projects: normalise tech to comma-string for renderSummaryCards ──────
+  const projects = (sp.projects || []).map(p => ({
+    name:        p.name        || '',
+    tech:        Array.isArray(p.tech)
+                   ? p.tech.join(', ')
+                   : (p.tech || ''),
+    description: p.description || '',
+    impact:      p.impact      || '',
+  })).filter(p => p.name);
+
+  // ── Internships: prefer description, fall back to work field ─────────────
+  const internships = (sp.internships || []).map(i => ({
+    company:     i.company     || '',
+    role:        i.role        || '',
+    duration:    i.duration    || '',
+    description: i.description || i.work || '',
+  })).filter(i => i.company || i.role);
+
+  // ── Achievements: merge top-level + academics.achievements ───────────────
+  const achievements = [
+    ...(sp.achievements || []),
+    ...(sp.hackathons   || []),
+  ].filter(Boolean);
+
+  // ── Extracurriculars: normalise string or object entries ─────────────────
+  const extracurriculars = (sp.extracurriculars || []).map(e =>
+    typeof e === 'string'
+      ? { activity: e, type: 'Club/Society', role: '', year: '', description: '' }
+      : e
+  ).filter(e => e.activity || e.name);
+
   return {
     personal: {
       name:     sp.name     || '',
       college:  sp.college  || '',
       branch:   sp.branch   || '',
       year:     sp.year     || '',
-      location: sp.location || ''
+      location: sp.location || '',
     },
     academics: {
       cgpa:            sp.cgpa || '',
       notable_courses: sp.subjects || [],
-      achievements:    sp.achievements || []
+      achievements,
     },
-    projects: (sp.projects || []).map(p => ({
-      name:        p.name        || '',
-      tech:        Array.isArray(p.tech) ? p.tech.join(', ') : (p.tech || ''),
-      description: p.description || '',
-      impact:      p.impact      || ''
-    })),
-    internships: (sp.internships || []).map(i => ({
-      company:     i.company     || '',
-      role:        i.role        || '',
-      duration:    i.duration    || '',
-      description: i.description || i.work || ''
-    })),
+    projects,
+    internships,
     skills: skillList,
-    extracurriculars: (sp.extracurriculars || []).map(e =>
-      typeof e === 'string'
-        ? { activity: e, type: 'Club/Society', role: '', year: '', description: '' }
-        : e
-    ),
-    struggles:          sp.struggles  || [],
+    extracurriculars,
     highlights:         sp.highlights || [],
+    struggles:          sp.struggles  || [],
     goals:              sp.goals      || '',
-    faculty_references: (sp.faculty_references || []).filter(f => f && f.name)
+    faculty_references: (sp.faculty_references || []).filter(f => f && f.name),
   };
 }
 
-// ── Helper: is an LLM-extracted profile essentially empty? ───────────────────
+// Is the LLM extraction result essentially empty?
 function _isProfileThin(p) {
   if (!p) return true;
-  const hasPersonal = p.personal && Object.values(p.personal).some(v => v);
-  const hasProjects = (p.projects || []).some(pr => pr.name);
-  const hasInterns  = (p.internships || []).some(i => i.company || i.role);
-  const hasSkills   = (p.skills || []).length > 0;
-  return !hasPersonal && !hasProjects && !hasInterns && !hasSkills;
+  return !(
+    (p.personal  && Object.values(p.personal).some(Boolean)) ||
+    (p.projects  && p.projects.some(pr => pr.name))          ||
+    (p.internships && p.internships.some(i => i.company || i.role)) ||
+    (p.skills    && p.skills.length > 0)
+  );
 }
 
-// ── Helper: merge server profile fields into a thin LLM extraction ───────────
+// Merge server profile into a thin LLM extraction — server wins for empty fields
 function _mergeServerIntoExtracted(extracted, sp) {
   const fromServer = _serverProfileToSummarySchema(sp);
-  const merged = Object.assign({}, fromServer);
-  if (extracted.personal && Object.values(extracted.personal).some(v => v))
-    merged.personal = extracted.personal;
-  if ((extracted.projects || []).some(p => p.name))
-    merged.projects = extracted.projects;
-  if ((extracted.internships || []).some(i => i.company || i.role))
-    merged.internships = extracted.internships;
-  if ((extracted.skills || []).length)
-    merged.skills = extracted.skills;
-  if ((extracted.highlights || []).length)
-    merged.highlights = extracted.highlights;
-  if (extracted.goals)
-    merged.goals = extracted.goals;
-  return merged;
+  return {
+    personal:          (extracted.personal && Object.values(extracted.personal).some(Boolean)) ? extracted.personal : fromServer.personal,
+    academics:         (extracted.academics?.cgpa || extracted.academics?.achievements?.length) ? extracted.academics : fromServer.academics,
+    projects:          (extracted.projects?.some(p => p.name))              ? extracted.projects    : fromServer.projects,
+    internships:       (extracted.internships?.some(i => i.company||i.role)) ? extracted.internships : fromServer.internships,
+    skills:            (extracted.skills?.length)                            ? extracted.skills      : fromServer.skills,
+    extracurriculars:  extracted.extracurriculars?.length                    ? extracted.extracurriculars : fromServer.extracurriculars,
+    highlights:        extracted.highlights?.length                          ? extracted.highlights  : fromServer.highlights,
+    struggles:         extracted.struggles  || fromServer.struggles,
+    goals:             extracted.goals      || fromServer.goals,
+    faculty_references: extracted.faculty_references?.length ? extracted.faculty_references : fromServer.faculty_references,
+  };
 }
 
-// ── Helper: flatten summary schema and persist to server ────────────────────
+// Flatten nested summary schema back to flat server format and PUT to /api/profile
 async function _persistFlatProfile(profile) {
   try {
     const flat = {
@@ -1265,19 +1299,26 @@ async function _persistFlatProfile(profile) {
                        ? pr.tech.split(',').map(s => s.trim()).filter(Boolean)
                        : (pr.tech || []),
         impact: pr.impact || '',
-        role:   pr.role   || ''
+        role:   pr.role   || '',
       })),
-      internships: profile.internships || [],
-      skills: { technical: Array.isArray(profile.skills) ? profile.skills : [], tools: [], soft: [] },
-      goals:            profile.goals             || '',
-      highlights:       profile.highlights        || [],
-      extracurriculars: (profile.extracurriculars || []).map(e =>
-        typeof e === 'string'
-          ? { activity: e, type: 'Club/Society', role: '', year: '', description: '' }
-          : e
-      ),
-      faculty_references: (profile.faculty_references || []).filter(f => f.name)
+      internships: (profile.internships || []).map(i => ({
+        company:     i.company     || '',
+        role:        i.role        || '',
+        duration:    i.duration    || '',
+        description: i.description || '',
+        work:        i.description || '',  // keep both fields in sync
+      })),
+      skills: {
+        technical: Array.isArray(profile.skills) ? profile.skills : [],
+        tools: [], soft: [],
+      },
+      goals:            profile.goals            || '',
+      highlights:       profile.highlights       || [],
+      achievements:     profile.academics?.achievements || [],
+      extracurriculars: profile.extracurriculars || [],
+      faculty_references: (profile.faculty_references || []).filter(f => f.name),
     };
+    // Strip keys that are empty so we don't overwrite existing good data
     Object.keys(flat).forEach(k => {
       if (flat[k] === '' || (Array.isArray(flat[k]) && !flat[k].length)) delete flat[k];
     });
@@ -1285,50 +1326,47 @@ async function _persistFlatProfile(profile) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(flat)
+      body: JSON.stringify(flat),
     });
   } catch(e) { console.warn('Profile server save failed:', e); }
 }
 
 async function generateSummary() {
   const grid = document.getElementById('summary-grid');
-  grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Kairo is reading through your conversation and building your profile…</p></div>';
+  grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Kairo is reading through your conversation and building your profile\u2026</p></div>';
 
-  // Always read a FRESH copy of the profile from localStorage.
-  // `user` is a const frozen at page-load time. If the student uploaded a
-  // resume after the page loaded, user.profile won't have resume_uploaded yet
-  // but localStorage will. Reading fresh here guarantees we never miss it.
-  const freshUserData = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-  const serverProfile = freshUserData.profile || {};
+  // Always read fresh from localStorage — `user` const is frozen at page-load
+  // and won't reflect a resume uploaded during the same session.
+  const freshUD       = JSON.parse(localStorage.getItem('kairo_user') || '{}');
+  const serverProfile = freshUD.profile || {};
 
-  // Strip bootstrap/silent messages — only keep real conversational turns
+  // Strip bootstrap/silent messages — count only genuine student replies
   const BOOT_RE = /^Hi \w+! I want to build my career profile\.$|^Hello! I want to build my career profile\.$|I've already uploaded my resume/;
   const cleanMessages = messages.filter(m =>
     !m._silent && !(m.role === 'user' && BOOT_RE.test(m.content?.trim()))
   );
   const realUserTurns = cleanMessages.filter(m => m.role === 'user');
 
-  // SHORT-CIRCUIT: resume uploaded, student barely/never spoke.
-  // Fewer than 2 real user turns means almost nothing was said. Skip the LLM
-  // extraction entirely and convert the server profile (already populated by
-  // the resume parser) directly into summary cards — instant and accurate.
+  // ── SHORT-CIRCUIT: resume present, student never/barely spoke ────────────
+  // Skip the LLM extraction call entirely — convert the server profile
+  // (already fully populated by the resume parser) straight into cards.
   if (realUserTurns.length < 2 && serverProfile.resume_uploaded) {
-    const syntheticProfile = _serverProfileToSummarySchema(serverProfile);
-    renderSummaryCards(syntheticProfile);
+    const synth = _serverProfileToSummarySchema(serverProfile);
+    renderSummaryCards(synth);
     const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-    if (!ud.profile) ud.profile = {};
-    Object.assign(ud.profile, syntheticProfile);
+    ud.profile = Object.assign(ud.profile || {}, synth);
     localStorage.setItem('kairo_user', JSON.stringify(ud));
-    await _persistFlatProfile(syntheticProfile);
+    await _persistFlatProfile(synth);
     return;
   }
 
+  // ── NORMAL PATH: extract from conversation transcript ────────────────────
   const transcript = cleanMessages
     .map(m => (m.role === 'user' ? 'You' : 'Kairo') + ': ' + m.content)
     .join('\n');
 
   const extractPrompt = `You are an AI assistant that extracts structured career profile data from a conversation transcript.
-Return ONLY valid JSON — no markdown, no backticks, no explanation. Use this exact schema:
+Return ONLY valid JSON \u2014 no markdown, no backticks, no explanation. Use this exact schema:
 {
   "personal": { "name": "", "college": "", "branch": "", "year": "", "location": "" },
   "academics": { "cgpa": "", "notable_courses": [], "achievements": [] },
@@ -1351,11 +1389,7 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
     const res = await fetch('/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({
-        message: extractPrompt,
-        conversation_id: null,
-        extract_only: true
-      })
+      body: JSON.stringify({ message: extractPrompt, conversation_id: null, extract_only: true })
     });
     const data = await res.json();
     if (data.response) {
@@ -1364,19 +1398,18 @@ Rules: Use empty string or empty array for fields not mentioned. Do not invent d
         grid.innerHTML = `<div class="summary-card" style="grid-column:1/-1;"><h3>Profile Summary</h3><p>${data.response.replace(/\n/g,'<br>')}</p></div>`;
         return;
       }
-      // If LLM extraction is thin but we have a server profile, merge it in
-      if (_isProfileThin(profile) && serverProfile.resume_uploaded) {
+      // If LLM extraction is thin AND we have a server profile, merge so cards aren't empty
+      if (_isProfileThin(profile) && Object.keys(serverProfile).length > 2) {
         profile = _mergeServerIntoExtracted(profile, serverProfile);
       }
       renderSummaryCards(profile);
       const ud = JSON.parse(localStorage.getItem('kairo_user') || '{}');
-      if (!ud.profile) ud.profile = {};
-      Object.assign(ud.profile, profile);
+      ud.profile = Object.assign(ud.profile || {}, profile);
       localStorage.setItem('kairo_user', JSON.stringify(ud));
       await _persistFlatProfile(profile);
     }
   } catch(e) {
-    grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Could not generate summary. Your conversation is saved — visit the Dashboard to review.</p></div>';
+    grid.innerHTML = '<div class="summary-card" style="grid-column:1/-1;"><p style="color:var(--muted);">Could not generate summary. Your conversation is saved \u2014 visit the Dashboard to review.</p></div>';
   }
 }
 
