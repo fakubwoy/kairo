@@ -129,16 +129,17 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .ai-orb-panel.loading .orb-ring-1 { animation: orbRingPulse 2.2s ease-in-out infinite; }
 .ai-orb-panel.loading .orb-ring-2 { animation: orbRingPulse 2.2s ease-in-out 0.3s infinite; }
 .ai-orb-panel.loading .orb-ring-3 { animation: orbRingPulse 2.2s ease-in-out 0.6s infinite; }
-.ai-orb-panel.speaking .orb-ring-1 { animation: orbRingPulse 1.4s ease-in-out infinite; }
-.ai-orb-panel.speaking .orb-ring-2 { animation: orbRingPulse 1.4s ease-in-out 0.2s infinite; }
-.ai-orb-panel.speaking .orb-ring-3 { animation: orbRingPulse 1.4s ease-in-out 0.4s infinite; }
-.ai-orb-panel.speaking .orb-ring-4 { animation: orbRingPulse 1.4s ease-in-out 0.6s infinite; }
+.ai-orb-panel.speaking .orb-ring-1 { animation: none; }
+.ai-orb-panel.speaking .orb-ring-2 { animation: none; }
+.ai-orb-panel.speaking .orb-ring-3 { animation: none; }
+.ai-orb-panel.speaking .orb-ring-4 { animation: none; }
 @keyframes orbRingPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.06);opacity:0.4} }
 
 /* The orb itself */
 .ai-orb { width: 210px; height: 210px; border-radius: 50%; position: relative; cursor: default; flex-shrink: 0; z-index: 1; }
 .orb-surface { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 38% 35%, rgba(255,240,190,0.92) 0%, rgba(230,195,100,0.75) 20%, rgba(180,140,50,0.6) 45%, rgba(120,88,20,0.8) 70%, rgba(50,32,5,0.95) 100%); box-shadow: 0 0 60px rgba(201,168,76,0.35), 0 0 120px rgba(184,148,56,0.15), inset 0 0 40px rgba(255,255,255,0.08); transition: all 0.5s ease; }
-.ai-orb-panel.speaking .orb-surface { box-shadow: 0 0 80px rgba(201,168,76,0.6), 0 0 160px rgba(184,148,56,0.25), inset 0 0 50px rgba(255,255,255,0.12); animation: orbBreath 1.4s ease-in-out infinite; }
+.ai-orb-panel.speaking .orb-surface { box-shadow: 0 0 80px rgba(201,168,76,0.6), 0 0 160px rgba(184,148,56,0.25), inset 0 0 50px rgba(255,255,255,0.12); animation: none; }
+.ai-orb-panel.speaking .orb-ambient { animation: none; }
 @keyframes orbBreath { 0%,100%{transform:scale(1)}50%{transform:scale(1.04)} }
 
 /* Orb highlight gleam */
@@ -968,39 +969,115 @@ async function sendAnswer(text) {
 function sendPendingAnswer() { if (pendingAnswer.trim()) sendAnswer(pendingAnswer); }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// TTS
+// TTS — Kokoro neural voice (blob fetch, no Web Speech fallback)
 // ──────────────────────────────────────────────────────────────────────────────
-// TTS — Edge Neural Voice (blob fetch) with Web Speech fallback
+// Voice modulation: a Web Audio AnalyserNode samples the RMS volume of the
+// playing audio 60×/sec and drives the orb ring scale + opacity in real time,
+// so the rings pulse with the actual speech rhythm instead of a fixed animation.
 // ──────────────────────────────────────────────────────────────────────────────
-// How it works:
-//   1. POST /api/tts — fetch the full MP3 response as a blob.
-//   2. Create an object URL from the blob and play it with an Audio element.
-//   3. On any failure (network, server 501/500, browser error) fall back to
-//      Web Speech API silently so the session always continues.
-//
-//   Why blob instead of MediaSource streaming?
-//   MediaSource + chunked MP3 is unreliable across browsers (Safari rejects it,
-//   Chrome sometimes stalls mid-stream). A simple blob fetch+play works
-//   everywhere and still uses the real Edge TTS neural voice from the server.
-//
-let _ttsAudio = null;   // current Audio element — needed to cancel mid-speech
-let _ttsAbort = null;   // AbortController for the in-flight fetch
+
+let _ttsAudio   = null;   // current Audio element
+let _ttsAbort   = null;   // AbortController for in-flight fetch
+let _ttsAudioCtx = null;  // shared AudioContext (created once, reused)
+let _modulationRaf = null; // requestAnimationFrame handle for ring modulation
 
 function _cancelTTS() {
-  if (_ttsAbort)  { _ttsAbort.abort(); _ttsAbort = null; }
-  if (_ttsAudio)  { _ttsAudio.pause(); URL.revokeObjectURL(_ttsAudio.src); _ttsAudio.src = ''; _ttsAudio = null; }
-  if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
+  if (_ttsAbort) { _ttsAbort.abort(); _ttsAbort = null; }
+  if (_ttsAudio) { _ttsAudio.pause(); URL.revokeObjectURL(_ttsAudio.src); _ttsAudio.src = ''; _ttsAudio = null; }
+  _stopModulation();
 }
 
+// ── Ring modulation via Web Audio AnalyserNode ────────────────────────────────
+function _startModulation(audioEl) {
+  _stopModulation();
+  try {
+    if (!_ttsAudioCtx || _ttsAudioCtx.state === 'closed') {
+      _ttsAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_ttsAudioCtx.state === 'suspended') _ttsAudioCtx.resume();
+
+    const source   = _ttsAudioCtx.createMediaElementSource(audioEl);
+    const analyser = _ttsAudioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.75;
+    source.connect(analyser);
+    analyser.connect(_ttsAudioCtx.destination);
+
+    const buf  = new Uint8Array(analyser.frequencyBinCount);
+    const rings = document.querySelectorAll('.orb-ring');
+    const ambient = document.querySelector('.orb-ambient');
+
+    // Each ring has a slightly different lag/scale multiplier for organic feel
+    const ringConfig = [
+      { scale: 1.10, opBase: 0.9  },
+      { scale: 1.18, opBase: 0.65 },
+      { scale: 1.26, opBase: 0.45 },
+      { scale: 1.36, opBase: 0.28 },
+    ];
+
+    function tick() {
+      _modulationRaf = requestAnimationFrame(tick);
+      analyser.getByteTimeDomainData(buf);
+
+      // RMS of waveform → 0..1
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / buf.length);
+      // Normalise: speech RMS typically 0.02–0.25, map to 0–1
+      const energy = Math.min(1, rms / 0.18);
+
+      rings.forEach((ring, i) => {
+        const cfg   = ringConfig[i] || ringConfig[3];
+        const scale = 1 + (cfg.scale - 1) * energy;
+        const op    = cfg.opBase * (0.15 + 0.85 * energy);
+        ring.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+        ring.style.opacity   = op.toFixed(3);
+        ring.style.animation = 'none'; // disable CSS keyframe while modulating
+      });
+
+      // Ambient glow breathes with energy too
+      if (ambient) {
+        const glowOp = 0.3 + 0.7 * energy;
+        const glowScale = 1 + 0.3 * energy;
+        ambient.style.opacity   = glowOp.toFixed(3);
+        ambient.style.transform = `translate(-50%, -50%) scale(${glowScale.toFixed(3)})`;
+        ambient.style.animation = 'none';
+      }
+    }
+    tick();
+  } catch(e) {
+    console.warn('[TTS] Web Audio modulation failed:', e);
+  }
+}
+
+function _stopModulation() {
+  if (_modulationRaf) { cancelAnimationFrame(_modulationRaf); _modulationRaf = null; }
+  // Reset rings to CSS-controlled state
+  document.querySelectorAll('.orb-ring').forEach(r => {
+    r.style.transform = '';
+    r.style.opacity   = '';
+    r.style.animation = '';
+  });
+  const ambient = document.querySelector('.orb-ambient');
+  if (ambient) { ambient.style.opacity = ''; ambient.style.transform = ''; ambient.style.animation = ''; }
+}
+
+// ── Main speak entry point ────────────────────────────────────────────────────
 async function speakText(text, onEnd) {
   _cancelTTS();
-  setAiSpeaking('loading');   // show loading spinner while audio is being generated
+  setAiSpeaking('loading');
   try {
     await _speakEdge(text, onEnd);
   } catch(e) {
-    console.warn('[TTS] Edge voice failed, falling back to Web Speech:', e);
-    setAiSpeaking(true);      // switch to speaking state for fallback
-    _speakFallback(text, onEnd);
+    // Kokoro failed — stop cleanly, no browser voice fallback
+    console.warn('[TTS] Kokoro failed, stopping silently:', e);
+    _stopModulation();
+    setAiSpeaking(false);
+    document.querySelector('.message-display')?.classList.remove('hidden');
+    if (onEnd) onEnd();
   }
 }
 
@@ -1008,7 +1085,6 @@ async function _speakEdge(text, onEnd) {
   const ctrl = new AbortController();
   _ttsAbort  = ctrl;
 
-  console.debug('[TTS] Fetching /api/tts, chars:', text.length);
   const res = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1017,37 +1093,25 @@ async function _speakEdge(text, onEnd) {
     signal: ctrl.signal,
   });
 
-  console.debug('[TTS] Response status:', res.status, 'content-type:', res.headers.get('content-type'));
-
-  // 501 = TTS not installed; 500 = synthesis error — both use fallback
   if (!res.ok) {
     setAiSpeaking(false);
     const errText = await res.text().catch(() => '');
     throw new Error(`TTS HTTP ${res.status}: ${errText.slice(0, 200)}`);
   }
 
-  // Audio received — switch loading indicator → speaking animation
-  setAiSpeaking(true);
-
-  // Verify the server actually returned audio, not a JSON error with status 200
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('audio')) {
     const body = await res.text().catch(() => '');
     throw new Error(`TTS bad content-type "${contentType}": ${body.slice(0, 200)}`);
   }
 
-  // Determine correct MIME type from server response (wav or mpeg)
   const mimeType = contentType.includes('wav') ? 'audio/wav' : 'audio/mpeg';
   const rawBlob  = await res.blob();
-  console.debug('[TTS] Blob size:', rawBlob.size, 'bytes, mimeType:', mimeType);
-
-  if (rawBlob.size < 100) {
-    throw new Error(`TTS blob too small (${rawBlob.size} bytes) — server likely returned empty audio`);
-  }
+  if (rawBlob.size < 100) throw new Error(`TTS blob too small (${rawBlob.size} bytes)`);
 
   const blob    = new Blob([rawBlob], { type: mimeType });
   const blobUrl = URL.createObjectURL(blob);
-  _ttsAbort     = null;   // fetch done, no longer abortable
+  _ttsAbort     = null;
 
   await new Promise((resolve, reject) => {
     const audio = new Audio();
@@ -1058,6 +1122,7 @@ async function _speakEdge(text, onEnd) {
       return (err) => {
         if (fired) return; fired = true;
         clearTimeout(guard);
+        _stopModulation();
         URL.revokeObjectURL(blobUrl);
         _ttsAudio = null;
         setAiSpeaking(false);
@@ -1066,58 +1131,23 @@ async function _speakEdge(text, onEnd) {
       };
     })();
 
-    // Safety guard: max expected duration + buffer
-    const guard = setTimeout(() => {
-      console.debug('[TTS] Safety guard fired — audio.ended did not fire in time');
-      done();
-    }, 500 + text.length * 80);
+    const guard = setTimeout(() => { done(); }, 500 + text.length * 80);
 
-    audio.addEventListener('ended', () => {
-      console.debug('[TTS] Audio ended normally');
-      done();
-    }, { once: true });
-
-    audio.addEventListener('error', (e) => {
-      const msg = audio.error
-        ? `MediaError ${audio.error.code}: ${audio.error.message}`
-        : String(e);
-      console.error('[TTS] Audio element error:', msg);
+    audio.addEventListener('ended',  () => done(),           { once: true });
+    audio.addEventListener('error',  (e) => {
+      const msg = audio.error ? `MediaError ${audio.error.code}` : String(e);
       done(new Error(msg));
     }, { once: true });
 
+    // Start modulation as soon as playback begins
+    audio.addEventListener('playing', () => {
+      setAiSpeaking(true);
+      _startModulation(audio);
+    }, { once: true });
+
     audio.src = blobUrl;
-    console.debug('[TTS] Starting playback…');
-    audio.play().catch(err => {
-      console.error('[TTS] play() rejected:', err);
-      done(err);
-    });
+    audio.play().catch(err => done(err));
   });
-}
-
-// ── Web Speech API fallback ───────────────────────────────────────────────────
-function _speakFallback(text, onEnd) {
-  if (!window.speechSynthesis) { setAiSpeaking(false); if (onEnd) onEnd(); return; }
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = 0.92; utter.pitch = 1.0; utter.volume = 1.0;
-
-  const voices = window.speechSynthesis.getVoices();
-  const pick = (names) => names.map(n => voices.find(v => v.name.includes(n))).find(Boolean);
-  const preferred = pick([
-    'Google UK English Female', 'Microsoft Sonia', 'Microsoft Aria',
-    'Karen', 'Samantha', 'Victoria',
-    'Google US English', 'Daniel', 'Moira',
-  ]);
-  if (preferred) utter.voice = preferred;
-
-  let fired = false;
-  const done = () => { if (fired) return; fired = true; setAiSpeaking(false); if (onEnd) onEnd(); };
-  const guard = setTimeout(done, Math.max(3500, text.length * 68 + 600));
-
-  utter.onend   = () => { clearTimeout(guard); done(); };
-  utter.onerror = () => { clearTimeout(guard); done(); };
-
-  window.speechSynthesis.speak(utter);
 }
 
 function setAiSpeaking(on) {
