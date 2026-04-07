@@ -991,33 +991,54 @@ async function _speakEdge(text, onEnd) {
   });
 
   // 501 = edge-tts not installed; 500 = synthesis error — both use fallback
-  if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`TTS HTTP ${res.status}: ${errText.slice(0, 120)}`);
+  }
 
-  const blob    = await res.blob();
+  // Verify the server actually returned audio, not a JSON error with status 200
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('audio')) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`TTS bad content-type "${contentType}": ${body.slice(0, 120)}`);
+  }
+
+  // Force the blob to audio/mpeg regardless of what the browser inferred,
+  // so Audio() always gets a type it knows how to decode.
+  const rawBlob = await res.blob();
+  const blob    = new Blob([rawBlob], { type: 'audio/mpeg' });
   const blobUrl = URL.createObjectURL(blob);
-  const audio   = new Audio(blobUrl);
-  _ttsAudio     = audio;
-  _ttsAbort     = null;   // fetch is done, no longer abortable
+  _ttsAbort     = null;   // fetch done, no longer abortable
 
-  const done = (() => {
-    let fired = false;
-    return () => {
-      if (fired) return; fired = true;
-      URL.revokeObjectURL(blobUrl);
-      _ttsAudio = null;
-      setAiSpeaking(false);
-      if (onEnd) onEnd();
-    };
-  })();
+  await new Promise((resolve, reject) => {
+    const audio = new Audio();
+    _ttsAudio   = audio;
 
-  audio.addEventListener('ended',  done, { once: true });
-  audio.addEventListener('error',  () => { done(); _speakFallback(text, null); }, { once: true });
+    const done = (() => {
+      let fired = false;
+      return (err) => {
+        if (fired) return; fired = true;
+        clearTimeout(guard);
+        URL.revokeObjectURL(blobUrl);
+        _ttsAudio = null;
+        setAiSpeaking(false);
+        if (onEnd) onEnd();
+        if (err) reject(err); else resolve();
+      };
+    })();
 
-  // Safety guard: fire done if audio runs longer than expected (e.g. ended event missing)
-  const guard = setTimeout(done, 500 + text.length * 80);
-  audio.addEventListener('ended', () => clearTimeout(guard), { once: true });
+    // Safety guard
+    const guard = setTimeout(() => done(), 500 + text.length * 80);
 
-  await audio.play();
+    audio.addEventListener('ended', () => done(), { once: true });
+    audio.addEventListener('error', (e) => {
+      const msg = audio.error ? `MediaError ${audio.error.code}: ${audio.error.message}` : String(e);
+      done(new Error(msg));
+    }, { once: true });
+
+    audio.src = blobUrl;
+    audio.play().catch(err => done(err));
+  });
 }
 
 // ── Web Speech API fallback ───────────────────────────────────────────────────
