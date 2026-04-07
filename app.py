@@ -3339,6 +3339,87 @@ def health():
     s = get_llm_status()
     return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
+# ── Edge TTS — Streaming (chunked transfer) ───────────────────────────────────
+# Streams MP3 chunks to the client as edge-tts synthesizes them.
+# The browser starts playing the first chunk (~150-250ms) while the rest arrive,
+# giving near-instant perceived latency — no waiting for the full audio to buffer.
+#
+# Uses Flask's stream_with_context + a threading.Thread to bridge the async
+# edge-tts generator into a synchronous generator Flask can stream.
+# Each request is fully self-contained — no state between requests.
+#
+import asyncio
+import threading
+import queue as _queue
+
+_TTS_VOICE = os.environ.get('TTS_VOICE', 'en-US-AriaNeural')
+_TTS_RATE  = os.environ.get('TTS_RATE', '-5%')
+
+@app.route('/api/tts', methods=['POST'])
+def edge_tts_route():
+    """Stream MP3 audio via chunked transfer encoding.
+    Playback starts on the client after the very first chunk (~200ms).
+    Falls back gracefully — client uses Web Speech API on any error.
+    """
+    text = (request.json or {}).get('text', '').strip()
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+    text = text[:800]
+
+    try:
+        import edge_tts
+        from flask import Response, stream_with_context
+
+        q = _queue.Queue()          # bridge between async thread and sync generator
+        _DONE = object()            # sentinel
+
+        def _run_async():
+            """Runs the async edge-tts generator in its own thread+event loop."""
+            async def _stream():
+                try:
+                    communicate = edge_tts.Communicate(text, _TTS_VOICE, rate=_TTS_RATE)
+                    async for chunk in communicate.stream():
+                        if chunk['type'] == 'audio':
+                            q.put(chunk['data'])   # push each chunk as it arrives
+                except Exception as e:
+                    q.put(e)                       # propagate error to generator
+                finally:
+                    q.put(_DONE)                   # always signal completion
+
+            asyncio.run(_stream())
+
+        # Start synthesis in background thread immediately
+        t = threading.Thread(target=_run_async, daemon=True)
+        t.start()
+
+        def _generate():
+            """Sync generator that yields chunks from the queue as they arrive."""
+            while True:
+                item = q.get()          # blocks until next chunk ready
+                if item is _DONE:
+                    break
+                if isinstance(item, Exception):
+                    break               # synthesis error — stop stream cleanly
+                yield item
+            t.join(timeout=10)          # ensure thread is cleaned up
+
+        return Response(
+            stream_with_context(_generate()),
+            mimetype='audio/mpeg',
+            headers={
+                'Cache-Control': 'no-store',
+                'X-Accel-Buffering': 'no',      # disable nginx buffering on Railway
+                'X-TTS-Voice': _TTS_VOICE,
+                'Transfer-Encoding': 'chunked',
+            }
+        )
+
+    except ImportError:
+        return jsonify({'error': 'edge-tts not installed', 'fallback': 'web_speech'}), 501
+    except Exception as e:
+        print(f'[TTS] error: {e}')
+        return jsonify({'error': str(e), 'fallback': 'web_speech'}), 500
+
 # Startup — create tables and apply any missing column migrations
 with app.app_context():
     # Each DDL statement runs inside its own savepoint so that a concurrent
