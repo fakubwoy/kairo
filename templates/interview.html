@@ -166,7 +166,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 @keyframes waveAnim{0%,100%{height:3px}50%{height:18px}}
 
 /* Message display — gradient fade at the bottom, clears the label pill */
-.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.9) 60%, transparent 100%); padding: 1.4rem 1.5rem 3.8rem; transition: opacity 0.3s; pointer-events: none; }
+.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.9) 60%, transparent 100%); padding: 1.4rem 1.5rem 3.8rem; transition: opacity 0.4s ease; pointer-events: none; }
+.message-display.hidden { opacity: 0; }
 .msg-role-label { font-size: 0.68rem; color: rgba(201,168,76,0.9); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; font-weight: 700; }
 .msg-text { font-size: 0.92rem; color: rgba(245,240,232,0.92); line-height: 1.65; max-height: 100px; overflow-y: auto; }
 .msg-text::-webkit-scrollbar{width:3px}.msg-text::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.2)}
@@ -566,7 +567,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
               <span>Kairo (AI Agent)</span>
             </div>
             <!-- Message caption -->
-            <div class="message-display">
+            <div class="message-display hidden">
               <div class="msg-role-label" id="msg-role-label">Kairo</div>
               <div class="msg-text" id="msg-text">Starting your session…</div>
             </div>
@@ -935,6 +936,7 @@ async function sendAnswer(text) {
     if (res.status === 402 || data.error === 'insufficient_credits') {
       const msg = `⚠️ ${data.message || 'Not enough credits.'} <a href="/dashboard" style="color:var(--gold);text-decoration:underline;">Go to Dashboard →</a>`;
       showMessage('Kairo', msg);
+      document.querySelector('.message-display')?.classList.remove('hidden');
       setStatus('ready', 'Ready');
       return;
     }
@@ -957,6 +959,7 @@ async function sendAnswer(text) {
     }
   } catch(e) {
     showMessage('Kairo', 'Sorry, trouble connecting. Please try again.');
+    document.querySelector('.message-display')?.classList.remove('hidden');
     appendLiveTranscript('Kairo', 'Sorry, trouble connecting. Please try again.');
   }
   setStatus('ready', 'Ready');
@@ -1119,6 +1122,7 @@ function _speakFallback(text, onEnd) {
 
 function setAiSpeaking(on) {
   const panel = document.getElementById('ai-panel');
+  const display = document.querySelector('.message-display');
   panel.classList.remove('speaking', 'loading');
   if (on === 'loading') {
     panel.classList.add('loading');
@@ -1127,6 +1131,8 @@ function setAiSpeaking(on) {
     setStatus('thinking', 'Generating audio…');
   } else if (on) {
     panel.classList.add('speaking');
+    // Audio is now playing — reveal the transcript
+    if (display) display.classList.remove('hidden');
     const dot = document.getElementById('ai-dot');
     if (dot) { dot.style.animation = 'pulse 0.8s infinite'; dot.style.background = 'var(--gold)'; }
   } else {
@@ -1140,9 +1146,17 @@ function setAiSpeaking(on) {
 // UI HELPERS
 // ──────────────────────────────────────────────────────────────────────────────
 function showMessage(role, text) {
+  const display = document.querySelector('.message-display');
   document.getElementById('msg-role-label').textContent = role;
   document.getElementById('msg-text').textContent = text;
-  if (role === 'Kairo') setStatus('speaking', 'Kairo is speaking…');
+  if (role === 'Kairo') {
+    // Hide until audio actually starts playing — revealed in setAiSpeaking(true)
+    if (display) display.classList.add('hidden');
+    setStatus('speaking', 'Kairo is speaking…');
+  } else {
+    // User messages show immediately
+    if (display) display.classList.remove('hidden');
+  }
 }
 
 function setStatus(state, text) {
