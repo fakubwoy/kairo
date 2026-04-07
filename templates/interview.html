@@ -113,19 +113,21 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .ai-orb-panel { position: relative; background: radial-gradient(ellipse at 50% 60%, #12082a 0%, #060408 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
 
 /* Ambient glow behind orb */
-.orb-ambient { position: absolute; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.08) 40%, transparent 70%); filter: blur(40px); pointer-events: none; transition: opacity 0.6s ease; }
+.orb-ambient { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.08) 40%, transparent 70%); filter: blur(40px); pointer-events: none; transition: opacity 0.6s ease; }
 .ai-orb-panel.speaking .orb-ambient { opacity: 1.8; animation: ambientBreath 1.4s ease-in-out infinite; }
-@keyframes ambientBreath { 0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:1.4} }
+@keyframes ambientBreath { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.15);opacity:1.4} }
 
-/* Outer pulse rings */
-.orb-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(167,139,250,0.15); pointer-events: none; }
+/* Outer pulse rings — all perfectly centered */
+.orb-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(167,139,250,0.15); pointer-events: none; }
 .orb-ring-1 { width: 260px; height: 260px; }
-.orb-ring-2 { width: 300px; height: 300px; border-color: rgba(167,139,250,0.08); }
-.orb-ring-3 { width: 345px; height: 345px; border-color: rgba(167,139,250,0.05); }
+.orb-ring-2 { width: 310px; height: 310px; border-color: rgba(167,139,250,0.08); }
+.orb-ring-3 { width: 365px; height: 365px; border-color: rgba(167,139,250,0.04); }
+.orb-ring-4 { width: 430px; height: 430px; border-color: rgba(167,139,250,0.025); }
 .ai-orb-panel.speaking .orb-ring-1 { animation: orbRingPulse 1.4s ease-in-out infinite; }
 .ai-orb-panel.speaking .orb-ring-2 { animation: orbRingPulse 1.4s ease-in-out 0.2s infinite; }
 .ai-orb-panel.speaking .orb-ring-3 { animation: orbRingPulse 1.4s ease-in-out 0.4s infinite; }
-@keyframes orbRingPulse { 0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:0.5} }
+.ai-orb-panel.speaking .orb-ring-4 { animation: orbRingPulse 1.4s ease-in-out 0.6s infinite; }
+@keyframes orbRingPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.06);opacity:0.4} }
 
 /* The orb itself */
 .ai-orb { width: 210px; height: 210px; border-radius: 50%; position: relative; cursor: default; flex-shrink: 0; }
@@ -143,10 +145,10 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .wave-bar:nth-child(1){animation-delay:0s}.wave-bar:nth-child(2){animation-delay:0.1s}.wave-bar:nth-child(3){animation-delay:0.2s}.wave-bar:nth-child(4){animation-delay:0.3s}.wave-bar:nth-child(5){animation-delay:0.4s}.wave-bar:nth-child(6){animation-delay:0.3s}.wave-bar:nth-child(7){animation-delay:0.2s}.wave-bar:nth-child(8){animation-delay:0.1s}
 @keyframes waveAnim{0%,100%{height:3px}50%{height:18px}}
 
-/* Message display — slides up from bottom of ai panel */
-.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.85) 80%, transparent 100%); padding: 1.5rem 1.5rem 1.2rem; transition: opacity 0.3s; }
-.msg-role-label { font-size: 0.68rem; color: rgba(167,139,250,0.8); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.35rem; font-weight: 600; }
-.msg-text { font-size: 0.88rem; color: rgba(245,240,232,0.9); line-height: 1.6; max-height: 80px; overflow-y: auto; }
+/* Message display — gradient fade at the bottom, clears the label pill */
+.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.9) 60%, transparent 100%); padding: 1.4rem 1.5rem 3.8rem; transition: opacity 0.3s; pointer-events: none; }
+.msg-role-label { font-size: 0.68rem; color: rgba(167,139,250,0.9); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; font-weight: 700; }
+.msg-text { font-size: 0.92rem; color: rgba(245,240,232,0.92); line-height: 1.65; max-height: 100px; overflow-y: auto; }
 .msg-text::-webkit-scrollbar{width:3px}.msg-text::-webkit-scrollbar-thumb{background:rgba(167,139,250,0.2)}
 
 /* Gradient divider between panels */
@@ -525,6 +527,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
             <div class="orb-ring orb-ring-1"></div>
             <div class="orb-ring orb-ring-2"></div>
             <div class="orb-ring orb-ring-3"></div>
+            <div class="orb-ring orb-ring-4"></div>
             <!-- Orb -->
             <div class="ai-orb">
               <div class="orb-surface"></div>
@@ -942,82 +945,43 @@ function sendPendingAnswer() { if (pendingAnswer.trim()) sendAnswer(pendingAnswe
 // ──────────────────────────────────────────────────────────────────────────────
 // TTS
 // ──────────────────────────────────────────────────────────────────────────────
-// TTS — Streaming Edge Neural Voice with instant playback + Web Speech fallback
+// TTS — Edge Neural Voice (blob fetch) with Web Speech fallback
 // ──────────────────────────────────────────────────────────────────────────────
 // How it works:
-//   1. POST /api/tts — server immediately starts streaming MP3 chunks via chunked
-//      transfer encoding as edge-tts synthesizes them.
-//   2. We feed those chunks into a MediaSource buffer in real time.
-//   3. Audio element starts playing as soon as the first chunk (~150ms) lands —
-//      no waiting for the full audio to arrive. Latency is near-identical to the
-//      old Web Speech API but with a human-quality neural voice.
-//   4. On any failure (network, server error, browser incompatibility) we fall
-//      back to Web Speech API instantly and silently.
+//   1. POST /api/tts — fetch the full MP3 response as a blob.
+//   2. Create an object URL from the blob and play it with an Audio element.
+//   3. On any failure (network, server 501/500, browser error) fall back to
+//      Web Speech API silently so the session always continues.
 //
-let _ttsAudio    = null;   // current Audio element — needed to cancel mid-speech
-let _ttsAbort    = null;   // AbortController for the fetch stream
+//   Why blob instead of MediaSource streaming?
+//   MediaSource + chunked MP3 is unreliable across browsers (Safari rejects it,
+//   Chrome sometimes stalls mid-stream). A simple blob fetch+play works
+//   everywhere and still uses the real Edge TTS neural voice from the server.
+//
+let _ttsAudio = null;   // current Audio element — needed to cancel mid-speech
+let _ttsAbort = null;   // AbortController for the in-flight fetch
 
 function _cancelTTS() {
   if (_ttsAbort)  { _ttsAbort.abort(); _ttsAbort = null; }
-  if (_ttsAudio)  { _ttsAudio.pause(); _ttsAudio.src = ''; _ttsAudio = null; }
+  if (_ttsAudio)  { _ttsAudio.pause(); URL.revokeObjectURL(_ttsAudio.src); _ttsAudio.src = ''; _ttsAudio = null; }
   if (window.speechSynthesis?.speaking) window.speechSynthesis.cancel();
 }
 
 async function speakText(text, onEnd) {
   _cancelTTS();
   setAiSpeaking(true);
-
-  // MediaSource streaming — supported in all modern browsers
-  if (window.MediaSource && MediaSource.isTypeSupported('audio/mpeg')) {
-    try {
-      await _speakStreaming(text, onEnd);
-      return;
-    } catch(e) {
-      // Streaming failed mid-way — fall through to Web Speech
-    }
+  try {
+    await _speakEdge(text, onEnd);
+  } catch(e) {
+    console.warn('[TTS] Edge voice failed, falling back to Web Speech:', e);
+    _speakFallback(text, onEnd);
   }
-
-  // Fallback for browsers without MediaSource (Safari < 17, some mobile)
-  _speakFallback(text, onEnd);
 }
 
-async function _speakStreaming(text, onEnd) {
-  const ms      = new MediaSource();
-  const audio   = new Audio();
-  _ttsAudio     = audio;
-  audio.src     = URL.createObjectURL(ms);
+async function _speakEdge(text, onEnd) {
+  const ctrl = new AbortController();
+  _ttsAbort  = ctrl;
 
-  const ctrl    = new AbortController();
-  _ttsAbort     = ctrl;
-
-  let sourceBuffer, streamDone = false, pendingChunks = [];
-
-  // Drain pending chunks into the SourceBuffer once it's ready and not updating
-  function _flush() {
-    if (!sourceBuffer || sourceBuffer.updating || !pendingChunks.length) return;
-    const chunk = pendingChunks.shift();
-    sourceBuffer.appendBuffer(chunk);
-  }
-
-  await new Promise((resolveOpen, rejectOpen) => {
-    ms.addEventListener('sourceopen', async () => {
-      URL.revokeObjectURL(audio.src);   // free the object URL immediately
-      try {
-        sourceBuffer = ms.addSourceBuffer('audio/mpeg');
-        sourceBuffer.mode = 'sequence';
-        sourceBuffer.addEventListener('updateend', () => {
-          _flush();
-          // Once all chunks are flushed and stream is done, signal EOS
-          if (streamDone && !pendingChunks.length && !sourceBuffer.updating) {
-            try { ms.endOfStream(); } catch(_) {}
-          }
-        });
-        resolveOpen();
-      } catch(e) { rejectOpen(e); }
-    }, { once: true });
-  });
-
-  // Start the fetch — response body arrives as a ReadableStream
   const res = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1026,47 +990,34 @@ async function _speakStreaming(text, onEnd) {
     signal: ctrl.signal,
   });
 
+  // 501 = edge-tts not installed; 500 = synthesis error — both use fallback
   if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
 
-  // Start playback as soon as the first chunk lands (timeupdate fires ~150ms in)
-  let playStarted = false;
-  audio.addEventListener('canplay', () => {
-    if (!playStarted) { playStarted = true; audio.play().catch(() => {}); }
-  }, { once: true });
+  const blob    = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const audio   = new Audio(blobUrl);
+  _ttsAudio     = audio;
+  _ttsAbort     = null;   // fetch is done, no longer abortable
 
-  // Completion handler
   const done = (() => {
     let fired = false;
     return () => {
       if (fired) return; fired = true;
-      _ttsAudio = null; _ttsAbort = null;
+      URL.revokeObjectURL(blobUrl);
+      _ttsAudio = null;
       setAiSpeaking(false);
       if (onEnd) onEnd();
     };
   })();
-  audio.addEventListener('ended', done, { once: true });
-  // Safety guard: if audio stalls for 3s after stream ends, fire done anyway
-  audio.addEventListener('error', () => { _speakFallback(text, onEnd); }, { once: true });
 
-  // Read stream chunks and feed into SourceBuffer
-  const reader = res.body.getReader();
-  try {
-    while (true) {
-      const { done: streamEnd, value } = await reader.read();
-      if (streamEnd) break;
-      pendingChunks.push(value);
-      _flush();
-    }
-  } finally {
-    streamDone = true;
-    _flush();
-    // If sourceBuffer is idle right now, close the stream immediately
-    if (sourceBuffer && !sourceBuffer.updating && !pendingChunks.length) {
-      try { ms.endOfStream(); } catch(_) {}
-    }
-    // Final safety guard: fire done 500ms after stream ends if audio hasn't ended
-    setTimeout(() => { if (_ttsAudio === audio) done(); }, 500 + text.length * 60);
-  }
+  audio.addEventListener('ended',  done, { once: true });
+  audio.addEventListener('error',  () => { done(); _speakFallback(text, null); }, { once: true });
+
+  // Safety guard: fire done if audio runs longer than expected (e.g. ended event missing)
+  const guard = setTimeout(done, 500 + text.length * 80);
+  audio.addEventListener('ended', () => clearTimeout(guard), { once: true });
+
+  await audio.play();
 }
 
 // ── Web Speech API fallback ───────────────────────────────────────────────────
