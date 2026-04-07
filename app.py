@@ -3412,8 +3412,8 @@ def kokoro_tts_route():
         return jsonify({'error': 'No text provided'}), 400
     text = text[:800]
 
-    voice = os.environ.get('TTS_VOICE', 'af_heart')
-    speed = float(os.environ.get('TTS_SPEED', '1.15'))
+    voice = os.environ.get('TTS_VOICE', 'am_michael')
+    speed = float(os.environ.get('TTS_SPEED', '1.05'))
     print(f'[TTS] Synthesising {len(text)} chars — voice={voice}')
 
     try:
