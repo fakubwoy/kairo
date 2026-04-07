@@ -3436,8 +3436,7 @@ def kokoro_tts_route():
         return jsonify({'error': 'kokoro-onnx not installed', 'fallback': 'web_speech'}), 501
     except Exception as e:
         import traceback
-        print(f'[TTS] error: {e}
-{traceback.format_exc()}')
+        print(f'[TTS] error: {e}{traceback.format_exc()}')
         return jsonify({'error': str(e), 'fallback': 'web_speech'}), 500
 
 # Startup — create tables and apply any missing column migrations
