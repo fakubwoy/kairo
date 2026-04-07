@@ -113,11 +113,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 .ai-orb-panel { position: relative; background: radial-gradient(ellipse at 50% 60%, #12082a 0%, #060408 70%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
 
 /* Ambient glow behind orb */
-.orb-ambient { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.08) 40%, transparent 70%); filter: blur(40px); pointer-events: none; transition: opacity 0.6s ease; }
+.orb-ambient { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.08) 40%, transparent 70%); filter: blur(40px); pointer-events: none; transition: opacity 0.6s ease; }
 .ai-orb-panel.speaking .orb-ambient { opacity: 1.8; animation: ambientBreath 1.4s ease-in-out infinite; }
 @keyframes ambientBreath { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.15);opacity:1.4} }
 
-/* Outer pulse rings — all perfectly centered */
+/* orb-wrap: inline container that's exactly the orb size; rings overflow from its center */
+.orb-wrap { position: relative; width: 210px; height: 210px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+
+/* Outer pulse rings — centered on the orb-wrap (= centered on the orb) */
 .orb-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(167,139,250,0.15); pointer-events: none; }
 .orb-ring-1 { width: 260px; height: 260px; }
 .orb-ring-2 { width: 310px; height: 310px; border-color: rgba(167,139,250,0.08); }
@@ -130,7 +133,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 @keyframes orbRingPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.06);opacity:0.4} }
 
 /* The orb itself */
-.ai-orb { width: 210px; height: 210px; border-radius: 50%; position: relative; cursor: default; flex-shrink: 0; }
+.ai-orb { width: 210px; height: 210px; border-radius: 50%; position: relative; cursor: default; flex-shrink: 0; z-index: 1; }
 .orb-surface { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 38% 35%, rgba(200,190,255,0.92) 0%, rgba(160,140,255,0.75) 20%, rgba(110,90,200,0.6) 45%, rgba(70,50,140,0.8) 70%, rgba(30,15,70,0.95) 100%); box-shadow: 0 0 60px rgba(139,92,246,0.35), 0 0 120px rgba(99,102,241,0.15), inset 0 0 40px rgba(255,255,255,0.08); transition: all 0.5s ease; }
 .ai-orb-panel.speaking .orb-surface { box-shadow: 0 0 80px rgba(139,92,246,0.6), 0 0 160px rgba(99,102,241,0.25), inset 0 0 50px rgba(255,255,255,0.12); animation: orbBreath 1.4s ease-in-out infinite; }
 @keyframes orbBreath { 0%,100%{transform:scale(1)}50%{transform:scale(1.04)} }
@@ -521,17 +524,17 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 
           <!-- RIGHT: AI orb panel -->
           <div class="ai-orb-panel" id="ai-panel">
-            <!-- Ambient glow -->
-            <div class="orb-ambient"></div>
-            <!-- Pulse rings -->
-            <div class="orb-ring orb-ring-1"></div>
-            <div class="orb-ring orb-ring-2"></div>
-            <div class="orb-ring orb-ring-3"></div>
-            <div class="orb-ring orb-ring-4"></div>
-            <!-- Orb -->
-            <div class="ai-orb">
-              <div class="orb-surface"></div>
-              <div class="orb-gleam"></div>
+            <!-- Orb + rings wrapped so rings center on the orb -->
+            <div class="orb-wrap">
+              <div class="orb-ambient"></div>
+              <div class="orb-ring orb-ring-1"></div>
+              <div class="orb-ring orb-ring-2"></div>
+              <div class="orb-ring orb-ring-3"></div>
+              <div class="orb-ring orb-ring-4"></div>
+              <div class="ai-orb">
+                <div class="orb-surface"></div>
+                <div class="orb-gleam"></div>
+              </div>
             </div>
             <!-- Wave -->
             <div class="sound-wave" id="sound-wave">
@@ -982,6 +985,7 @@ async function _speakEdge(text, onEnd) {
   const ctrl = new AbortController();
   _ttsAbort  = ctrl;
 
+  console.debug('[TTS] Fetching /api/tts, chars:', text.length);
   const res = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -990,23 +994,31 @@ async function _speakEdge(text, onEnd) {
     signal: ctrl.signal,
   });
 
-  // 501 = edge-tts not installed; 500 = synthesis error — both use fallback
+  console.debug('[TTS] Response status:', res.status, 'content-type:', res.headers.get('content-type'));
+
+  // 501 = TTS not installed; 500 = synthesis error — both use fallback
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    throw new Error(`TTS HTTP ${res.status}: ${errText.slice(0, 120)}`);
+    throw new Error(`TTS HTTP ${res.status}: ${errText.slice(0, 200)}`);
   }
 
   // Verify the server actually returned audio, not a JSON error with status 200
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('audio')) {
     const body = await res.text().catch(() => '');
-    throw new Error(`TTS bad content-type "${contentType}": ${body.slice(0, 120)}`);
+    throw new Error(`TTS bad content-type "${contentType}": ${body.slice(0, 200)}`);
   }
 
-  // Force the blob to audio/mpeg regardless of what the browser inferred,
-  // so Audio() always gets a type it knows how to decode.
-  const rawBlob = await res.blob();
-  const blob    = new Blob([rawBlob], { type: 'audio/mpeg' });
+  // Determine correct MIME type from server response (wav or mpeg)
+  const mimeType = contentType.includes('wav') ? 'audio/wav' : 'audio/mpeg';
+  const rawBlob  = await res.blob();
+  console.debug('[TTS] Blob size:', rawBlob.size, 'bytes, mimeType:', mimeType);
+
+  if (rawBlob.size < 100) {
+    throw new Error(`TTS blob too small (${rawBlob.size} bytes) — server likely returned empty audio`);
+  }
+
+  const blob    = new Blob([rawBlob], { type: mimeType });
   const blobUrl = URL.createObjectURL(blob);
   _ttsAbort     = null;   // fetch done, no longer abortable
 
@@ -1027,17 +1039,31 @@ async function _speakEdge(text, onEnd) {
       };
     })();
 
-    // Safety guard
-    const guard = setTimeout(() => done(), 500 + text.length * 80);
+    // Safety guard: max expected duration + buffer
+    const guard = setTimeout(() => {
+      console.debug('[TTS] Safety guard fired — audio.ended did not fire in time');
+      done();
+    }, 500 + text.length * 80);
 
-    audio.addEventListener('ended', () => done(), { once: true });
+    audio.addEventListener('ended', () => {
+      console.debug('[TTS] Audio ended normally');
+      done();
+    }, { once: true });
+
     audio.addEventListener('error', (e) => {
-      const msg = audio.error ? `MediaError ${audio.error.code}: ${audio.error.message}` : String(e);
+      const msg = audio.error
+        ? `MediaError ${audio.error.code}: ${audio.error.message}`
+        : String(e);
+      console.error('[TTS] Audio element error:', msg);
       done(new Error(msg));
     }, { once: true });
 
     audio.src = blobUrl;
-    audio.play().catch(err => done(err));
+    console.debug('[TTS] Starting playback…');
+    audio.play().catch(err => {
+      console.error('[TTS] play() rejected:', err);
+      done(err);
+    });
   });
 }
 

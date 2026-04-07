@@ -3339,85 +3339,96 @@ def health():
     s = get_llm_status()
     return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
-# ── Edge TTS — Streaming (chunked transfer) ───────────────────────────────────
-# Streams MP3 chunks to the client as edge-tts synthesizes them.
-# The browser starts playing the first chunk (~150-250ms) while the rest arrive,
-# giving near-instant perceived latency — no waiting for the full audio to buffer.
+# ── TTS — Kokoro (local, no external calls) ──────────────────────────────────
+# Uses kokoro-onnx: a lightweight, high-quality neural TTS model that runs
+# entirely on the server CPU. No external API calls, no IP blocking, no
+# rate limits. edge-tts was blocked on Railway (Microsoft filters cloud IPs).
 #
-# Uses Flask's stream_with_context + a threading.Thread to bridge the async
-# edge-tts generator into a synchronous generator Flask can stream.
-# Each request is fully self-contained — no state between requests.
+# Model: kokoro-82M (Apache 2.0). First request downloads ~90MB model weights
+# to /tmp/kokoro_cache — subsequent requests are instant (model stays loaded).
 #
-import asyncio
-import threading
-import queue as _queue
+# kokoro-onnx outputs 24kHz PCM; we encode to MP3 via pydub+lameenc so the
+# browser gets a standard audio/mpeg blob it can play directly.
+#
+import io
+import struct
 
-_TTS_VOICE = os.environ.get('TTS_VOICE', 'en-US-AriaNeural')
-_TTS_RATE  = os.environ.get('TTS_RATE', '-5%')
+_kokoro_pipeline = None   # lazy-loaded singleton — stays in memory across requests
+_kokoro_lock     = None   # threading.Lock, initialised below
+
+def _get_kokoro():
+    """Lazy-load Kokoro pipeline (downloads model on first call, ~90 MB)."""
+    global _kokoro_pipeline, _kokoro_lock
+    import threading
+    if _kokoro_lock is None:
+        _kokoro_lock = threading.Lock()
+    with _kokoro_lock:
+        if _kokoro_pipeline is not None:
+            return _kokoro_pipeline
+        print('[TTS] Loading Kokoro model…')
+        from kokoro_onnx import Kokoro
+        import os
+        cache_dir = os.environ.get('KOKORO_CACHE', '/tmp/kokoro_cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        # kokoro-onnx downloads model + voices to cache_dir automatically
+        _kokoro_pipeline = Kokoro.from_pretrained(cache_dir=cache_dir)
+        print('[TTS] Kokoro model loaded.')
+        return _kokoro_pipeline
+
+def _pcm_to_wav(samples, sample_rate=24000):
+    """Convert float32 numpy array to WAV bytes (no external deps)."""
+    import numpy as np
+    pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
+    data = pcm.tobytes()
+    buf = io.BytesIO()
+    # WAV header
+    buf.write(b'RIFF')
+    buf.write(struct.pack('<I', 36 + len(data)))
+    buf.write(b'WAVE')
+    buf.write(b'fmt ')
+    buf.write(struct.pack('<IHHIIHH', 16, 1, 1, sample_rate, sample_rate * 2, 2, 16))
+    buf.write(b'data')
+    buf.write(struct.pack('<I', len(data)))
+    buf.write(data)
+    buf.seek(0)
+    return buf.read()
 
 @app.route('/api/tts', methods=['POST'])
-def edge_tts_route():
-    """Stream MP3 audio via chunked transfer encoding.
-    Playback starts on the client after the very first chunk (~200ms).
-    Falls back gracefully — client uses Web Speech API on any error.
+def kokoro_tts_route():
+    """Synthesise speech with Kokoro (local neural TTS) and return audio/wav.
+    Client uses Web Speech API as fallback on any error.
     """
     text = (request.json or {}).get('text', '').strip()
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     text = text[:800]
 
+    voice  = os.environ.get('TTS_VOICE', 'af_heart')   # Kokoro voice name
+    speed  = float(os.environ.get('TTS_SPEED', '1.0'))
+
+    print(f'[TTS] Synthesising {len(text)} chars with Kokoro voice={voice}')
+
     try:
-        import edge_tts
-        from flask import Response, stream_with_context
-
-        q = _queue.Queue()          # bridge between async thread and sync generator
-        _DONE = object()            # sentinel
-
-        def _run_async():
-            """Runs the async edge-tts generator in its own thread+event loop."""
-            async def _stream():
-                try:
-                    communicate = edge_tts.Communicate(text, _TTS_VOICE, rate=_TTS_RATE)
-                    async for chunk in communicate.stream():
-                        if chunk['type'] == 'audio':
-                            q.put(chunk['data'])   # push each chunk as it arrives
-                except Exception as e:
-                    q.put(e)                       # propagate error to generator
-                finally:
-                    q.put(_DONE)                   # always signal completion
-
-            asyncio.run(_stream())
-
-        # Start synthesis in background thread immediately
-        t = threading.Thread(target=_run_async, daemon=True)
-        t.start()
-
-        def _generate():
-            """Sync generator that yields chunks from the queue as they arrive."""
-            while True:
-                item = q.get()          # blocks until next chunk ready
-                if item is _DONE:
-                    break
-                if isinstance(item, Exception):
-                    break               # synthesis error — stop stream cleanly
-                yield item
-            t.join(timeout=10)          # ensure thread is cleaned up
-
+        kokoro = _get_kokoro()
+        samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang='en-us')
+        wav_bytes = _pcm_to_wav(samples, sample_rate)
+        print(f'[TTS] Done — {len(wav_bytes)} bytes WAV')
+        from flask import Response
         return Response(
-            stream_with_context(_generate()),
-            mimetype='audio/mpeg',
+            wav_bytes,
+            mimetype='audio/wav',
             headers={
                 'Cache-Control': 'no-store',
-                'X-Accel-Buffering': 'no',      # disable nginx buffering on Railway
-                'X-TTS-Voice': _TTS_VOICE,
-                'Transfer-Encoding': 'chunked',
+                'X-Accel-Buffering': 'no',
+                'Content-Length': str(len(wav_bytes)),
             }
         )
-
-    except ImportError:
-        return jsonify({'error': 'edge-tts not installed', 'fallback': 'web_speech'}), 501
+    except ImportError as e:
+        print(f'[TTS] kokoro-onnx not installed: {e}')
+        return jsonify({'error': 'kokoro-onnx not installed', 'fallback': 'web_speech'}), 501
     except Exception as e:
-        print(f'[TTS] error: {e}')
+        import traceback
+        print(f'[TTS] Kokoro error: {e}\n{traceback.format_exc()}')
         return jsonify({'error': str(e), 'fallback': 'web_speech'}), 500
 
 # Startup — create tables and apply any missing column migrations
