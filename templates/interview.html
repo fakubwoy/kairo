@@ -167,7 +167,7 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 @keyframes waveAnim{0%,100%{height:3px}50%{height:18px}}
 
 /* Message display — gradient fade at the bottom, clears the label pill */
-.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.9) 60%, transparent 100%); padding: 1.4rem 1.5rem 3.8rem; transition: opacity 0.4s ease; pointer-events: none; }
+.message-display { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(6,4,8,0.97) 0%, rgba(6,4,8,0.9) 60%, transparent 100%); padding: 1.4rem 1.5rem 4.2rem; transition: opacity 0.4s ease; pointer-events: none; }
 .message-display.hidden { opacity: 0; }
 .msg-role-label { font-size: 0.68rem; color: rgba(201,168,76,0.9); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.4rem; font-weight: 700; }
 .msg-text { font-size: 0.92rem; color: rgba(245,240,232,0.92); line-height: 1.65; max-height: 100px; overflow-y: auto; }
@@ -562,8 +562,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
             </div>
             <!-- Loading label — visible only during audio generation -->
             <div class="loading-label"><span>Processing</span><span class="loading-dots"><span></span><span></span><span></span></span></div>
-            <!-- Label — top left so it never overlaps the transcript caption -->
-            <div class="panel-label" style="position:absolute;top:1rem;left:1rem;">
+            <!-- Label — bottom left, transcript padding clears it -->
+            <div class="panel-label" style="position:absolute;bottom:1rem;left:1rem;">
               <div class="panel-label-dot ai" id="ai-dot"></div>
               <span>Kairo (AI Agent)</span>
             </div>
