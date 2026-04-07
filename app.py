@@ -3340,79 +3340,87 @@ def health():
     return jsonify({'status': 'ok', 'active_backend': s['active_backend']})
 
 # ── TTS — Kokoro (local, no external calls) ──────────────────────────────────
-# Uses kokoro-onnx: a lightweight, high-quality neural TTS model that runs
-# entirely on the server CPU. No external API calls, no IP blocking, no
-# rate limits. edge-tts was blocked on Railway (Microsoft filters cloud IPs).
+# Uses kokoro-onnx 0.5.0: lightweight neural TTS that runs on server CPU.
+# No Microsoft WebSocket, no cloud IP blocking, no rate limits.
 #
-# Model: kokoro-82M (Apache 2.0). First request downloads ~90MB model weights
-# to /tmp/kokoro_cache — subsequent requests are instant (model stays loaded).
+# Model files (~90 MB total) are downloaded once to KOKORO_CACHE on first
+# request, then the Kokoro instance is kept in memory for subsequent calls.
 #
-# kokoro-onnx outputs 24kHz PCM; we encode to MP3 via pydub+lameenc so the
-# browser gets a standard audio/mpeg blob it can play directly.
+# kokoro-onnx 0.5.0 API:
+#   Kokoro(model_path, voices_path)  — explicit file paths required
+#   kokoro.create(text, voice, speed, lang) -> (samples_float32, sample_rate)
 #
 import io
 import struct
+import threading as _threading
+import urllib.request as _urllib_request
 
-_kokoro_pipeline = None   # lazy-loaded singleton — stays in memory across requests
-_kokoro_lock     = None   # threading.Lock, initialised below
+_KOKORO_MODEL_URL  = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx'
+_KOKORO_VOICES_URL = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin'
+
+_kokoro_instance = None
+_kokoro_lock     = _threading.Lock()
+
+def _download_if_missing(url, dest):
+    if not os.path.exists(dest):
+        print(f'[TTS] Downloading {os.path.basename(dest)} …')
+        tmp = dest + '.tmp'
+        _urllib_request.urlretrieve(url, tmp)
+        os.rename(tmp, dest)
+        print(f'[TTS] Downloaded {os.path.basename(dest)} ({os.path.getsize(dest)//1024} KB)')
 
 def _get_kokoro():
-    """Lazy-load Kokoro pipeline (downloads model on first call, ~90 MB)."""
-    global _kokoro_pipeline, _kokoro_lock
-    import threading
-    if _kokoro_lock is None:
-        _kokoro_lock = threading.Lock()
+    """Lazy-load Kokoro (downloads model files on first call, ~90 MB total)."""
+    global _kokoro_instance
     with _kokoro_lock:
-        if _kokoro_pipeline is not None:
-            return _kokoro_pipeline
-        print('[TTS] Loading Kokoro model…')
+        if _kokoro_instance is not None:
+            return _kokoro_instance
         from kokoro_onnx import Kokoro
-        import os
         cache_dir = os.environ.get('KOKORO_CACHE', '/tmp/kokoro_cache')
         os.makedirs(cache_dir, exist_ok=True)
-        # kokoro-onnx downloads model + voices to cache_dir automatically
-        _kokoro_pipeline = Kokoro.from_pretrained(cache_dir=cache_dir)
-        print('[TTS] Kokoro model loaded.')
-        return _kokoro_pipeline
+        model_path  = os.path.join(cache_dir, 'kokoro-v1.0.onnx')
+        voices_path = os.path.join(cache_dir, 'voices-v1.0.bin')
+        _download_if_missing(_KOKORO_MODEL_URL,  model_path)
+        _download_if_missing(_KOKORO_VOICES_URL, voices_path)
+        print('[TTS] Loading Kokoro model into memory…')
+        _kokoro_instance = Kokoro(model_path, voices_path)
+        print('[TTS] Kokoro ready.')
+        return _kokoro_instance
 
-def _pcm_to_wav(samples, sample_rate=24000):
-    """Convert float32 numpy array to WAV bytes (no external deps)."""
+def _pcm_to_wav(samples, sample_rate):
+    """Convert float32 numpy array → raw WAV bytes (no extra deps)."""
     import numpy as np
-    pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
+    pcm  = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
     data = pcm.tobytes()
-    buf = io.BytesIO()
-    # WAV header
+    buf  = io.BytesIO()
     buf.write(b'RIFF')
     buf.write(struct.pack('<I', 36 + len(data)))
-    buf.write(b'WAVE')
-    buf.write(b'fmt ')
+    buf.write(b'WAVEfmt ')
     buf.write(struct.pack('<IHHIIHH', 16, 1, 1, sample_rate, sample_rate * 2, 2, 16))
     buf.write(b'data')
     buf.write(struct.pack('<I', len(data)))
     buf.write(data)
-    buf.seek(0)
-    return buf.read()
+    return buf.getvalue()
 
 @app.route('/api/tts', methods=['POST'])
 def kokoro_tts_route():
-    """Synthesise speech with Kokoro (local neural TTS) and return audio/wav.
-    Client uses Web Speech API as fallback on any error.
+    """Synthesise speech with Kokoro and return audio/wav.
+    On any error the client falls back to Web Speech API silently.
     """
     text = (request.json or {}).get('text', '').strip()
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     text = text[:800]
 
-    voice  = os.environ.get('TTS_VOICE', 'af_heart')   # Kokoro voice name
-    speed  = float(os.environ.get('TTS_SPEED', '1.0'))
-
-    print(f'[TTS] Synthesising {len(text)} chars with Kokoro voice={voice}')
+    voice = os.environ.get('TTS_VOICE', 'af_heart')
+    speed = float(os.environ.get('TTS_SPEED', '1.0'))
+    print(f'[TTS] Synthesising {len(text)} chars — voice={voice}')
 
     try:
         kokoro = _get_kokoro()
         samples, sample_rate = kokoro.create(text, voice=voice, speed=speed, lang='en-us')
         wav_bytes = _pcm_to_wav(samples, sample_rate)
-        print(f'[TTS] Done — {len(wav_bytes)} bytes WAV')
+        print(f'[TTS] OK — {len(wav_bytes)} bytes WAV at {sample_rate} Hz')
         from flask import Response
         return Response(
             wav_bytes,
@@ -3428,7 +3436,8 @@ def kokoro_tts_route():
         return jsonify({'error': 'kokoro-onnx not installed', 'fallback': 'web_speech'}), 501
     except Exception as e:
         import traceback
-        print(f'[TTS] Kokoro error: {e}\n{traceback.format_exc()}')
+        print(f'[TTS] error: {e}
+{traceback.format_exc()}')
         return jsonify({'error': str(e), 'fallback': 'web_speech'}), 500
 
 # Startup — create tables and apply any missing column migrations
