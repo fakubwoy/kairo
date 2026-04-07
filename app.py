@@ -3413,7 +3413,7 @@ def kokoro_tts_route():
     text = text[:800]
 
     voice = os.environ.get('TTS_VOICE', 'af_heart')
-    speed = float(os.environ.get('TTS_SPEED', '1.0'))
+    speed = float(os.environ.get('TTS_SPEED', '1.15'))
     print(f'[TTS] Synthesising {len(text)} chars — voice={voice}')
 
     try:
@@ -3537,6 +3537,22 @@ with app.app_context():
                     print(f"DDL warning: {e}")
         conn.execute(db.text("COMMIT"))
         print("Database schema ready.")
+
+# ── Kokoro warm-start ────────────────────────────────────────────────────────
+# Pre-load the TTS model in a background daemon thread immediately after the
+# app starts so that the FIRST /api/tts call never has to wait for the
+# ~345 MB download + model-init.  The thread is a daemon so it does not
+# prevent gunicorn from shutting down cleanly.
+def _warmup_kokoro():
+    try:
+        print('[TTS] Warm-start: pre-loading Kokoro in background…')
+        _get_kokoro()
+        print('[TTS] Warm-start complete — model ready.')
+    except Exception as exc:
+        print(f'[TTS] Warm-start failed (will retry on first request): {exc}')
+
+_warmup_thread = _threading.Thread(target=_warmup_kokoro, daemon=True, name='kokoro-warmup')
+_warmup_thread.start()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

@@ -141,7 +141,15 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 /* Orb highlight gleam */
 .orb-gleam { position: absolute; top: 12%; left: 18%; width: 35%; height: 28%; border-radius: 50%; background: radial-gradient(ellipse, rgba(255,255,255,0.45) 0%, transparent 70%); pointer-events: none; }
 
-/* Sound wave bars under the orb */
+/* Loading state — audio being generated */
+.ai-orb-panel.loading .orb-ambient { opacity: 0.6; animation: ambientBreath 2s ease-in-out infinite; }
+.ai-orb-panel.loading .orb-surface { animation: orbLoadingPulse 1.8s ease-in-out infinite; }
+@keyframes orbLoadingPulse { 0%,100%{opacity:0.6}50%{opacity:0.9} }
+.ai-orb-panel.loading .sound-wave .wave-bar { animation: waveLoadingAnim 1.4s ease-in-out infinite; }
+@keyframes waveLoadingAnim{0%,100%{height:3px;opacity:0.3}50%{height:8px;opacity:0.7}}
+.loading-label { position: absolute; bottom: 3.5rem; left: 0; right: 0; text-align: center; font-size: 0.72rem; color: rgba(96,165,250,0.8); letter-spacing: 0.1em; text-transform: uppercase; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.ai-orb-panel.loading .loading-label { opacity: 1; animation: loadingLabelPulse 1.4s ease-in-out infinite; }
+@keyframes loadingLabelPulse{0%,100%{opacity:0.5}50%{opacity:1}}
 .sound-wave { display: flex; align-items: center; gap: 3px; height: 24px; margin-top: 1.2rem; }
 .wave-bar { width: 3px; background: rgba(167,139,250,0.6); border-radius: 2px; height: 3px; transition: height 0.1s; }
 .ai-orb-panel.speaking .sound-wave .wave-bar { animation: waveAnim 0.8s ease-in-out infinite; }
@@ -541,6 +549,8 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
               <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
               <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
             </div>
+            <!-- Loading label — visible only during audio generation -->
+            <div class="loading-label">Generating audio…</div>
             <!-- Label -->
             <div class="panel-label" style="position:absolute;bottom:1rem;left:1rem;">
               <div class="panel-label-dot ai" id="ai-dot"></div>
@@ -972,11 +982,12 @@ function _cancelTTS() {
 
 async function speakText(text, onEnd) {
   _cancelTTS();
-  setAiSpeaking(true);
+  setAiSpeaking('loading');   // show loading spinner while audio is being generated
   try {
     await _speakEdge(text, onEnd);
   } catch(e) {
     console.warn('[TTS] Edge voice failed, falling back to Web Speech:', e);
+    setAiSpeaking(true);      // switch to speaking state for fallback
     _speakFallback(text, onEnd);
   }
 }
@@ -998,9 +1009,13 @@ async function _speakEdge(text, onEnd) {
 
   // 501 = TTS not installed; 500 = synthesis error — both use fallback
   if (!res.ok) {
+    setAiSpeaking(false);
     const errText = await res.text().catch(() => '');
     throw new Error(`TTS HTTP ${res.status}: ${errText.slice(0, 200)}`);
   }
+
+  // Audio received — switch loading indicator → speaking animation
+  setAiSpeaking(true);
 
   // Verify the server actually returned audio, not a JSON error with status 200
   const contentType = res.headers.get('content-type') || '';
@@ -1095,10 +1110,21 @@ function _speakFallback(text, onEnd) {
 
 function setAiSpeaking(on) {
   const panel = document.getElementById('ai-panel');
-  panel.classList.toggle('speaking', on);
-  const dot = document.getElementById('ai-dot');
-  if (dot) { dot.style.animation = on ? 'pulse 0.8s infinite' : ''; dot.style.background = on ? '#a78bfa' : '#a78bfa'; }
-  if (!on) { const sd = document.getElementById('status-dot'); if(sd) sd.classList.remove('speaking'); }
+  panel.classList.remove('speaking', 'loading');
+  if (on === 'loading') {
+    panel.classList.add('loading');
+    const dot = document.getElementById('ai-dot');
+    if (dot) { dot.style.animation = 'pulse 1.2s infinite'; dot.style.background = '#60a5fa'; }
+    setStatus('thinking', 'Generating audio…');
+  } else if (on) {
+    panel.classList.add('speaking');
+    const dot = document.getElementById('ai-dot');
+    if (dot) { dot.style.animation = 'pulse 0.8s infinite'; dot.style.background = '#a78bfa'; }
+  } else {
+    const dot = document.getElementById('ai-dot');
+    if (dot) { dot.style.animation = ''; dot.style.background = '#a78bfa'; }
+    const sd = document.getElementById('status-dot'); if(sd) sd.classList.remove('speaking');
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
