@@ -3358,8 +3358,13 @@ import urllib.request as _urllib_request
 _KOKORO_MODEL_URL  = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx'
 _KOKORO_VOICES_URL = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin'
 
-_kokoro_instance = None
-_kokoro_lock     = _threading.Lock()
+_kokoro_instance   = None
+_kokoro_lock       = _threading.Lock()
+_kokoro_last_used  = 0.0          # epoch seconds of last synthesis call
+
+# Unload Kokoro from RAM after this many seconds of silence (default 10 min).
+# Override with env var KOKORO_IDLE_TIMEOUT (seconds).
+_KOKORO_IDLE_TIMEOUT = int(os.environ.get('KOKORO_IDLE_TIMEOUT', 600))
 
 def _download_if_missing(url, dest):
     if not os.path.exists(dest):
@@ -3369,22 +3374,50 @@ def _download_if_missing(url, dest):
         os.rename(tmp, dest)
         print(f'[TTS] Downloaded {os.path.basename(dest)} ({os.path.getsize(dest)//1024} KB)')
 
+def _unload_kokoro_if_idle():
+    """Background daemon: evict Kokoro from RAM after KOKORO_IDLE_TIMEOUT seconds idle."""
+    import time
+    while True:
+        time.sleep(30)   # check every 30 s
+        with _kokoro_lock:
+            global _kokoro_instance, _kokoro_last_used
+            if _kokoro_instance is None:
+                continue
+            idle_secs = time.time() - _kokoro_last_used
+            if idle_secs >= _KOKORO_IDLE_TIMEOUT:
+                print(f'[TTS] Idle for {idle_secs:.0f}s — unloading Kokoro from RAM.')
+                _kokoro_instance = None
+                # Hint to the GC that we want the memory back now.
+                import gc
+                gc.collect()
+                print('[TTS] Kokoro unloaded.')
+
+# Start the idle-eviction watcher as a daemon thread.
+_eviction_thread = _threading.Thread(
+    target=_unload_kokoro_if_idle, daemon=True, name='kokoro-eviction'
+)
+_eviction_thread.start()
+
 def _get_kokoro():
-    """Lazy-load Kokoro (downloads model files on first call, ~90 MB total)."""
-    global _kokoro_instance
+    """Lazy-load Kokoro on demand. Reloads automatically if previously evicted.
+    Model files are cached on disk so only the first call ever downloads them.
+    """
+    import time
+    global _kokoro_instance, _kokoro_last_used
     with _kokoro_lock:
-        if _kokoro_instance is not None:
-            return _kokoro_instance
-        from kokoro_onnx import Kokoro
-        cache_dir = os.environ.get('KOKORO_CACHE', '/tmp/kokoro_cache')
-        os.makedirs(cache_dir, exist_ok=True)
-        model_path  = os.path.join(cache_dir, 'kokoro-v1.0.onnx')
-        voices_path = os.path.join(cache_dir, 'voices-v1.0.bin')
-        _download_if_missing(_KOKORO_MODEL_URL,  model_path)
-        _download_if_missing(_KOKORO_VOICES_URL, voices_path)
-        print('[TTS] Loading Kokoro model into memory…')
-        _kokoro_instance = Kokoro(model_path, voices_path)
-        print('[TTS] Kokoro ready.')
+        if _kokoro_instance is None:
+            from kokoro_onnx import Kokoro
+            cache_dir = os.environ.get('KOKORO_CACHE', '/tmp/kokoro_cache')
+            os.makedirs(cache_dir, exist_ok=True)
+            model_path  = os.path.join(cache_dir, 'kokoro-v1.0.onnx')
+            voices_path = os.path.join(cache_dir, 'voices-v1.0.bin')
+            _download_if_missing(_KOKORO_MODEL_URL,  model_path)
+            _download_if_missing(_KOKORO_VOICES_URL, voices_path)
+            print('[TTS] Loading Kokoro model into memory…')
+            _kokoro_instance = Kokoro(model_path, voices_path)
+            print('[TTS] Kokoro ready.')
+        # Refresh the idle clock on every successful acquisition.
+        _kokoro_last_used = time.time()
         return _kokoro_instance
 
 def _pcm_to_wav(samples, sample_rate):
@@ -3543,6 +3576,9 @@ with app.app_context():
 # app starts so that the FIRST /api/tts call never has to wait for the
 # ~345 MB download + model-init.  The thread is a daemon so it does not
 # prevent gunicorn from shutting down cleanly.
+# NOTE: The kokoro-eviction daemon thread (started above) will automatically
+# unload the model from RAM after KOKORO_IDLE_TIMEOUT seconds of inactivity
+# (default 10 min). _get_kokoro() transparently reloads on the next request.
 def _warmup_kokoro():
     try:
         print('[TTS] Warm-start: pre-loading Kokoro in background…')
