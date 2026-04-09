@@ -3364,7 +3364,7 @@ _kokoro_last_used  = 0.0          # epoch seconds of last synthesis call
 
 # Unload Kokoro from RAM after this many seconds of silence (default 10 min).
 # Override with env var KOKORO_IDLE_TIMEOUT (seconds).
-_KOKORO_IDLE_TIMEOUT = int(os.environ.get('KOKORO_IDLE_TIMEOUT', 600))
+_KOKORO_IDLE_TIMEOUT = int(os.environ.get('KOKORO_IDLE_TIMEOUT', 300))
 
 def _download_if_missing(url, dest):
     if not os.path.exists(dest):
@@ -3571,24 +3571,9 @@ with app.app_context():
         conn.execute(db.text("COMMIT"))
         print("Database schema ready.")
 
-# ── Kokoro warm-start ────────────────────────────────────────────────────────
-# Pre-load the TTS model in a background daemon thread immediately after the
-# app starts so that the FIRST /api/tts call never has to wait for the
-# ~345 MB download + model-init.  The thread is a daemon so it does not
-# prevent gunicorn from shutting down cleanly.
-# NOTE: The kokoro-eviction daemon thread (started above) will automatically
-# unload the model from RAM after KOKORO_IDLE_TIMEOUT seconds of inactivity
-# (default 10 min). _get_kokoro() transparently reloads on the next request.
-def _warmup_kokoro():
-    try:
-        print('[TTS] Warm-start: pre-loading Kokoro in background…')
-        _get_kokoro()
-        print('[TTS] Warm-start complete — model ready.')
-    except Exception as exc:
-        print(f'[TTS] Warm-start failed (will retry on first request): {exc}')
-
-_warmup_thread = _threading.Thread(target=_warmup_kokoro, daemon=True, name='kokoro-warmup')
-_warmup_thread.start()
+# ── Kokoro is loaded on first /api/tts request only ──────────────────────────
+# The kokoro-eviction daemon (above) unloads it after KOKORO_IDLE_TIMEOUT
+# seconds of inactivity (default 5 min). _get_kokoro() reloads transparently.
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
