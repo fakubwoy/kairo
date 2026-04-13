@@ -36,6 +36,12 @@ if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 2,
+    'max_overflow': 2,
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
@@ -86,7 +92,14 @@ def get_redis():
     if not REDIS_URL:
         return None
     try:
-        client = redis_lib.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+        client = redis_lib.from_url(
+            REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_keepalive=True,
+            max_connections=3,          # cap pool — we only have 1 worker
+            health_check_interval=30,   # avoid stale connections without polling
+        )
         client.ping()
         _redis = client
         print("Redis connected")
@@ -394,8 +407,18 @@ def call_llm(messages, system_prompt="", max_tokens=1000):
     return "I'm having trouble connecting to the AI service. Please add a GROQ_API_KEY (free at console.groq.com) to your environment variables."
 
 
+_llm_status_cache = {"data": None, "ts": 0.0}
+_LLM_STATUS_TTL = 300  # seconds (5 min)
+
 def get_llm_status():
-    """Return detailed status of all LLM backends for the UI."""
+    """Return detailed status of all LLM backends for the UI.
+    Result is cached for 5 minutes to avoid polling external APIs on every request.
+    """
+    import time
+    now = time.time()
+    if _llm_status_cache["data"] and now - _llm_status_cache["ts"] < _LLM_STATUS_TTL:
+        return _llm_status_cache["data"]
+
     status = {
         "groq": {"configured": False, "ok": False, "models": GROQ_MODELS},
         "openrouter": {"configured": False, "ok": False, "models": OPENROUTER_FREE_MODELS},
@@ -454,6 +477,8 @@ def get_llm_status():
     elif status["ollama"]["installed"] and status["ollama"]["model_available"]:
         status["active_backend"] = "ollama"
 
+    _llm_status_cache["data"] = status
+    _llm_status_cache["ts"] = time.time()
     return status
 
 
@@ -3378,7 +3403,10 @@ def _unload_kokoro_if_idle():
     """Background daemon: evict Kokoro from RAM after KOKORO_IDLE_TIMEOUT seconds idle."""
     import time
     while True:
-        time.sleep(30)   # check every 30 s
+        # Sleep longer when Kokoro isn't loaded — no need to check frequently
+        with _kokoro_lock:
+            is_loaded = _kokoro_instance is not None
+        time.sleep(30 if is_loaded else 120)
         with _kokoro_lock:
             global _kokoro_instance, _kokoro_last_used
             if _kokoro_instance is None:
