@@ -3402,13 +3402,13 @@ def _download_if_missing(url, dest):
 def _unload_kokoro_if_idle():
     """Background daemon: evict Kokoro from RAM after KOKORO_IDLE_TIMEOUT seconds idle."""
     import time
+    global _kokoro_instance, _kokoro_last_used
     while True:
         # Sleep longer when Kokoro isn't loaded — no need to check frequently
         with _kokoro_lock:
             is_loaded = _kokoro_instance is not None
         time.sleep(30 if is_loaded else 120)
         with _kokoro_lock:
-            global _kokoro_instance, _kokoro_last_used
             if _kokoro_instance is None:
                 continue
             idle_secs = time.time() - _kokoro_last_used
