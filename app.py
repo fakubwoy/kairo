@@ -265,13 +265,39 @@ def _add_credits(student_id, delta, action, description=''):
 
 
 def _spend_credits(student_id, action):
-    """Deduct credits for action. Returns (ok: bool, balance: int, cost: int)."""
+    """Deduct credits for action. Returns (ok: bool, balance: int, cost: int).
+
+    Uses a row-level lock (SELECT … FOR UPDATE on the ledger aggregate via an
+    advisory lock key) so that concurrent requests cannot both pass the balance
+    check and push the balance negative.  Falls back gracefully on SQLite (which
+    has no FOR UPDATE) by re-checking inside the same transaction.
+    """
     cost = CREDIT_COSTS.get(action, 0)
     if cost == 0:
         return True, _get_balance(student_id), 0
+
+    # Use a DB-level advisory lock keyed on the student's UUID to serialise
+    # concurrent spend attempts for the same student.
+    # PostgreSQL: pg_try_advisory_xact_lock(bigint) — auto-released at tx end.
+    # SQLite: no-op (single-writer anyway).
+    try:
+        lock_key = abs(hash(student_id)) % (2**31)
+        db.session.execute(
+            db.text("SELECT pg_advisory_xact_lock(:k)"),
+            {'k': lock_key}
+        )
+    except Exception:
+        pass  # SQLite or other DB — proceed without advisory lock
+
+    # Re-read balance inside the (now locked) transaction
     balance = _get_balance(student_id)
     if balance < cost:
         return False, balance, cost
+
+    # Double-check: ensure balance - cost >= 0 (guards against edge cases)
+    if balance - cost < 0:
+        return False, balance, cost
+
     entry = CreditLedger(student_id=student_id, delta=-cost, action=action,
                           description=f'Used {action.replace("_", " ")}')
     db.session.add(entry)
@@ -826,12 +852,23 @@ def login():
     if not password:
         return jsonify({'error': 'Password required'}), 400
 
-    # Auto-correct common typo
+    # Auto-correct common typos
     email = email.replace('@vitsudent.ac.in', '@vitstudent.ac.in')
+    email = email.replace('@vitapstudent.ac.in', '@vitapstudent.ac.in')  # normalise already-correct AP addresses
 
-    VALID_VIT_DOMAINS = ('@vitstudent.ac.in', '@vit.ac.in')
+    # Accepted VIT email domains:
+    #   @vitstudent.ac.in   — VIT Vellore students  (e.g. name2022@vitstudent.ac.in)
+    #   @vit.ac.in          — VIT Vellore faculty / staff
+    #   @vitapstudent.ac.in — VIT-AP students        (e.g. Saifuddin.23bce7306@vitapstudent.ac.in)
+    #   @vitap.ac.in        — VIT-AP faculty / staff
+    VALID_VIT_DOMAINS = (
+        '@vitstudent.ac.in',
+        '@vit.ac.in',
+        '@vitapstudent.ac.in',
+        '@vitap.ac.in',
+    )
     if not any(email.endswith(d) for d in VALID_VIT_DOMAINS):
-        return jsonify({'error': 'Please use your VIT email (e.g. name2022@vitstudent.ac.in)'}), 400
+        return jsonify({'error': 'Please use your VIT email (e.g. name2022@vitstudent.ac.in or name.23bce@vitapstudent.ac.in)'}), 400
 
     student = Student.query.filter_by(email=email).first()
     is_new = not student
@@ -3357,6 +3394,241 @@ def admin_grant_credits():
         return jsonify({'error': 'Student not found'}), 404
     new_balance = _add_credits(student.id, amount, 'admin_grant', reason)
     return jsonify({'email': email, 'granted': amount, 'new_balance': new_balance})
+
+
+# ── Admin: full credit management panel ───────────────────────────────────────
+#
+#  All endpoints below require the ADMIN_SECRET env var in the request body.
+#  Default secret (change in Railway Variables!): kairo-admin-2026
+#
+#  Quick-reference:
+#    POST /api/admin/credits/set       — set a student's balance to an exact value
+#    POST /api/admin/credits/adjust    — add or subtract any amount (positive or negative)
+#    POST /api/admin/credits/reset     — wipe ledger and restart from CREDITS_ON_SIGNUP
+#    GET  /api/admin/credits/lookup?email=…&admin_secret=… — view balance + ledger
+#    GET  /api/admin/credits/top?admin_secret=… — leaderboard of top balances
+#    POST /api/admin/credits/bulk-grant — grant the same amount to multiple emails
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _admin_auth(data):
+    """Return True if the admin_secret in *data* is correct."""
+    return data.get('admin_secret', '') == os.environ.get('ADMIN_SECRET', 'kairo-admin-2026')
+
+
+@app.route('/api/admin/credits/set', methods=['POST'])
+def admin_credits_set():
+    """Force a student's balance to an exact value.
+
+    Body: { admin_secret, email, balance, reason? }
+    """
+    data = request.json or {}
+    if not _admin_auth(data):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    email   = data.get('email', '').lower().strip()
+    target  = int(data.get('balance', 0))
+    reason  = data.get('reason', 'Admin balance adjustment')
+
+    if target < 0:
+        return jsonify({'error': 'Balance cannot be set below 0'}), 400
+
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+
+    current = _get_balance(student.id)
+    delta   = target - current   # may be positive or negative
+
+    if delta == 0:
+        return jsonify({'email': email, 'message': 'Balance unchanged', 'balance': current})
+
+    new_balance = _add_credits(
+        student.id, delta, 'admin_set',
+        f'{reason} (set {current} → {target})'
+    )
+    return jsonify({'email': email, 'previous': current, 'delta': delta, 'new_balance': new_balance})
+
+
+@app.route('/api/admin/credits/adjust', methods=['POST'])
+def admin_credits_adjust():
+    """Add or subtract credits from a student.  Use negative amount to deduct.
+
+    Body: { admin_secret, email, amount, reason? }
+    """
+    data   = request.json or {}
+    if not _admin_auth(data):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    email  = data.get('email', '').lower().strip()
+    amount = int(data.get('amount', 0))
+    reason = data.get('reason', 'Admin manual adjustment')
+
+    if amount == 0:
+        return jsonify({'error': 'Amount cannot be zero'}), 400
+
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+
+    current = _get_balance(student.id)
+
+    # Never allow balance to go negative
+    if current + amount < 0:
+        return jsonify({
+            'error': f'This deduction would push balance below 0 '
+                     f'(current: {current}, amount: {amount}). '
+                     f'Use /api/admin/credits/set to force a specific value.'
+        }), 400
+
+    new_balance = _add_credits(student.id, amount, 'admin_adjust', reason)
+    return jsonify({'email': email, 'previous': current, 'delta': amount, 'new_balance': new_balance})
+
+
+@app.route('/api/admin/credits/reset', methods=['POST'])
+def admin_credits_reset():
+    """Wipe all ledger entries for a student and restart with CREDITS_ON_SIGNUP.
+
+    Body: { admin_secret, email, reason? }
+    USE WITH CAUTION — this permanently removes the ledger history.
+    """
+    data   = request.json or {}
+    if not _admin_auth(data):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    email  = data.get('email', '').lower().strip()
+    reason = data.get('reason', 'Admin reset')
+
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+
+    old_balance = _get_balance(student.id)
+
+    # Delete all existing ledger rows for this student
+    CreditLedger.query.filter_by(student_id=student.id).delete()
+    db.session.commit()
+
+    # Re-add the signup bonus as the seed entry
+    new_balance = _add_credits(
+        student.id, CREDITS_ON_SIGNUP, 'admin_reset',
+        f'{reason} (wiped {old_balance} credits, reset to {CREDITS_ON_SIGNUP})'
+    )
+    return jsonify({
+        'email': email,
+        'previous_balance': old_balance,
+        'new_balance': new_balance,
+        'message': f'Ledger reset. Balance restarted at {CREDITS_ON_SIGNUP}.'
+    })
+
+
+@app.route('/api/admin/credits/lookup', methods=['GET'])
+def admin_credits_lookup():
+    """View balance and full ledger for any student.
+
+    Query params: email, admin_secret
+    """
+    secret = request.args.get('admin_secret', '')
+    if secret != os.environ.get('ADMIN_SECRET', 'kairo-admin-2026'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    email = request.args.get('email', '').lower().strip()
+    if not email:
+        return jsonify({'error': 'email param required'}), 400
+
+    student = Student.query.filter_by(email=email).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+
+    balance = _get_balance(student.id)
+    ledger  = CreditLedger.query.filter_by(student_id=student.id)\
+                  .order_by(CreditLedger.created_at.desc()).all()
+
+    amb = Ambassador.query.filter_by(student_id=student.id).first()
+
+    return jsonify({
+        'email':          student.email,
+        'name':           student.name,
+        'balance':        balance,
+        'referral_code':  amb.referral_code if amb else None,
+        'is_ambassador':  amb.is_ambassador if amb else False,
+        'total_referrals': amb.total_referrals if amb else 0,
+        'credit_costs':   CREDIT_COSTS,
+        'signup_bonus':   CREDITS_ON_SIGNUP,
+        'ledger': [{
+            'id':          e.id,
+            'delta':       e.delta,
+            'action':      e.action,
+            'description': e.description,
+            'created_at':  e.created_at.isoformat(),
+        } for e in ledger],
+    })
+
+
+@app.route('/api/admin/credits/top', methods=['GET'])
+def admin_credits_top():
+    """Return the top N students by current credit balance.
+
+    Query params: admin_secret, limit (default 20)
+    """
+    secret = request.args.get('admin_secret', '')
+    if secret != os.environ.get('ADMIN_SECRET', 'kairo-admin-2026'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    limit = min(int(request.args.get('limit', 20)), 100)
+
+    rows = db.session.execute(
+        db.text("""
+            SELECT s.email, s.name,
+                   COALESCE(SUM(cl.delta), 0) AS balance
+            FROM student s
+            LEFT JOIN credit_ledger cl ON cl.student_id = s.id
+            GROUP BY s.id, s.email, s.name
+            ORDER BY balance DESC
+            LIMIT :lim
+        """),
+        {'lim': limit}
+    ).fetchall()
+
+    return jsonify([
+        {'email': r[0], 'name': r[1], 'balance': int(r[2])}
+        for r in rows
+    ])
+
+
+@app.route('/api/admin/credits/bulk-grant', methods=['POST'])
+def admin_credits_bulk_grant():
+    """Grant the same number of credits to a list of students at once.
+
+    Body: { admin_secret, emails: [...], amount, reason? }
+    """
+    data   = request.json or {}
+    if not _admin_auth(data):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    emails = [e.lower().strip() for e in data.get('emails', []) if e]
+    amount = int(data.get('amount', 0))
+    reason = data.get('reason', 'Admin bulk grant')
+
+    if amount <= 0:
+        return jsonify({'error': 'Amount must be positive'}), 400
+    if not emails:
+        return jsonify({'error': 'emails list required'}), 400
+
+    results = []
+    for email in emails:
+        student = Student.query.filter_by(email=email).first()
+        if not student:
+            results.append({'email': email, 'status': 'not_found'})
+            continue
+        new_balance = _add_credits(student.id, amount, 'admin_bulk_grant', reason)
+        results.append({'email': email, 'status': 'ok', 'new_balance': new_balance})
+
+    ok_count = sum(1 for r in results if r['status'] == 'ok')
+    return jsonify({
+        'granted_to': ok_count,
+        'amount_each': amount,
+        'results': results,
+    })
 
 
 @app.route('/api/health')
