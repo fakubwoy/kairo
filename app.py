@@ -2195,6 +2195,7 @@ def generate_resume():
             }), 402
     
     # Try to get from DB
+    profile_data = {}
     if sid and sid != 'demo':
         student = Student.query.get(sid)
         if student:
