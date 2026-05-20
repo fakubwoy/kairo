@@ -1687,13 +1687,14 @@ function renderLLMStatus(s) {
 
   // Bar status text — just show what's active, no internal details
   const barText = {
-    groq: 'Groq · ready',
-    openrouter: 'OpenRouter · ready',
-    ollama: 'Ollama · local',
+    gemini: 'AI · ready',
+    groq: 'AI · ready',
+    openrouter: 'AI · ready',
+    ollama: 'AI · local',
   };
   const statusEl = document.getElementById('aiBarStatus');
   if (s.active_backend) {
-    statusEl.textContent = barText[s.active_backend] || 'Ready';
+    statusEl.textContent = barText[s.active_backend] || 'AI · ready';
     statusEl.style.color = 'var(--gold)';
   } else {
     statusEl.textContent = 'No AI backend — tap to set up';
@@ -1711,19 +1712,17 @@ function renderLLMStatus(s) {
   // ── Cloud panel: show whichever cloud provider is configured/working ─────
   const grEl = document.getElementById('groq-status');
   const grHint = document.getElementById('groq-hint');
-  if (!s.groq.configured && !s.openrouter.configured) {
-    grEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> No cloud key set</span>`;
-    grHint.innerHTML = `Get a free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a> and add 
-      <code>GROQ_API_KEY</code> to your <code>.env</code>.`;
-  } else if (s.groq.ok) {
-    grEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected · Llama 3.3 70B</span>`;
+  const anyConfigured = s.gemini?.configured || s.groq?.configured || s.openrouter?.configured;
+  const anyOk = s.gemini?.ok || s.groq?.ok || s.openrouter?.ok;
+  if (!anyConfigured) {
+    grEl.innerHTML = `<span class="status-badge err"><span class="status-dot-sm"></span> No AI key set</span>`;
+    grHint.innerHTML = `Add a <code>GEMINI_API_KEY</code> to your environment variables to enable AI features.`;
+  } else if (anyOk) {
+    grEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> AI connected</span>`;
     grHint.innerHTML = '';
-  } else if (s.openrouter.ok) {
-    grEl.innerHTML = `<span class="status-badge ok"><span class="status-dot-sm"></span> Connected via OpenRouter</span>`;
-    grHint.innerHTML = `<span style="color:rgba(107,101,96,0.8);">Add a <a href="https://console.groq.com" target="_blank">Groq key</a> for faster responses.</span>`;
   } else {
     grEl.innerHTML = `<span class="status-badge warn"><span class="status-dot-sm"></span> Key set but API unreachable</span>`;
-    grHint.innerHTML = `Check your key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>`;
+    grHint.innerHTML = `Check that your <code>GEMINI_API_KEY</code> is valid.`;
   }
 
   // ── Local panel ───────────────────────────────────────────────────────────

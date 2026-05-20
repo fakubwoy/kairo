@@ -78,6 +78,7 @@ OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama3.2')
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')  # Optional: for higher rate limits
 
 # ── Redis (optional) ──────────────────────────────────────────────────────────
@@ -129,12 +130,20 @@ def cache_set_messages(conv_id, messages):
         except Exception:
             pass
 
-# Groq free models — fast inference, generous free tier. Primary cloud provider.
+# Gemini models — primary AI provider (high-tier key).
+GEMINI_MODELS = [
+    "gemini-2.5-flash-preview-05-20",   # best quality, fast
+    "gemini-2.0-flash",                  # fast, capable fallback
+    "gemini-1.5-flash",                  # reliable fallback
+]
+GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+
+# Groq free models — secondary cloud fallback.
 GROQ_MODELS = [
-    "llama-3.3-70b-versatile",   # best quality on groq free tier
-    "llama-3.1-8b-instant",      # fastest, good for chat
-    "gemma2-9b-it",              # google gemma fallback
-    "mixtral-8x7b-32768",        # mistral fallback
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+    "mixtral-8x7b-32768",
 ]
 
 # OpenRouter free models — secondary cloud fallback if Groq is unavailable
@@ -324,6 +333,50 @@ def _ensure_ambassador_record(student):
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
+def _call_gemini(messages, system_prompt, max_tokens=1000):
+    """Call Gemini API (primary provider). Returns response string or None."""
+    if not GEMINI_API_KEY:
+        return None
+    contents = []
+    for m in messages:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+    if not contents or contents[-1]["role"] != "user":
+        return None
+    body = {
+        "contents": contents,
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.7},
+    }
+    if system_prompt:
+        body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+    for model in GEMINI_MODELS:
+        try:
+            resp = requests.post(
+                f"{GEMINI_API_BASE}/{model}:generateContent?key={GEMINI_API_KEY}",
+                json=body, timeout=90,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return parts[0].get("text", "")
+            elif resp.status_code == 429:
+                print(f"Gemini 429 on {model}, trying next...")
+                continue
+            elif resp.status_code in (400, 404):
+                print(f"Gemini {resp.status_code} on {model}, trying next...")
+                continue
+            else:
+                print(f"Gemini {resp.status_code} on {model}: {resp.text[:120]}")
+                break
+        except Exception as e:
+            print(f"Gemini error on {model}: {e}")
+            break
+    return None
+
+
 def _call_groq(messages, system_prompt, max_tokens=1000):
     """Try Groq models in order. Returns response string or None."""
     if not GROQ_API_KEY:
@@ -417,7 +470,11 @@ def _call_ollama(messages, system_prompt, max_tokens=1000):
 
 
 def call_llm(messages, system_prompt="", max_tokens=1000):
-    """Call LLM with provider priority: Groq → OpenRouter → Ollama."""
+    """Call LLM with provider priority: Gemini → Groq → OpenRouter → Ollama."""
+    result = _call_gemini(messages, system_prompt, max_tokens)
+    if result:
+        return result
+
     result = _call_groq(messages, system_prompt, max_tokens)
     if result:
         return result
@@ -430,7 +487,7 @@ def call_llm(messages, system_prompt="", max_tokens=1000):
     if result:
         return result
 
-    return "I'm having trouble connecting to the AI service. Please add a GROQ_API_KEY (free at console.groq.com) to your environment variables."
+    return "I'm having trouble connecting to the AI service. Please ensure GEMINI_API_KEY is set in your environment variables."
 
 
 _llm_status_cache = {"data": None, "ts": 0.0}
@@ -446,6 +503,7 @@ def get_llm_status():
         return _llm_status_cache["data"]
 
     status = {
+        "gemini": {"configured": False, "ok": False, "models": GEMINI_MODELS},
         "groq": {"configured": False, "ok": False, "models": GROQ_MODELS},
         "openrouter": {"configured": False, "ok": False, "models": OPENROUTER_FREE_MODELS},
         "ollama": {
@@ -456,6 +514,19 @@ def get_llm_status():
         },
         "active_backend": None
     }
+
+    # Check Gemini (primary)
+    if GEMINI_API_KEY:
+        status["gemini"]["configured"] = True
+        try:
+            resp = requests.get(
+                f"{GEMINI_API_BASE}/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
+                timeout=6
+            )
+            # A 400 (bad request) still means the key is valid and the API is reachable
+            status["gemini"]["ok"] = resp.status_code in (200, 400)
+        except Exception:
+            status["gemini"]["ok"] = False
 
     # Check Groq
     if GROQ_API_KEY:
@@ -496,7 +567,9 @@ def get_llm_status():
         pass  # not running — expected on cloud deployments
 
     # Determine active backend (first one that's working)
-    if status["groq"]["ok"]:
+    if status["gemini"]["ok"]:
+        status["active_backend"] = "gemini"
+    elif status["groq"]["ok"]:
         status["active_backend"] = "groq"
     elif status["openrouter"]["ok"]:
         status["active_backend"] = "openrouter"
@@ -722,7 +795,7 @@ Return ONLY valid JSON with these exact keys (use empty arrays/strings for field
     # Strip UI-only metadata before sending to LLM
     clean_messages = [{"role": m["role"], "content": m["content"]} for m in messages if not m.get("_silent")]
     conv_text = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in clean_messages])
-    result = call_llm([{"role": "user", "content": f"Conversation:\n{conv_text}\n\nExtract the profile:"}], system)
+    result = call_llm([{"role": "user", "content": f"Conversation:\n{conv_text}\n\nExtract the complete profile. Make sure to capture ALL projects, internships, skills, and experiences mentioned:"}], system, max_tokens=2000)
 
     try:
         clean = result.strip()
@@ -1273,8 +1346,17 @@ def resume_parse_upload():
         return jsonify({'error': 'PDF appears to be empty or image-only — please use a text-based PDF'}), 422
 
     # ── LLM: extract rich structured profile from resume ─────────────────────
-    RESUME_EXTRACT_PROMPT = """You are parsing a student resume to extract a comprehensive structured career profile.
-Return ONLY valid JSON (no markdown, no explanation) with these exact keys — use empty arrays/strings for absent fields, never invent data:
+    RESUME_EXTRACT_PROMPT = """You are a precise resume parser. Extract EVERY piece of information from this student resume.
+
+CRITICAL RULES:
+- Extract ALL projects listed — do not skip or merge any. Each project in the resume must appear as a separate entry.
+- Extract ALL internships/work experiences — do not skip any.
+- Copy descriptions, tech stacks, and bullet points exactly as written.
+- If multiple projects are listed, ALL of them must appear in the "projects" array.
+- Never summarise or condense — extract faithfully and completely.
+- Return ONLY valid JSON (no markdown, no explanation, no code fences).
+
+Return this exact JSON schema:
 {
   "name": "",
   "email": "",
@@ -1297,12 +1379,14 @@ Return ONLY valid JSON (no markdown, no explanation) with these exact keys — u
   "clubs": [],
   "goals": "",
   "highlights": []
-}"""
+}
+
+Reminder: The "projects" array MUST contain one entry per project in the resume. Do not collapse multiple projects into one."""
 
     raw = call_llm(
-        [{"role": "user", "content": f"Resume text:\n{extracted_text[:5000]}\n\nExtract the structured profile:"}],
+        [{"role": "user", "content": f"Resume text (extract EVERY project and field completely):\n{extracted_text[:8000]}\n\nExtract the full structured profile now:"}],
         RESUME_EXTRACT_PROMPT,
-        max_tokens=1800
+        max_tokens=4000
     )
 
     extracted_profile = {}
@@ -2206,8 +2290,9 @@ def generate_resume():
     
     system_prompt = get_resume_system_prompt(profile_data, job_description)
     result = call_llm(
-        [{"role": "user", "content": "Generate the resume JSON now."}],
-        system_prompt
+        [{"role": "user", "content": "Generate the resume JSON now. Include ALL projects and experiences from the profile."}],
+        system_prompt,
+        max_tokens=3000
     )
     
     # Parse JSON
