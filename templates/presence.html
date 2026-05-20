@@ -562,15 +562,14 @@ body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans
 (async () => {
   try {
     const data = await fetch('/api/auth/me', { credentials: 'include' }).then(r => r.json());
-    const s = data.student || {};
-    document.getElementById('sidebarName').textContent  = s.name  || '—';
-    document.getElementById('sidebarEmail').textContent = s.email || '';
+    document.getElementById('sidebarName').textContent  = data.name  || '—';
+    document.getElementById('sidebarEmail').textContent = data.email || '';
     if (typeof data.credits === 'number') {
       document.getElementById('sidebarCredits').textContent = data.credits;
     }
 
     // Pre-fill from profile
-    const p = s.profile_data || {};
+    const p = data.profile || {};
     const github   = p.github_username || '';
     const linkedin = p.linkedin_url    || '';
     const role     = p.target_role || (p.career_goals && p.career_goals.target_role) || '';
